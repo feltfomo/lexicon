@@ -34,7 +34,7 @@ in
           ${installCommands}
           ${reloadCommands}
         '';
-        provenance = "modules/_lib/program.nix";
+        provenance = "lexicon/program/theme/adapters/caelestia.nix";
       }
     ];
 }

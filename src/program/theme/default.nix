@@ -443,7 +443,7 @@ let
         src = entry.source;
         representation = contract.capabilities.writable;
         onConflict = contract.conflictPolicies.runtimeWins;
-        provenance = "modules/_lib/program.nix";
+        provenance = "lexicon/program/theme/default.nix";
       };
     in
     if duplicateIds != [ ] then

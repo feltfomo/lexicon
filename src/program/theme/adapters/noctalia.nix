@@ -38,7 +38,7 @@ in
         src = (pkgs.formats.toml { }).generate "noctalia-${blockId}.toml" {
           theme.templates.user = registrations;
         };
-        provenance = "modules/_lib/program.nix";
+        provenance = "lexicon/program/theme/adapters/noctalia.nix";
       }
     ];
 }

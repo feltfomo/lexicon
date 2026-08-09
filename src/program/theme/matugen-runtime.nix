@@ -94,7 +94,7 @@ let
                 }) entries
               );
             };
-            provenance = "modules/_lib/program.nix";
+            provenance = "lexicon/program/theme/matugen-runtime.nix";
           }
         ];
       }
