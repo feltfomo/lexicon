@@ -29,7 +29,7 @@
 
 ## Public facade
 
-All functions are exported from `modules/_lib/ownerships/default.nix`.
+All functions are exported from `src/ownerships/default.nix`.
 
 | Function | Result |
 | --- | --- |
@@ -256,5 +256,7 @@ Unknown view, malformed callback, or a stage-produced structured diagnostic.
 ## Lower-level seams
 
 `resolve.nix` exports `resolveWith`, `engineArgsFor`, and `validateRosterCtx`. `engine.nix`, `axes.nix`, `merge.nix`, and `matrix.nix` export additional focused seams for tests and subsystem composition.
+
+These are reachable by importing the file, not through the facade. `default.nix` deliberately does not re-export them, and the furnish suite asserts their absence, so a consumer cannot reach the engine by accident.
 
 These are not ordinary aspect APIs. Preserve facade behavior when changing them, and add parity and forcing tests around any new seam.

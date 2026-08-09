@@ -23,8 +23,8 @@ let
   pkgs = import <nixpkgs> { };
   lib = pkgs.lib;
 
-  ownerships = import ./modules/_lib/ownerships {
-    inherit lib;
+  ownerships = import ./src/ownerships {
+    inherit lib krisis axiom;
   };
 
   roster = ownerships.toRoster [
@@ -336,10 +336,10 @@ configuration/
 ### `ownerships.nix`
 
 ```nix
-{ lib }:
+{ lib, krisis, axiom }:
 let
-  ownerships = import ../modules/_lib/ownerships {
-    inherit lib;
+  ownerships = inputs.lexicon.lib.ownerships {
+    inherit lib krisis axiom;
   };
 
   roster = ownerships.toRoster [
@@ -405,7 +405,7 @@ Ownerships resolves plain attrsets, so a normal NixOS module can return resolved
 { lib, pkgs, ... }:
 let
   ownership = import ./ownerships.nix {
-    inherit lib;
+    inherit lib krisis axiom;
   };
 
   unitSets = ownership.importUnitSets {
@@ -431,7 +431,7 @@ Do not use Ownerships as a replacement for NixOS option merging. Resolve units t
 { lib, pkgs, hostName, hostSystem, ... }:
 let
   ownership = import ./ownerships.nix {
-    inherit lib;
+    inherit lib krisis axiom;
   };
   unitSets = ownership.importUnitSets {
     dir = ./units;
@@ -492,7 +492,7 @@ Home Manager uses user scope because both host and user claims can matter.
 { lib, pkgs, ... }:
 let
   ownership = import ./ownerships.nix {
-    inherit lib;
+    inherit lib krisis axiom;
   };
 
   unitSets = ownership.importUnitSets {
@@ -863,4 +863,4 @@ The semantics are the same:
 - Den supplies roster-bound resolver doors;
 - Program supplies a higher-level facade for common program and managed-file declarations.
 
-See [Program](../program.md), [Architecture](architecture.md), [Inspection](inspection.md), and [Reference](reference.md) for the surrounding subsystem documentation.
+See [Architecture](architecture.md), [Inspection](inspection.md), and [Reference](reference.md) for the surrounding subsystem documentation.

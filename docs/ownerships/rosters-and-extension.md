@@ -173,6 +173,8 @@ Keep compatibility in relation data and shared semantics in `engine.mkRelationCh
 
 ## Den federation boundary
 
-The whole-fleet adapter lives in `modules/_lib/den.nix`. It normalizes den hosts and users into the same declaration/projector path used standalone. Ownerships source files do not inspect den internals.
+The whole-fleet adapter lives in `src/den.nix`. It normalizes den hosts and users into the same declaration/projector path used standalone. Ownerships source files do not inspect den internals.
+
+It takes `den` as a function argument rather than importing it, so lexicon carries the integration without taking den as an input. The consumer supplies its own den, and its host files are what populate the fleet.
 
 Host dimensions remain roster metadata unless a deliberate descriptor exposes them as author syntax. Adding dimensions must not silently expand the public claim-key set.

@@ -45,7 +45,7 @@ See:
 
 ## Public and internal surfaces
 
-`modules/_lib/furnish/default.nix` exports:
+`src/furnish/default.nix` exports:
 
 | Export | Role |
 | --- | --- |

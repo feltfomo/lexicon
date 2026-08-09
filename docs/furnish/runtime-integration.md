@@ -1,8 +1,20 @@
 # Furnish runtime integration
 
-`modules/_lib/furnish/runtime.nix` turns the pure compiler output into a closure-retained manifest and arranges reconciliation during activation and boot.
+`src/furnish/runtime.nix` turns the pure compiler output into a closure-retained manifest and arranges reconciliation during activation and boot.
 
 This document describes the NixOS boundary. The coordinator's internal Rust algorithms are documented separately.
+
+## How a consumer gets this module
+
+The module is curried on its cross-repo dependencies, because a NixOS module cannot be handed flake inputs:
+
+```nix
+furnishRuntime = inputs.lexicon.lib.furnishRuntime { inherit krisis axiom; };
+```
+
+`mkCoordinator` is filled in from lexicon's own `furnish-coordinator` input, so a consumer never adds that input itself. It stays a function of `pkgs` rather than a built package, which keeps the binary the unit runs on the same store path as the binary the config builds.
+
+Apply it once and pass the result around. Every application produces a distinct value, and the module system dedupes by `key` rather than by import path, so the module declares a stable `key` of its own. Without it, each aspect importing a separately-applied copy would redeclare `lexicon.furnish.enable`.
 
 ## NixOS options
 
