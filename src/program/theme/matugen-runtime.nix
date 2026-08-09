@@ -101,6 +101,10 @@ let
     );
 in
 {
+  # same reason as the furnish runtime: imported by value, so it needs an
+  # explicit identity to be deduped across the slices that pull it in.
+  key = "lexicon/program/theme/matugen-runtime.nix";
+
   options.lexicon.theme.matugen.entries = lib.mkOption {
     type = lib.types.listOf lib.types.attrs;
     default = [ ];

@@ -114,6 +114,12 @@ let
   '';
 in
 {
+  # consumers import this by value, not by path, so the module system has no
+  # filename to dedupe on. every program slice applies this function separately
+  # and each result is a distinct value; without a stable key each one looks like
+  # a different module and redeclares the options below.
+  key = "lexicon/furnish/runtime.nix";
+
   options.lexicon.furnish = {
     enable = lib.mkEnableOption "furnish-managed filesystem reconciliation";
     state = {
