@@ -380,14 +380,12 @@ let
   identityLess =
     a: b: builtins.lessThan a.filesystemIdentity.canonical b.filesystemIdentity.canonical;
 
-  # only the caller knows which file a declaration came from, so an absent
-  # source stays absent rather than becoming a made-up one.
-  provenanceOf =
-    declaration: name:
-    let
-      source = (declaration.provenance or { }).source or null;
-    in
-    { declaration = name; } // lib.optionalAttrs (source != null) { inherit source; };
+  # the runtime needs a source on every entry, so one nobody named points at
+  # the declaration itself instead of a made-up file.
+  provenanceOf = declaration: name: {
+    declaration = name;
+    source = (declaration.provenance or { }).source or name;
+  };
 
   indexProjection = declaration: {
     inherit (declaration) filesystemIdentity authority managedRoot;
@@ -396,16 +394,16 @@ let
 
   claimantKey =
     claimant:
-    "${claimant.authority.scope}:${claimant.authority.identity}:${
-      claimant.provenance.source or ""
-    }:${claimant.provenance.declaration}";
+    "${claimant.authority.scope}:${claimant.authority.identity}:${claimant.provenance.source}:${claimant.provenance.declaration}";
 
   claimantLess = a: b: builtins.lessThan (claimantKey a) (claimantKey b);
 
   renderClaimant =
     claimant:
     "${claimant.authority.scope}/${claimant.authority.identity} (${claimant.provenance.declaration}${
-      lib.optionalString (claimant.provenance ? source) " at ${claimant.provenance.source}"
+      lib.optionalString (
+        claimant.provenance.source != claimant.provenance.declaration
+      ) " at ${claimant.provenance.source}"
     })";
 
   # the filesystem identity is the index key, so collision detection is just

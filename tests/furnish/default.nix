@@ -940,10 +940,11 @@ let
         } == [ ];
     }
     {
-      name = "a declaration naming no provenance source gets no invented one";
+      name = "a declaration naming no provenance source falls back to its own label";
       pass =
         (builtins.head (compile [ (removeAttrs sample [ "provenance" ]) ]).manifestData).provenance == {
           declaration = "sample-config";
+          source = "sample-config";
         };
     }
   ];
