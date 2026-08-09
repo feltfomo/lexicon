@@ -939,6 +939,13 @@ let
           principals = hostPrincipals;
         } == [ ];
     }
+    {
+      name = "a declaration naming no provenance source gets no invented one";
+      pass =
+        (builtins.head (compile [ (removeAttrs sample [ "provenance" ]) ]).manifestData).provenance == {
+          declaration = "sample-config";
+        };
+    }
   ];
 
   failing = builtins.filter (check: !check.pass) checks;

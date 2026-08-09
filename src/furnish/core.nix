@@ -380,23 +380,33 @@ let
   identityLess =
     a: b: builtins.lessThan a.filesystemIdentity.canonical b.filesystemIdentity.canonical;
 
+  # only the caller knows which file a declaration came from, so an absent
+  # source stays absent rather than becoming a made-up one.
+  provenanceOf =
+    declaration: name:
+    let
+      source = (declaration.provenance or { }).source or null;
+    in
+    { declaration = name; } // lib.optionalAttrs (source != null) { inherit source; };
+
   indexProjection = declaration: {
     inherit (declaration) filesystemIdentity authority managedRoot;
-    provenance = {
-      declaration = entryName declaration;
-      source = (declaration.provenance or { }).source or "unknown";
-    };
+    provenance = provenanceOf declaration (entryName declaration);
   };
 
   claimantKey =
     claimant:
-    "${claimant.authority.scope}:${claimant.authority.identity}:${claimant.provenance.source}:${claimant.provenance.declaration}";
+    "${claimant.authority.scope}:${claimant.authority.identity}:${
+      claimant.provenance.source or ""
+    }:${claimant.provenance.declaration}";
 
   claimantLess = a: b: builtins.lessThan (claimantKey a) (claimantKey b);
 
   renderClaimant =
     claimant:
-    "${claimant.authority.scope}/${claimant.authority.identity} (${claimant.provenance.declaration} at ${claimant.provenance.source})";
+    "${claimant.authority.scope}/${claimant.authority.identity} (${claimant.provenance.declaration}${
+      lib.optionalString (claimant.provenance ? source) " at ${claimant.provenance.source}"
+    })";
 
   # the filesystem identity is the index key, so collision detection is just
   # duplicate keying over the projections
@@ -693,10 +703,7 @@ let
       };
       inherit (artifact) cleanupStrategy;
       inherit (artifact) selfHealStrategy;
-      provenance = {
-        declaration = declaration.label;
-        source = (declaration.provenance or { }).source or "unknown";
-      };
+      provenance = provenanceOf declaration declaration.label;
     };
 
   defaultProvider = mkEnabledProvider {
