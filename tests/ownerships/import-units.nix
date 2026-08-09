@@ -1,7 +1,11 @@
 # _lib/ownerships/tests/import-units.nix
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  ownerships = import ../default.nix { inherit lib; };
+  ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
 
   throws = value: !(builtins.tryEval (builtins.deepSeq value value)).success;
 

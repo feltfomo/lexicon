@@ -1,0 +1,3 @@
+# member of an excluded subtree. the tests prove this never reaches a
+# destination, and that naming it explicitly is refused rather than honored.
+name = "inner"

@@ -6,13 +6,13 @@
 {
   den,
   lib,
+  krisis,
+  axiom,
 }:
 let
-  krisis = import ./krisis { inherit lib; };
-
-  ownershipAxes = import ./ownerships/axes.nix { inherit lib; };
+  ownershipAxes = import ./ownerships/axes.nix { inherit lib krisis axiom; };
   ownershipRoster = import ./ownerships/roster.nix {
-    inherit lib;
+    inherit lib krisis axiom;
     inherit (ownershipAxes) descriptors;
   };
 

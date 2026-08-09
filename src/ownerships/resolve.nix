@@ -5,12 +5,14 @@
 # callers share the same path.
 {
   lib,
+  krisis,
+  axiom,
   descriptors ? null,
   relations ? null,
 }:
 let
-  engine = import ./engine.nix { inherit lib; };
-  axes = import ./axes.nix { inherit lib; };
+  engine = import ./engine.nix { inherit lib krisis axiom; };
+  axes = import ./axes.nix { inherit lib krisis axiom; };
   descriptorSet = axes.compileDescriptors (
     if descriptors == null then axes.descriptors else descriptors
   );
@@ -18,9 +20,9 @@ let
   relationRegistrations = axes.validateRelations axisDescriptors (
     if relations == null then axes.relations else relations
   );
-  mergeLib = import ./merge.nix { inherit lib; };
+  mergeLib = import ./merge.nix { inherit lib krisis axiom; };
   rosterLib = import ./roster.nix {
-    inherit lib;
+    inherit lib krisis axiom;
     descriptors = axisDescriptors;
   };
 

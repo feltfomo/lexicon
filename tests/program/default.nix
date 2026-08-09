@@ -1,6 +1,11 @@
-{ lib, pkgs }:
+{
+  lib,
+  pkgs,
+  krisis,
+  axiom,
+}:
 let
-  ownerships = import ../../ownerships { inherit lib; };
+  ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
   inherit (ownerships) claimKeys;
 
   merge =
@@ -53,13 +58,16 @@ let
   # the fake resolver is already ctx-pure, so the prepared door is the same
   # function; only program.nix's wiring of the split is under test here.
   resolvePrepared = resolve;
-  program = import ../../program.nix {
+  program = import ../../src/program.nix {
     inherit
       lib
+      krisis
+      axiom
       resolve
       resolveSystem
       resolvePrepared
       ;
+    mkCoordinator = throw "the program tests forced the furnish coordinator builder";
     filePrincipals = args: [
       {
         authority = {
@@ -80,7 +88,6 @@ let
     host.name = "test";
     user.name = "feltfomo";
   };
-  caelestiaCli = builtins.fromJSON (builtins.readFile ../../../../configs/caelestia/cli.json);
 
   declarationsOfWith =
     args: spec:
@@ -99,7 +106,7 @@ let
     files = [
       {
         dest = ".config/example";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
       }
     ];
   };
@@ -108,14 +115,14 @@ let
     files = [
       {
         dest = ".config/example";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
       }
     ];
   };
   directoryOnly = program {
     directories = [
       {
-        src = ../../krisis;
+        src = ./fixtures/sample-tree;
         dest = ".config/example";
         files = [
           {
@@ -133,7 +140,7 @@ let
     theme = {
       id = "example";
       renderers.noctalia = {
-        source = ../../krisis/safe-render.nix;
+        source = ./fixtures/sample-tree/safe-render.nix;
         output = ".config/example/safe-render.nix";
       };
     };
@@ -145,7 +152,7 @@ let
     theme = {
       id = "dms-example";
       renderers.dms = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/example/dms.conf";
         native.compare_to = "dark";
       };
@@ -157,7 +164,7 @@ let
     theme = {
       id = "illogical-impulse-example";
       renderers.illogical-impulse = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/example/illogical-impulse.conf";
         native.compare_to = "dark";
       };
@@ -171,7 +178,7 @@ let
     theme = {
       id = "end4-pc-example";
       renderers.end4-pc = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/example/end4-pc.conf";
         native.compare_to = "dark";
       };
@@ -183,7 +190,7 @@ let
     theme = {
       id = "caelestia-example";
       renderers.caelestia = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/example/caelestia.conf";
         reload = "pkill -SIGUSR1 example";
       };
@@ -198,7 +205,7 @@ let
         {
           subId = "zeta";
           renderers.caelestia = {
-            source = ../../program.nix;
+            source = ../../src/program.nix;
             output = ".config/example/zeta.conf";
             reload = "printf zeta";
           };
@@ -206,7 +213,7 @@ let
         {
           subId = "alpha";
           renderers.caelestia = {
-            source = ../../program.nix;
+            source = ../../src/program.nix;
             output = ".config/example/alpha.conf";
             reload = "printf alpha";
           };
@@ -236,7 +243,7 @@ let
   dualTheme = program {
     theme = {
       id = "shared";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/example/shared.conf";
       renderers.noctalia.sharedWith = [
         "dms"
@@ -251,7 +258,7 @@ let
   reverseSharedTheme = program {
     theme = {
       id = "reverse-shared";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/example/reverse-shared.conf";
       renderers.dms.sharedWith = [ "noctalia" ];
     };
@@ -268,9 +275,9 @@ let
   subtreeDirectory = program {
     directories = [
       {
-        src = ../../furnish;
+        src = ./fixtures/prunable;
         dest = ".config/furnish-source";
-        exclude = [ "coordinator" ];
+        exclude = [ "nested" ];
       }
     ];
   };
@@ -282,7 +289,7 @@ let
       {
         users = [ "feltfomo" ];
         dest = ".config/user-only";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
       }
     ];
   };
@@ -291,7 +298,7 @@ let
       {
         exceptUsers = [ "feltfomo" ];
         dest = ".config/except-user";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
       }
     ];
   };
@@ -303,7 +310,7 @@ let
     files = [
       {
         dest = ".config/unknown";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
         typo = true;
       }
     ];
@@ -312,7 +319,7 @@ let
     theme = {
       id = "invalid";
       renderers.dms = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/invalid";
         typo = true;
       };
@@ -322,7 +329,7 @@ let
     theme = {
       id = "invalid-native";
       renderers.caelestia = {
-        source = ../../program.nix;
+        source = ../../src/program.nix;
         output = ".config/invalid-native";
         native.format = "unsupported";
       };
@@ -337,7 +344,7 @@ let
   inheritedRendererFields = program {
     theme = {
       id = "inherited-renderer";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/inherited-renderer";
       placedAs = "shared.nix";
       renderers = {
@@ -353,7 +360,7 @@ let
   unknownSharedShell = program {
     theme = {
       id = "unknown-shared-shell";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/unknown-shared-shell";
       renderers.noctalia.sharedWith = [ "ds" ];
     };
@@ -361,7 +368,7 @@ let
   duplicateSharedShell = program {
     theme = {
       id = "duplicate-shared-shell";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/duplicate-shared-shell";
       renderers.noctalia.sharedWith = [
         "dms"
@@ -372,7 +379,7 @@ let
   selfSharedShell = program {
     theme = {
       id = "self-shared-shell";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/self-shared-shell";
       renderers.noctalia.sharedWith = [ "noctalia" ];
     };
@@ -380,7 +387,7 @@ let
   overlappingSharedShell = program {
     theme = {
       id = "overlapping-shared-shell";
-      source = ../../program.nix;
+      source = ../../src/program.nix;
       output = ".config/overlapping-shared-shell";
       renderers = {
         noctalia.sharedWith = [ "dms" ];
@@ -392,7 +399,7 @@ let
     files = [
       {
         dest = ".config/policy";
-        src = ../../program.nix;
+        src = ../../src/program.nix;
         onConflict = "merge";
       }
     ];
@@ -400,12 +407,12 @@ let
   excludedOverride = program {
     directories = [
       {
-        src = ../../furnish;
+        src = ./fixtures/prunable;
         dest = ".config/furnish-source";
-        exclude = [ "coordinator" ];
+        exclude = [ "nested" ];
         files = [
           {
-            names = [ "coordinator/src/main.rs" ];
+            names = [ "nested/inner.toml" ];
             representation = "writable";
           }
         ];
@@ -415,15 +422,15 @@ let
   excludedTheme = program {
     directories = [
       {
-        src = ../../furnish;
+        src = ./fixtures/prunable;
         dest = ".config/furnish-source";
-        exclude = [ "coordinator" ];
+        exclude = [ "nested" ];
       }
     ];
     theme = {
       id = "excluded";
       renderers.noctalia = {
-        source = ../../furnish/coordinator/Cargo.toml;
+        source = ./fixtures/prunable/nested/inner.toml;
         output = ".config/excluded.toml";
       };
     };
@@ -466,7 +473,7 @@ let
   selectedMalformedDirectory = program {
     directories = [
       {
-        src = ../../program.nix;
+        src = ../../src/program.nix;
         dest = ".config/not-a-directory";
       }
     ];
@@ -561,7 +568,6 @@ rec {
     caelestia-publishers-are-strict-and-transactionally-ordered =
       lib.hasInfix "set -eu" caelestiaMultiHookScript
       && containsInOrder caelestiaPublishFragments caelestiaMultiHookScript;
-    caelestia-aggregate-post-hook-is-strict = lib.hasPrefix "set -eu;" caelestiaCli.theme.postHook;
     shared-registration-emits-all-backends =
       builtins.elem ".config/noctalia/templates/shared/program.nix" dualThemeDestinations
       && builtins.elem ".config/noctalia/shared.toml" dualThemeDestinations
@@ -581,7 +587,7 @@ rec {
       writableDeclaration.representation == "writable"
       && writableDeclaration.onConflict == "runtime-wins";
     directory-subtrees-are-pruned =
-      !(builtins.any (destination: lib.hasInfix "/coordinator/" destination) subtreeDestinations);
+      !(builtins.any (destination: lib.hasInfix "/nested/" destination) subtreeDestinations);
     directory-member-sources-stay-path-typed = builtins.all (
       declaration: builtins.isPath declaration.source.value
     ) subtreeDeclarations;

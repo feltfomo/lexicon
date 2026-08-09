@@ -1,6 +1,5 @@
-{ lib }:
+{ lib, axiom }:
 let
-  axiom = import ../axiom { inherit lib; };
   inherit (axiom) canonical;
 
   schemaVersion = 2;

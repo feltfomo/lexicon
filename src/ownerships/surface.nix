@@ -10,14 +10,14 @@
 # nesting and conflict guarantee still comes from the engine.
 {
   lib,
+  krisis,
+  axiom,
   descriptors ? null,
   relations ? null,
 }:
 let
-  engine = import ./engine.nix { inherit lib; };
-  krisis = import ../krisis { inherit lib; };
-  axes = import ./axes.nix { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
+  engine = import ./engine.nix { inherit lib krisis axiom; };
+  axes = import ./axes.nix { inherit lib krisis axiom; };
   inherit (axiom) schema validation;
 
   unitProblem = krisis.mkDiagnosticFactory {
@@ -44,12 +44,12 @@ let
   axisDescriptors = descriptorSet.descriptors;
   relationRegistrations = if relations == null then axes.relations else relations;
   resolveLib = import ./resolve.nix {
-    inherit lib;
+    inherit lib krisis axiom;
     descriptors = axisDescriptors;
     relations = relationRegistrations;
   };
-  mergeLib = import ./merge.nix { inherit lib; };
-  matrixLib = import ./matrix.nix { inherit lib; };
+  mergeLib = import ./merge.nix { inherit lib krisis axiom; };
+  matrixLib = import ./matrix.nix { inherit lib krisis axiom; };
 
   defaultMerge = (mergeLib.mkMerge { }).mergeTracked;
 

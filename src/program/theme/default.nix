@@ -1,5 +1,6 @@
 {
   lib,
+  axiom,
   contract,
   claimKeys,
   claimsOf,
@@ -13,7 +14,6 @@
   reporter,
 }:
 let
-  axiom = import ../../axiom { inherit lib; };
   capability = import ./capabilities.nix;
 
   # a capability the adapter declares, rather than a per-feature boolean every

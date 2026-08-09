@@ -1,3 +1,10 @@
+# curried on its cross-repo dependencies, because program.nix imports this by
+# path into a module set and a module can't be handed flake inputs otherwise.
+{
+  mkCoordinator,
+  krisis,
+  axiom,
+}:
 {
   config,
   lib,
@@ -5,9 +12,9 @@
   ...
 }:
 let
-  contract = import ./contract.nix { inherit lib; };
+  contract = import ./contract.nix { inherit lib axiom; };
   furnish = import ./default.nix {
-    inherit lib;
+    inherit lib krisis axiom;
     resolve = throw "furnish runtime forced the user ownership resolver";
     resolveSystem = throw "furnish runtime forced the system ownership resolver";
   };
@@ -19,7 +26,9 @@ let
     map (declaration: declaration.source.value) cfg.declarations
   );
 
-  coordinator = import ./coordinator.nix { inherit pkgs; };
+  # the coordinator input hands out a function of pkgs rather than a built
+  # package, so the binary this unit runs comes from the host's own pkgs.
+  coordinator = mkCoordinator { inherit pkgs; };
 
   nativeExecutor =
     {

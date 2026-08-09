@@ -2,11 +2,15 @@
 #
 # fleet audit proofs cover parity with real resolution, engine-defined dead claims,
 # open-roster uncertainty, separate user/system contexts, and report laziness.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  surface = import ../surface.nix { inherit lib; };
-  resolveLib = import ../resolve.nix { inherit lib; };
-  matrixLib = import ../matrix.nix { inherit lib; };
+  surface = import ../../src/ownerships/surface.nix { inherit lib krisis axiom; };
+  resolveLib = import ../../src/ownerships/resolve.nix { inherit lib krisis axiom; };
+  matrixLib = import ../../src/ownerships/matrix.nix { inherit lib krisis axiom; };
   inherit (surface)
     define
     toRoster

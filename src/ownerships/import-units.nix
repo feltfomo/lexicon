@@ -2,10 +2,12 @@
 #
 # deterministic standalone unit discovery. files remain ordinary ownership
 # units; this module only finds, imports, normalizes, and groups them.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  krisis = import ../krisis { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
   inherit (axiom) validation canonical;
 
   importProblem = krisis.mkDiagnosticFactory {

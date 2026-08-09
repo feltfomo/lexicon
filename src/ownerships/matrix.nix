@@ -3,12 +3,15 @@
 # read-only fleet projection over the same compose, checks, and selection boundaries used
 # by resolution. reports retain names and shallow shape only; config values
 # never cross this boundary.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  engine = import ./engine.nix { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
+  engine = import ./engine.nix { inherit lib krisis axiom; };
   inherit (axiom) canonical;
-  inherit (import ../krisis { inherit lib; }) safeShape;
+  inherit (krisis) safeShape;
 
   leafKey =
     index:

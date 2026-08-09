@@ -8,7 +8,11 @@
 # (a set axis, a predicate axis, a future role/trait axis) compose with zero
 # edits here. roster access lives behind satisfiable/select only; compose/narrow
 # are roster-independent, so the whole thing runs against a stubbed roster.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
   inherit (builtins)
     attrNames
@@ -18,8 +22,6 @@ let
     length
     ;
 
-  krisis = import ../krisis { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
   inherit (krisis) safeShape;
 
   # every registered axis at its identity - globally owned on all axes. a claim

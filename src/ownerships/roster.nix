@@ -6,10 +6,12 @@
 # declarations; den itself never leaks into this module.
 {
   lib,
+  krisis,
+  axiom,
   descriptors ? null,
 }:
 let
-  axes = import ./axes.nix { inherit lib; };
+  axes = import ./axes.nix { inherit lib krisis axiom; };
   descriptorSet = axes.compileDescriptors (
     if descriptors == null then axes.descriptors else descriptors
   );

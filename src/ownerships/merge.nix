@@ -3,7 +3,11 @@
 # values and their contributing units travel through one shape-keyed recursion.
 # ordinary callers project the merged value; explanations and lock policies can
 # inspect the lazy provenance sibling without a second merge implementation.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
   inherit (builtins)
     isAttrs
@@ -13,9 +17,7 @@ let
     foldl'
     ;
 
-  krisis = import ../krisis { inherit lib; };
   inherit (krisis) safeRender;
-  axiom = import ../axiom { inherit lib; };
   inherit (axiom) canonical schema validation;
 
   mergeProblem = krisis.mkDiagnosticFactory {

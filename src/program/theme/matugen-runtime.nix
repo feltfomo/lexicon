@@ -1,4 +1,8 @@
 {
+  krisis,
+  axiom,
+}:
+{
   config,
   lib,
   pkgs,
@@ -9,11 +13,10 @@
 # renderer's independent program declarations must converge before furnish
 # publishes its config.toml.
 let
-  contract = import ../../furnish/contract.nix { inherit lib; };
+  contract = import ../../furnish/contract.nix { inherit lib axiom; };
   furnishFiles = import ../../furnish/files.nix { inherit lib contract; };
-  axiom = import ../../axiom { inherit lib; };
   capability = import ./capabilities.nix;
-  inherit (import ../report.nix { inherit lib; }) problem finish;
+  inherit (import ../report.nix { inherit lib krisis axiom; }) problem finish;
 
   candidates =
     lib.mapAttrsToList

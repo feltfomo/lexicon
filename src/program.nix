@@ -1,5 +1,8 @@
 {
   lib,
+  krisis,
+  axiom,
+  mkCoordinator,
   resolve,
   resolveSystem,
   resolvePrepared,
@@ -7,18 +10,26 @@
   hostUserNames,
 }:
 let
-  furnish = import ./furnish { inherit lib resolve resolveSystem; };
-  ownerships = import ./ownerships { inherit lib; };
+  furnish = import ./furnish {
+    inherit
+      lib
+      krisis
+      axiom
+      resolve
+      resolveSystem
+      ;
+  };
+  ownerships = import ./ownerships { inherit lib krisis axiom; };
   inherit (furnish) contract;
   inherit (ownerships) claimKeys;
-  axiom = import ./axiom { inherit lib; };
-  programReport = import ./program/report.nix { inherit lib; };
+  programReport = import ./program/report.nix { inherit lib krisis axiom; };
   inherit (programReport) problem reporter duplicateValues;
   inherit (reporter) checked;
   furnishFiles = furnish.files;
   themeCompiler = import ./program/theme {
     inherit
       lib
+      axiom
       contract
       claimKeys
       claimsOf
@@ -799,8 +810,8 @@ lib.optionalAttrs needsHomeManager {
       in
       {
         imports = [
-          ./furnish/runtime.nix
-          ./program/theme/matugen-runtime.nix
+          (import ./furnish/runtime.nix { inherit mkCoordinator krisis axiom; })
+          (import ./program/theme/matugen-runtime.nix { inherit krisis axiom; })
           {
             assertions = lib.optional (hostFiles != [ ]) {
               assertion = config.lexicon.furnish.declarations != [ ];

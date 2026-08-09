@@ -5,11 +5,15 @@
 # claim kind, kept plain so it can be eyeballed with `nix eval`; `ok` asserts
 # each and is what a flake check forces. nothing den-related is imported, so a
 # green run also proves the surface resolves standalone.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  axes = import ../axes.nix { inherit lib; };
-  resolveLib = import ../resolve.nix { inherit lib; };
-  surface = import ../surface.nix { inherit lib; };
+  axes = import ../../src/ownerships/axes.nix { inherit lib krisis axiom; };
+  resolveLib = import ../../src/ownerships/resolve.nix { inherit lib krisis axiom; };
+  surface = import ../../src/ownerships/surface.nix { inherit lib krisis axiom; };
   inherit (surface)
     define
     toRoster

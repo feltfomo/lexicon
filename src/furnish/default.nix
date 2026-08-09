@@ -1,13 +1,13 @@
 {
   lib,
+  krisis,
+  axiom,
   resolve,
   resolveSystem,
 }:
 let
-  ownerships = import ../ownerships { inherit lib; };
-  krisis = import ../krisis { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
-  contract = import ./contract.nix { inherit lib; };
+  ownerships = import ../ownerships { inherit lib krisis axiom; };
+  contract = import ./contract.nix { inherit lib axiom; };
   core = import ./core.nix {
     inherit
       lib

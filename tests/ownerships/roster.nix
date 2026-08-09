@@ -5,10 +5,14 @@
 # path resolves with no den present. covers the cross-axis membership check, the
 # null-vs-[] host distinction (unknown degrades, known-none stays a failure),
 # and a host-only config on a user-less host staying clear of the check.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  axes = import ../axes.nix { inherit lib; };
-  resolve = import ../resolve.nix { inherit lib; };
+  axes = import ../../src/ownerships/axes.nix { inherit lib krisis axiom; };
+  resolve = import ../../src/ownerships/resolve.nix { inherit lib krisis axiom; };
 
   inherit (axes) include;
   inherit (resolve) define toRoster resolveWith;

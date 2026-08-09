@@ -4,10 +4,12 @@
 # the engine consumes registries built from these records; it never learns axis
 # names, author keys, roster fields, or which scopes may use them. new axes and
 # relations extend data here instead of branching the translator or resolver.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  krisis = import ../krisis { inherit lib; };
-  axiom = import ../axiom { inherit lib; };
   inherit (axiom)
     canonical
     registry

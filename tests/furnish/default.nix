@@ -1,16 +1,18 @@
 {
   lib,
+  krisis,
+  axiom,
   resolve,
   resolveSystem,
   principalContexts,
 }:
 let
-  ownerships = import ../../ownerships { inherit lib; };
-  krisis = import ../../krisis { inherit lib; };
-  axiom = import ../../axiom { inherit lib; };
-  furnish = import ../default.nix {
+  ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
+  furnish = import ../../src/furnish {
     inherit
       lib
+      krisis
+      axiom
       resolve
       resolveSystem
       ;
@@ -38,9 +40,9 @@ let
     representation = contract.capabilities.symlink;
     source = {
       kind = "path";
-      value = ../default.nix;
+      value = ./fixtures/example.conf;
     };
-    provenance.source = "modules/_lib/furnish/tests/default.nix";
+    provenance.source = "tests/furnish/default.nix";
   };
 
   mkExecutor =
@@ -234,7 +236,7 @@ let
 
   throws = value: !(builtins.tryEval (builtins.deepSeq value value)).success;
 
-  inertCore = import ../core.nix {
+  inertCore = import ../../src/furnish/core.nix {
     inherit
       lib
       contract
@@ -256,7 +258,7 @@ let
   };
   noOp = inertCore.compile { inherit raw; };
 
-  systemCore = import ../core.nix {
+  systemCore = import ../../src/furnish/core.nix {
     inherit
       lib
       contract
@@ -413,8 +415,8 @@ let
 
   collisionEvidence = aggregateCollisionText;
 
-  # frozen copy of the record kitty carried by hand, so the generated layer has
-  # to keep producing it.
+  # a hand-written record, frozen here so the generated files layer has to keep
+  # producing it byte for byte.
   kittyRecord = {
     label = "kitty.files[0]";
     filesystemNamespace = "x86_64-linux/khion";
@@ -427,14 +429,14 @@ let
     representation = "symlink";
     source = {
       kind = "path";
-      value = ../../../../configs/kitty/kitty.conf;
+      value = ./fixtures/example.conf;
     };
     provenance.source = "modules/aspects/kitty.nix";
   };
 
   kittyEntry = {
     dest = ".config/kitty/kitty.conf";
-    src = ../../../../configs/kitty/kitty.conf;
+    src = ./fixtures/example.conf;
     label = "kitty.files[0]";
     provenance = "modules/aspects/kitty.nix";
   };
@@ -480,11 +482,18 @@ let
   # the emission site's argument shape is what decides which scopes it runs
   # under, so it is pinned here next to the counting it produces.
   programSlice =
-    (import ../../program.nix {
-      inherit lib resolve resolveSystem;
+    (import ../../src/program.nix {
+      inherit
+        lib
+        krisis
+        axiom
+        resolve
+        resolveSystem
+        ;
       # program's prepared door is not exercised here; the test resolver is
       # ctx-pure, so the prepared form is the same function.
       resolvePrepared = resolve;
+      mkCoordinator = throw "the furnish tests forced the coordinator builder";
       filePrincipals = _: [ ];
       hostUserNames = _: [ ];
     })
@@ -659,7 +668,7 @@ let
       name = "manifest context pins a dedicated artifact object";
       pass =
         lib.hasPrefix "/nix/store/" artifactTarget
-        && artifactTarget != toString ../default.nix
+        && artifactTarget != toString ./fixtures/example.conf
         && builtins.elem (builtins.unsafeDiscardStringContext artifactTarget) (
           builtins.attrNames manifestContext
         );

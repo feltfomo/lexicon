@@ -1,13 +1,21 @@
 {
   lib,
+  krisis,
+  axiom,
   descriptors ? null,
   relations ? null,
 }:
 let
   surface = import ./surface.nix {
-    inherit lib descriptors relations;
+    inherit
+      lib
+      krisis
+      axiom
+      descriptors
+      relations
+      ;
   };
-  unitImporter = import ./import-units.nix { inherit lib; };
+  unitImporter = import ./import-units.nix { inherit lib krisis axiom; };
 in
 {
   inherit (surface)

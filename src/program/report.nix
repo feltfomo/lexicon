@@ -2,11 +2,12 @@
 # declarations, the theme compiler elaborates them, and the matugen runtime
 # module aggregates cross-aspect entries, and an author gets the same error
 # shape from all three.
-{ lib }:
+{
+  lib,
+  krisis,
+  axiom,
+}:
 let
-  axiom = import ../axiom { inherit lib; };
-  krisis = import ../krisis { inherit lib; };
-
   reporter = krisis.mkReporter {
     formatHeader = count: "program: ${toString count} declaration error(s)";
     formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
