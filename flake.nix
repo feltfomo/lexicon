@@ -15,6 +15,13 @@
       url = "github:feltfomo/krisis";
       inputs.axiom.follows = "axiom";
     };
+    # furnish links files natively through this rust binary, so the coordinator
+    # is lexicon's dependency and not a consumer's. a config adds lexicon and
+    # gets the linker with it.
+    furnish-coordinator = {
+      url = "github:feltfomo/furnish-coordinator";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -29,14 +36,27 @@
       # every library stays a function of its dependencies. the consumer supplies
       # lib, krisis, axiom, and the ownership doors, so nothing here pins a
       # nixpkgs on a caller's behalf.
-      flake.lib = {
-        ownerships = import ./src/ownerships;
-        furnish = import ./src/furnish;
-        furnishRuntime = import ./src/furnish/runtime.nix;
-        program = import ./src/program.nix;
-        report = import ./src/program/report.nix;
-        den = import ./src/den.nix;
-      };
+      #
+      # the coordinator is the exception, because it's ours rather than the
+      # caller's: the two surfaces that need it get it filled in from our own
+      # input. args comes last so a suite can still override it with a throw to
+      # prove the pure path never forces the builder.
+      flake.lib =
+        let
+          withCoordinator =
+            path: args: import path ({ inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args);
+        in
+        {
+          ownerships = import ./src/ownerships;
+          furnish = import ./src/furnish;
+          furnishRuntime = withCoordinator ./src/furnish/runtime.nix;
+          program = withCoordinator ./src/program.nix;
+          report = import ./src/program/report.nix;
+          den = import ./src/den.nix;
+          # so a consumer wanting the binary as a package or app builds it with
+          # the same builder the reconcile unit uses, still without an input.
+          inherit (inputs.furnish-coordinator.lib) mkCoordinator;
+        };
 
       perSystem =
         { pkgs, ... }:
