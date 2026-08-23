@@ -20,6 +20,26 @@
         "type": "github"
       }
     },
+    "disko": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1781152676,
+        "narHash": "sha256-RxWs5ND31KzTG7wvMM+PMfUjyNpmIEr999lqNARaM5o=",
+        "owner": "nix-community",
+        "repo": "disko",
+        "rev": "ff8702b4de27f72b4c78573dfb89ec74e36abdf1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "disko",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -101,11 +121,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1786230527,
-        "narHash": "sha256-KmlUzBBRBlyIS6ET9+4lVZkI+a4Tr84RPFu2Gj7s2mQ=",
+        "lastModified": 1787826771,
+        "narHash": "sha256-cWpqRrI3nHnz/oPaQG7/QV0/QZrREA0So94M4NsHS5g=",
         "owner": "feltfomo",
         "repo": "furnish-coordinator",
-        "rev": "607dfcd24de0bd0644359a94b0ae452bdee9abc4",
+        "rev": "36d48f5a0c2a6cce7ec024fff8522784c67ec8e7",
         "type": "github"
       },
       "original": {
@@ -248,6 +268,7 @@
     "root": {
       "inputs": {
         "axiom": "axiom",
+        "disko": "disko",
         "flake-parts": "flake-parts_2",
         "furnish-coordinator": "furnish-coordinator",
         "krisis": "krisis",

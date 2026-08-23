@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -27,7 +31,13 @@
   outputs =
     inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.treefmt-nix.flakeModule ];
+      imports = [
+        inputs.treefmt-nix.flakeModule
+        ./tests/system/nix/furnish-coordinator.nix
+        ./tests/system/nix/program-files-regression.nix
+        ./tests/system/nix/rebuild-vm-golden.nix
+        ./tests/system/nix/furnish-coordinator-gate.nix
+      ];
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -56,6 +66,119 @@
           # so a consumer wanting the binary as a package or app builds it with
           # the same builder the reconcile unit uses, still without an input.
           inherit (inputs.furnish-coordinator.lib) mkCoordinator;
+        };
+
+      flake.nixosConfigurations =
+        let
+          system = "x86_64-linux";
+          pkgs = import inputs.nixpkgs { inherit system; };
+          inherit (pkgs) lib;
+          axiom = inputs.axiom.lib.axiom { inherit lib; };
+          krisis = inputs.krisis.lib.krisis { inherit lib axiom; };
+
+          merge =
+            left: right:
+            lib.zipAttrsWith
+              (
+                _: values:
+                if builtins.all builtins.isList values then
+                  builtins.concatLists values
+                else if builtins.all builtins.isAttrs values then
+                  lib.foldl' merge { } values
+                else
+                  lib.last values
+              )
+              [
+                left
+                right
+              ];
+          collect =
+            ctx: unit:
+            let
+              hostName = ctx.host.name or null;
+              userName = ctx.user.name or null;
+              active =
+                (!(unit ? when) || unit.when ctx)
+                && (!(unit ? hosts) || builtins.elem hostName unit.hosts)
+                && (!(unit ? users) || builtins.elem userName unit.users)
+                && (!(unit ? exceptHosts) || !(builtins.elem hostName unit.exceptHosts))
+                && (!(unit ? exceptUsers) || !(builtins.elem userName unit.exceptUsers));
+              own = removeAttrs unit [
+                "hosts"
+                "users"
+                "exceptHosts"
+                "exceptUsers"
+                "when"
+                "children"
+              ];
+            in
+            if !active then { } else lib.foldl' merge own (map (collect ctx) (unit.children or [ ]));
+          resolve = units: ctx: lib.foldl' merge { } (map (collect ctx) units);
+          program = import ./src/program.nix {
+            inherit
+              lib
+              krisis
+              axiom
+              resolve
+              ;
+            resolveSystem = resolve;
+            resolvePrepared = resolve;
+            inherit (inputs.furnish-coordinator.lib) mkCoordinator;
+            filePrincipals = args: [
+              {
+                authority = {
+                  scope = "user";
+                  identity = args.user.name;
+                };
+              }
+            ];
+            hostUserNames = _: [ "tester" ];
+          };
+          furnishRuntime = import ./src/furnish/runtime.nix {
+            inherit krisis axiom;
+            inherit (inputs.furnish-coordinator.lib) mkCoordinator;
+          };
+          fixtureProgram = program {
+            files = [
+              {
+                dest = ".config/lexicon/static.conf";
+                src = ./tests/system/fixture/payload.conf;
+              }
+              {
+                dest = ".config/lexicon/writable.conf";
+                src = ./tests/system/fixture/writable.conf;
+                representation = "writable";
+                onConflict = "runtime-wins";
+              }
+            ];
+          };
+        in
+        {
+          furnish-vm = inputs.nixpkgs.lib.nixosSystem {
+            inherit system;
+            specialArgs = {
+              inherit inputs;
+              host = {
+                name = "furnish-vm";
+                inherit system;
+              };
+              user.name = "tester";
+            };
+            modules = [
+              inputs.disko.nixosModules.disko
+              furnishRuntime
+              fixtureProgram.nixos
+              ./tests/system/fixture/host.nix
+              ./tests/system/fixture/disko.nix
+            ];
+          };
+          furnish-installer = inputs.nixpkgs.lib.nixosSystem {
+            inherit system;
+            specialArgs = { inherit inputs; };
+            modules = [
+              (import ./tests/system/fixture/installer.nix { inherit inputs; })
+            ];
+          };
         };
 
       perSystem =
@@ -172,9 +295,23 @@
           };
 
           devShells.default = pkgs.mkShell {
-            packages = [
-              pkgs.nixfmt
-              pkgs.statix
+            packages = with pkgs; [
+              bashInteractive
+              deadnix
+              delve
+              git
+              go
+              gofumpt
+              golangci-lint
+              gopls
+              jq
+              marksman
+              nixd
+              nixfmt
+              shellcheck
+              shfmt
+              statix
+              taplo
             ];
           };
         };

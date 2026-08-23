@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "lexicon-furnish-system-proof/v1",
+  "authority": "synthetic-furnish-vm",
+  "host": "furnish-vm",
+  "user": "tester",
+  "hashAlgorithm": "sha256"
+}

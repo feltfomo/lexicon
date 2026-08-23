@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "declarationIdentity": "fixture.files[0]",
+      "destination": ".config/lexicon/static.conf",
+      "sourceKind": "static-file",
+      "sourcePath": "tests/system/fixture/payload.conf"
+    },
+    {
+      "declarationIdentity": "fixture.files[1]",
+      "destination": ".config/lexicon/writable.conf",
+      "sourceKind": "static-file",
+      "sourcePath": "tests/system/fixture/writable.conf"
+    }
+  ]
+}
