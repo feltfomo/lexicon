@@ -105,10 +105,14 @@ let
 
   # nixos marks the initrd invocation before it enters the target root. every
   # other activation remains a reconcile, including an invocation with no mark.
+  # nixos-install can run activation before tmpfiles has prepared the target's
+  # volatile /run hierarchy, so the runtime owner must prepare the coordinator's
+  # trusted lock directory before entering its fail-closed boundary.
   activationCommand = ''
     if [ "''${IN_NIXOS_SYSTEMD_STAGE1:-}" = true ]; then
       printf '%s\n' 'furnish activation boot path defers reconciliation to furnish.service'
     else
+      ${pkgs.coreutils}/bin/install -d -m 0755 /run/lock
       ${reconcileCommand}
     fi
   '';
