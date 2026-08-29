@@ -1,287 +1,174 @@
-# Program
+# program
 
-`program` is the normal aspect-authoring surface for software that installs packages, imports Home Manager modules, places files, expands configuration directories, registers application themes, or emits a NixOS slice.
-
-A declaration has no effect unless it contains a capability such as `pkg`, `imports`, `files`, `directories`, `theme`, or `nixos`.
-
-## Minimal program
+`program` is the function an aspect declares against. you hand it one attribute
+set and it hands back the home manager and nixos modules den installs.
+everything in between is validation, ownership resolution and file expansion.
 
 ```nix
-{ program, rootPath, ... }:
-{
-  den.aspects.ghostty = program {
-    pkg = pkgs: pkgs.ghostty;
-    directories = [
-      {
-        src = "${rootPath}/configs/ghostty";
-        dest = ".config/ghostty";
-      }
-    ];
-  };
-}
-```
-
-## Combining Home Manager and other capabilities
-
-Put all capabilities for one application in the same `program` declaration. Use `imports` for Home Manager configuration, then add `pkg`, `files`, `directories`, `theme`, or `nixos` beside it as needed. Do not merge the result of `program` with a separate `homeManager` attribute.
-
-```nix
-{ program, rootPath, ... }:
-{
-  den.aspects.example = program {
-    imports = [
-      (
-        { config, ... }:
-        {
-          programs.example = {
-            enable = true;
-            settings.themeFile = "${config.home.homeDirectory}/.config/example/reactive.conf";
-          };
-        }
-      )
-    ];
-
-    files = [
-      {
-        src = "${rootPath}/configs/example/config.toml";
-        dest = ".config/example/config.toml";
-      }
-    ];
-
-    theme = {
-      id = "example";
-      output = ".config/example/reactive.conf";
-      renderers = {
-        noctalia = {
-          source = "${rootPath}/configs/example/reactive.conf";
-          sharedWith = [
-            "dms"
-            "illogical-impulse"
-            "end4-pc"
-          ];
-        };
-        caelestia.source = "${rootPath}/configs/example/caelestia.conf";
-      };
-    };
-  };
-}
-```
-
-`imports` is the normal bridge to Home Manager. Keeping it inside `program` gives one readable declaration for the application and lets Program combine every selected capability under the same ownership rules.
-
-## Theme registration
-
-A theme declaration describes one application theme. Common renderer settings live beside `renderers`; a renderer may override any of them locally. `renderers` explicitly selects the shells that may render the theme.
-
-```nix
-theme = {
-  id = "kitty";
-  output = ".config/kitty/themes/reactive.conf";
-  reload = "pkill -SIGUSR1 kitty";
-
-  renderers = {
-    noctalia = {
-      source = "${rootPath}/configs/kitty/themes/reactive.conf";
-      sharedWith = [
-        "dms"
-        "illogical-impulse"
-        "end4-pc"
-      ];
-    };
-
-    caelestia.source = "${rootPath}/configs/kitty/themes/caelestia.conf";
-  };
+den.aspects.hyprland = program {
+  hosts = [ "khion" "lumi" ];
+  pkg = pkgs: pkgs.pyprland;
+  nixos = { pkgs, host, ... }: [ ... ];
+  files = [ ... ];
+  directories = [ ... ];
+  theme = { ... };
 };
 ```
 
-The declaration visibly says that Kitty has one renderer shared by Noctalia, DMS, Illogical Impulse, and end4-pC, plus a distinct Caelestia template. `output` and `reload` are written once because they describe the application result rather than a shell-specific input.
+## the declaration
 
-- An omitted shell is not registered; its configuration remains static unless another declaration manages it.
-- Shared fields are applied first, then renderer-local fields override them.
-- `sharedWith` directly copies the complete effective renderer settings to the named shells. It is not transitive and does not chase another renderer declaration.
-- The primary renderer key carries no priority. Noctalia shared with DMS has the same meaning as DMS shared with Noctalia.
-- A shell may be assigned by exactly one renderer declaration within a template.
-- An empty renderer is valid only when inherited fields make its effective settings complete.
+a declaration is a closed vocabulary. an unknown key is a typo and is reported
+as one, naming the nearest legal key when there is one close enough.
 
-### Renderer fields
+| key | shape | meaning |
+| --- | --- | --- |
+| `hosts` | list of names | claim, restricts the whole aspect |
+| `users` | list of names | claim |
+| `exceptHosts` | list of names | claim |
+| `exceptUsers` | list of names | claim |
+| `when` | predicate | claim |
+| `pkg` | function of pkgs | one package into the user's profile |
+| `nixos` | function, list, or one slice | system configuration |
+| `imports` | list | home manager imports |
+| `files` | list of file entries | files furnish installs |
+| `directories` | list of directory entries | directory trees furnish installs |
+| `theme` | attribute set | theme templates |
 
-The following fields may be written beside `renderers` as shared settings or inside a renderer as an override:
+the five claim keys are the ownership engine's claim keys and mean the same
+thing here that they mean anywhere else.
 
-- `source`: template source path.
-- `output`: stable path below the user's home directory.
-- `reload`: optional command run after publishing the rendered output.
-- `subdir`: optional renderer template subdirectory.
-- `placedAs`: optional basename for the shell's managed template copy. It defaults to the basename of `source`. Current adapters use explicit input paths, so changing this name does not change rendering behavior or `output`.
-- `subId`: optional suffix for the registration identity.
-- `native`: optional backend-specific registration fields.
+## nixos
 
-`placedAs` controls the basename of the shell-managed template copy. It is useful both for readable shell-side names and for avoiding staging collisions. The Firefox templates below stage `caelestia-userChrome.css` and `caelestia-userContent.css` as `userChrome.css` and `userContent.css`.
-
-Registration identity and filesystem identity are separate. `id` plus `subId` distinguishes registrations, but it does not make identical staged paths distinct. If two templates for the same application use sources with the same basename and land in the same renderer subdirectory, give them different `placedAs` values. Otherwise Furnish correctly reports `collision-detection/duplicate-filesystem-identity`. Cross-application reuse does not normally collide because the application ID namespaces the renderer directory.
-
-Renderer entries additionally accept `sharedWith`, a list of registered shell names that use the same effective settings. Program validates these names against the adapter registry, reports every known shell, and suggests a nearby name for likely typos.
-
-Every effective renderer must define `source` and `output` after shared fields and local overrides are combined.
-
-### Renderer-specific fields
-
-Noctalia and DMS adapters may also set `native` fields supported by their registration format.
+three spellings.
 
 ```nix
-theme = {
-  id = "example";
-  renderers.dms = {
-    source = ./colors.conf;
-    output = ".config/example/colors.conf";
-    native.compare_to = "dark";
-  };
-};
+nixos = { services.foo.enable = true; };
+nixos = [ { services.foo.enable = true; } { services.bar.enable = true; } ];
+nixos = { pkgs, config, host, user, ... }: [ ... ];
 ```
 
-Caelestia does not expose native per-template registration fields. Program rejects `renderers.caelestia.native` rather than pretending the backend supports it.
+only the function form is applied, and it receives the build, so a slice can
+read the resolved host instead of rebuilding it from `pkgs.stdenv.hostPlatform`
+and `config.networking.hostName`.
 
-### Caelestia publication
-
-Caelestia renders registered templates into its state directory. Program emits one executable publisher per application under `.config/caelestia/theme-hooks/`.
-
-A publisher installs every output for that application before running any reload command. Entries are ordered by registration identity, and both the publisher and aggregate `postHook` stop on the first failure. This prevents a partial multi-output publication from being followed by a reload that observes only some new files.
-
-## Multiple outputs
-
-Use `templates` when one application publishes multiple files. `id` remains application-wide; shared fields belong inside each template because each one describes a different output.
-
-When multiple entries reuse one source basename, assign distinct staged basenames even if their `subId` and `output` differ:
+the slices hang under the declaration's own claim, narrowed to what a system
+scope resolve can bind. the outer `hosts` owns them all.
 
 ```nix
-theme = {
-  id = "qt";
-  templates = [
-    {
-      subId = "qt5ct";
-      source = "${rootPath}/configs/qt/reactive.conf";
-      output = ".config/qt5ct/colors/reactive.conf";
-      placedAs = "qt5ct.conf";
-      renderers.noctalia.sharedWith = [ "dms" ];
-    }
-    {
-      subId = "qt6ct";
-      source = "${rootPath}/configs/qt/reactive.conf";
-      output = ".config/qt6ct/colors/reactive.conf";
-      placedAs = "qt6ct.conf";
-      renderers.noctalia.sharedWith = [ "dms" ];
-    }
+den.aspects.hyprland = program {
+  hosts = [ "khion" "lumi" ];
+  nixos = { pkgs, ... }: [
+    { programs.hyprland.enable = true; }
+    { hosts = [ "khion" ]; hardware.nvidia.modesetting.enable = true; }
   ];
 };
 ```
 
-Without the distinct `placedAs` values, both registrations would try to stage `reactive.conf` at the same shell-managed path.
+the first slice lands on both hosts because it inherits the declaration's
+claim. the second narrows within it. a slice cannot widen past the
+declaration, so a host the declaration does not claim resolves to nothing.
 
-```nix
-theme = {
-  id = "firefox";
-  templates = [
-    {
-      subId = "chrome";
-      output = ".config/mozilla/firefox/feltfomo/chrome/userChrome.css";
-      renderers = {
-        noctalia = {
-          source = "${rootPath}/configs/firefox/chrome/userChrome.css";
-          sharedWith = [
-            "dms"
-            "illogical-impulse"
-            "end4-pc"
-          ];
-        };
-        caelestia = {
-          source = "${rootPath}/configs/firefox/chrome/caelestia-userChrome.css";
-          placedAs = "userChrome.css";
-        };
-      };
-    }
-    {
-      subId = "content";
-      output = ".config/mozilla/firefox/feltfomo/chrome/userContent.css";
-      renderers = {
-        noctalia = {
-          source = "${rootPath}/configs/firefox/chrome/userContent.css";
-          sharedWith = [
-            "dms"
-            "illogical-impulse"
-            "end4-pc"
-          ];
-        };
-        caelestia = {
-          source = "${rootPath}/configs/firefox/chrome/caelestia-userContent.css";
-          placedAs = "userContent.css";
-        };
-      };
-    }
-  ];
-};
-```
+## files
 
-The multi-template form does not mix single-template fields beside `templates`. Put shared fields inside each list entry.
+a file entry names one source and one destination, and may carry a claim so it
+reaches only some of the aspect's hosts or users.
 
-## Compositor themes
+| key | meaning |
+| --- | --- |
+| the five claim keys | narrow this entry within the declaration |
+| `src` | source path |
+| `dest` | destination, relative and normalized |
+| `label` | name shown in diagnostics |
+| `representation` | how furnish materializes it |
+| `onConflict` | one of the declared conflict policies |
+| `provenance` | free text recorded on the installed file |
 
-Compositors register only with the shell engine used in that session.
+## directories
 
-```nix
-theme = {
-  id = "hyprland";
-  renderers.caelestia = {
-    source = "${rootPath}/configs/hypr/caelestia-colors.lua";
-    output = ".config/hypr/colors.lua";
-    placedAs = "colors.lua";
-    reload = "hyprctl reload";
-  };
-};
-```
+a directory entry installs a whole tree. the tree is read once per aspect, not
+once per user.
 
-Niri uses `renderers.dms`; Mango uses `renderers.noctalia`.
+| key | meaning |
+| --- | --- |
+| the five claim keys | narrow this entry within the declaration |
+| `src` | source directory |
+| `dest` | destination root |
+| `exclude` | normalized relative names to leave out |
+| `files` | per file overrides inside the tree |
+| `representation`, `onConflict`, `provenance` | defaults for every file in the tree |
 
-## Files
+an entry in `files` names one or more members of the tree and overrides their
+lifecycle keys.
 
-```nix
-files = [
-  {
-    src = "${rootPath}/configs/example/config.toml";
-    dest = ".config/example/config.toml";
-  }
-];
-```
+| key | meaning |
+| --- | --- |
+| the five claim keys | narrow this rule |
+| `names` | non empty list of normalized relative names |
+| `representation`, `onConflict`, `provenance` | overrides for those names |
 
-Optional file lifecycle fields are `representation`, `onConflict`, and `provenance`.
+the checks are strict on purpose. excluding a name that is not in the tree,
+overriding a name that is not in the tree, overriding a name you also excluded,
+repeating an override name, and excluding or overriding a file the theme owns
+are all errors that name the declaring index.
 
-## Directories
+### why the walk is split
 
-```nix
-directories = [
-  {
-    src = "${rootPath}/configs/example";
-    dest = ".config/example";
-    exclude = [ "generated.conf" ];
-    files = [
-      {
-        names = [ "state.json" ];
-        representation = "writable";
-        onConflict = "source-wins";
-      }
-    ];
-  }
-];
-```
+reading the source tree does not depend on which user is being resolved, but it
+used to happen inside the per user resolve, so a two user host walked every
+directory twice. `prewalkDirectory` does everything that is context free, the
+readDir recursion, the membership inventory and the shape and source checks
+that gate them. the aspect runs it once per declared directory and every user
+slice threads the result through `expandDirectory`.
 
-Directory expansion manages regular files recursively. Theme sources under that directory are reserved automatically and are not also emitted as ordinary files.
+the prewalk is looked up by the declaring index. a missing index means the
+declared list and the resolved entries disagree, which throws and names the
+index. it used to fall back to an empty walk, which turned that disagreement
+into a directory that silently installed nothing.
 
-## Ownership
+## theme
 
-Program declarations and nested file, directory, or theme entries accept Ownerships claims such as `hosts`, `users`, `exceptHosts`, `exceptUsers`, and `when`.
+the theme block carries an `id` and either one inline template or a `templates`
+list. the two spellings cannot be mixed and mixing them is reported with the
+offending keys. a single template is normalized into a one element list before
+the compiler sees it, so the compiler only handles one shape.
 
-Prefer the highest declaration level that accurately expresses ownership. Use nested claims only when one capability has narrower ownership than the rest of the program.
+matugen backed templates are tagged with the user context and merged once by the
+shared runtime, because a matugen renderer reads one config file per user.
 
-## Validation
+## what program emits
 
-Program uses a closed declaration schema. It rejects unknown fields, malformed destinations, incomplete effective renderer settings, malformed or unknown `sharedWith` names, repeated or self-shared shells, overlapping renderer groups, unsupported native fields, duplicate registration identities, invalid conflict policies, and theme sources hidden under excluded directory subtrees. Independent declaration problems are accumulated before Program stops; dependent elaboration does not run after an invalid renderer shape.
+`homeManager` is emitted when the declaration has a `pkg` or any `imports`. it
+resolves the declaration for the given host and user and installs the package
+and the imports.
 
-Payloads selected by Ownerships are validated before Program emits Furnish declarations.
+`nixos` is emitted when the declaration has a `nixos` block or owns any files.
+it resolves the system slices, and when the declaration owns files it also
+resolves the file, directory and theme entries, expands them, and hands the
+result to furnish along with the host's principals.
+
+the furnish namespace is the resolved host's canonical id. when there is no
+resolved host, standalone evaluation for instance, it falls back to the
+platform and hostname pair.
+
+an assertion fires when an aspect produces files but no principal receives
+them, and it lists the users the host actually has, because that failure is
+almost always a claim that reaches no one.
+
+## the file layout
+
+`program.nix` is the composition root. it wires the pieces together and holds
+the two emitters.
+
+| file | holds |
+| --- | --- |
+| `program/fields.nix` | the small predicates and key sets everything shares |
+| `program/spec.nix` | the closed vocabularies, the schemas, `validateSpec` |
+| `program/directories.nix` | the readDir walk, the prewalk split, expansion |
+| `program/units.nix` | the ownership units a declaration becomes |
+| `program/report.nix` | the diagnostics policy and the suggester |
+| `program/theme/` | the theme compiler and its backends |
+
+the suggester is duplicated between `program/report.nix` and
+`ownerships/axes.nix` rather than imported. the `program-boundary` check exists
+to keep the program layer from reaching into ownership internals, and one small
+duplicated helper is cheaper than a hole in that boundary.
