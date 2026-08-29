@@ -8,6 +8,10 @@
 # left is its config. untagged means globally owned. this is a thin translator
 # onto the engine's claim tree and holds no resolution logic of its own, so every
 # nesting and conflict guarantee still comes from the engine.
+#
+# every door is one point in a four-axis product -- scope x projection x strict x
+# merge -- and `resolverFor` is the only body. the tables at the bottom name the
+# points worth exporting, so adding or dropping a door is a row, not a function.
 {
   lib,
   krisis,
@@ -38,6 +42,7 @@ let
     lib.optionalAttrs (builtins.isAttrs unit && unit ? label && builtins.isString unit.label) {
       primary.label = unit.label;
     };
+
   descriptorSet = axes.compileDescriptors (
     if descriptors == null then axes.descriptors else descriptors
   );
@@ -45,7 +50,7 @@ let
   relationRegistrations = if relations == null then axes.relations else relations;
   resolveLib = import ./resolve.nix {
     inherit lib krisis axiom;
-    descriptors = axisDescriptors;
+    compiled = descriptorSet;
     relations = relationRegistrations;
   };
   mergeLib = import ./merge.nix { inherit lib krisis axiom; };
@@ -60,13 +65,14 @@ let
   # plain-string identification for diagnostics, never config, never merged --
   # they ride the leaf as siblings of `value`, and `strip` only ever pulls
   # `.value`, so they're dropped before merge with no extra work.
-  reserved = claimKeys ++ [
+  carriedKeys = [
     "children"
-    "value"
     "label"
     "source"
     "mergeProfile"
   ];
+  carriedAttrs = lib.genAttrs carriedKeys (_: null);
+  reserved = claimKeys ++ [ "value" ] ++ carriedKeys;
 
   # ownership keys are read by name off a unit's top level, so a config value
   # sitting on a reserved key would be silently swallowed as a claim. the one
@@ -195,7 +201,7 @@ let
             unitProblem (
               {
                 code = "unit-merge-profile-unknown";
-                message = "unknown merge profile '${checked.mergeProfile}'";
+                message = "unknown merge profile '${checked.mergeProfile}'${axes.suggestionFor profileNames checked.mergeProfile}";
               }
               // labelOf checked
             )
@@ -226,8 +232,8 @@ let
       children = map (translateWith profileNames) (profileChecked.children or [ ]);
       carriesDeclaration = lib.any (key: profileChecked ? ${key}) (
         claimKeys
+        ++ [ "value" ]
         ++ [
-          "value"
           "label"
           "source"
           "mergeProfile"
@@ -243,264 +249,224 @@ let
           true
       );
     in
+    # the carried keys ride through as one projection; `children` is reapplied
+    # last because the translated tree replaces the authored one.
     builtins.seq valid (
       {
         inherit claim;
       }
       // lib.optionalAttrs (payload != { }) { value = payload; }
+      // builtins.intersectAttrs carriedAttrs profileChecked
       // lib.optionalAttrs (profileChecked ? children) { inherit children; }
-      // lib.optionalAttrs (profileChecked ? label) { inherit (profileChecked) label; }
-      // lib.optionalAttrs (profileChecked ? source) { inherit (profileChecked) source; }
-      // lib.optionalAttrs (profileChecked ? mergeProfile) { inherit (profileChecked) mergeProfile; }
     );
 
   translate = translateWith null;
 
-  # bind the surface to a roster once -- the fleet the owners are checked against.
-  # the returned resolve takes the authored units and yields a context-consuming
-  # function; den fills host/user, so the aspect never destructures them. the
-  # engine args -- registry (host, user, and the shared `when` predicate axis)
-  # plus registered relation stages -- all come from resolve.nix's engineargsfor, so
-  # nothing here is surface-local anymore. `resolve` is a name at three layers --
-  # this public one an aspect calls, resolve.nix's `resolvewith`, and the
-  # engine's own `resolve` invoked below; only this one is meant for aspects.
-  mkResolve =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-    in
-    units: rawCtx:
-    engine.resolve {
-      inherit (base) registry stages;
-      merge = defaultMerge;
-      ctx = axes.contextFor base.registry rawCtx;
-    } { children = map translate units; };
-
-  # trace siblings use the same translated tree and engine pipeline as their
-  # value-only counterparts. they are exported for manual inspection and tests;
-  # ordinary aspect bindings keep their existing return type.
-  mkResolveTrace =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-    in
-    units: rawCtx:
-    engine.trace {
-      inherit (base) registry stages;
-      merge = defaultMerge;
-      ctx = axes.contextFor base.registry rawCtx;
-    } { children = map translate units; };
-
   # a system-scope resolve binds a host but no user (ctx.user = null), so a
   # `users` / `exceptusers` claim anywhere in the tree can never own anything --
   # a host-wide slice has no user to narrow to. reject that when the units are
-  # handed in, before resolve runs, naming the offending key and its value. the
-  # engine's resolve-time missing-ctx throw still backstops a miss here, so this
-  # is a clearer, earlier message rather than the only line of defense.
-  forbiddenByScope = lib.genAttrs [
-    "user"
-    "system"
-  ] (axes.forbiddenKeysFor axisDescriptors);
-
-  assertScope =
-    scope: unit:
+  # handed in, before resolve runs, naming every offending key and its value.
+  # the engine's resolve-time missing-ctx throw still backstops a miss here, so
+  # this is a clearer, earlier message rather than the only line of defense.
+  scopeGuard =
+    scope: units:
     let
-      forbidden = forbiddenByScope.${scope};
-      offending = builtins.filter (key: unit ? ${key.name}) forbidden;
-      bad = if offending == [ ] then null else builtins.head offending;
+      violations = axes.scopeViolationsFor axisDescriptors scope units;
     in
-    if bad != null then
-      throw (bad.scopeError scope bad.name unit.${bad.name})
-    else
-      lib.all (assertScope scope) (unit.children or [ ]);
+    if violations == [ ] then true else throw (lib.concatStringsSep "\n" violations);
 
-  # host-only sibling of mkresolve uses the same roster-bound registry and stages, but the
-  # ctx carries only a host (user = null). the retained user axis stays global on
-  # every unit here -- the guard above forbids narrowing it -- so assertctx never
-  # demands a user entity and the membership check (which reads claims and
-  # roster, never ctx) degrades to host-only on its own. mkresolve is left
-  # untouched, so every already-migrated user-scope aspect resolves identically.
-  mkResolveSystem =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-    in
-    units: rawCtx:
-    builtins.seq (lib.all (assertScope "system") units) (
-      engine.resolve {
-        inherit (base) registry stages;
-        merge = defaultMerge;
-        ctx = axes.contextFor base.registry rawCtx;
-      } { children = map translate units; }
-    );
-
-  mkResolveSystemTrace =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-    in
-    units: rawCtx:
-    builtins.seq (lib.all (assertScope "system") units) (
-      engine.trace {
-        inherit (base) registry stages;
-        merge = defaultMerge;
-        ctx = axes.contextFor base.registry rawCtx;
-      } { children = map translate units; }
-    );
-
-  # prepared resolve splits the pipeline at its context boundary: the units are
-  # translated and composed once when they are handed in, and the returned
-  # function runs only the per-ctx tail (ctx demand, select, survivors, merge)
-  # for each context given to it. callers that resolve the same unit set for
-  # many contexts -- program aspects instantiated once per user -- hoist every
-  # ctx-independent phase.
-  mkResolvePrepared =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-    in
-    units:
-    let
-      prepared = engine.prepare {
-        inherit (base) registry stages;
-        merge = defaultMerge;
-      } { children = map translate units; };
-    in
-    rawCtx: (engine.applyPrepared prepared (axes.contextFor base.registry rawCtx)).value;
-
-  # matrix siblings keep config values inside the engine and return only stable
-  # snapshot keys, human identity, shallow shape, and selection metadata. a
-  # caller can enrich each roster context for predicates that read more than
-  # entity names; the default is the smallest concrete context.
-  mkResolveMatrix =
-    roster:
-    {
-      units,
-      # hostname is the canonical host id; bind it as host.id so the generic
-      # memberof reads it directly instead of re-deriving (and double-prefixing)
-      # a system from a bare name.
-      contextFor ? (
-        { hostName, userName }: {
+  # matrix contexts differ only in which entity names the roster projection
+  # yields, so the scope picks the constructor and the default ctx together.
+  # hostname is the canonical host id; bind it as host.id so the generic
+  # memberof reads it directly instead of re-deriving (and double-prefixing) a
+  # system from a bare name.
+  matrixScopes = {
+    user = {
+      contexts = matrixLib.mkUserContexts;
+      defaultContext =
+        { hostName, userName }:
+        {
           host.id = hostName;
           user.name = userName;
-        }
-      ),
+        };
+    };
+    system = {
+      contexts = matrixLib.mkSystemContexts;
+      defaultContext = { hostName }: { host.id = hostName; };
+    };
+  };
+
+  # the one resolver body. scope decides which axes a unit may narrow on,
+  # projection decides what comes back, strict adds roster validation of the
+  # build ctx, and profileArgs swaps the merge and the profile vocabulary the
+  # translator accepts.
+  resolverFor =
+    {
+      roster,
+      base ? resolveLib.engineArgsFor roster,
+      scope ? "user",
+      projection ? "value",
+      strict ? false,
+      profileArgs ? null,
     }:
     let
-      base = resolveLib.engineArgsFor roster;
-      contexts = matrixLib.mkUserContexts {
-        inherit roster;
-        contextFor = names: axes.contextFor base.registry (contextFor names);
+      profiles = if profileArgs == null then null else profileArgs.profiles or mergeLib.builtinProfiles;
+      merge =
+        if profiles == null then
+          defaultMerge
+        else
+          (mergeLib.mkMerge (profileArgs // { inherit profiles; })).mergeTracked;
+      translateUnit = if profiles == null then translate else translateWith (builtins.attrNames profiles);
+      tree = units: { children = map translateUnit units; };
+      guarded = units: value: builtins.seq (scopeGuard scope units) value;
+      # strict validation runs before the body, not from inside the ctx thunk. a
+      # globally owned unit narrows on nothing and so never demands ctx, which
+      # meant an unrostered host resolved without the roster check ever running.
+      withContext =
+        rawCtx: body:
+        let
+          ctx = axes.contextFor base.registry rawCtx;
+        in
+        if strict then builtins.seq (resolveLib.validateCtxWith base ctx) (body ctx) else body ctx;
+      pipelineArgs = ctx: {
+        inherit (base) registry stages;
+        inherit merge ctx;
+      };
+      projections = {
+        value =
+          units:
+          guarded units (rawCtx: withContext rawCtx (ctx: engine.resolve (pipelineArgs ctx) (tree units)));
+        trace =
+          units:
+          guarded units (rawCtx: withContext rawCtx (ctx: engine.trace (pipelineArgs ctx) (tree units)));
+        # the ctx-independent half runs once when the units are handed in; the
+        # returned function is only ctx demand, select, survivors, and merge.
+        prepared =
+          units:
+          guarded units (
+            let
+              half = engine.prepare {
+                inherit (base) registry stages;
+                inherit merge;
+              } (tree units);
+            in
+            rawCtx: withContext rawCtx (ctx: (engine.applyPrepared half ctx).value)
+          );
+        matrix =
+          {
+            units,
+            contextFor ? matrixScopes.${scope}.defaultContext,
+          }:
+          guarded units (
+            matrixLib.report {
+              inherit roster scope;
+              inherit (base) registry stages;
+              contexts = matrixScopes.${scope}.contexts {
+                inherit roster;
+                contextFor = names: axes.contextFor base.registry (contextFor names);
+              };
+              unit = tree units;
+            }
+          );
       };
     in
-    matrixLib.report {
-      inherit roster contexts;
-      inherit (base) registry stages;
-      scope = "user";
-      unit.children = map translate units;
+    projections.${projection}
+      or (throw "ownerships: unknown resolver projection '${projection}'${axes.suggestionFor (builtins.attrNames projections) projection}");
+
+  # the exported points of the product. a combination that isn't here is one
+  # row away, and `resolverFor` reaches any of them directly.
+  doorTable = {
+    resolve = { };
+    resolveSystem = {
+      scope = "system";
+    };
+    trace = {
+      projection = "trace";
+    };
+    systemTrace = {
+      scope = "system";
+      projection = "trace";
+    };
+    prepared = {
+      projection = "prepared";
+    };
+    systemPrepared = {
+      scope = "system";
+      projection = "prepared";
+    };
+    matrix = {
+      projection = "matrix";
+    };
+    systemMatrix = {
+      scope = "system";
+      projection = "matrix";
+    };
+    strict = {
+      strict = true;
+    };
+    systemStrict = {
+      scope = "system";
+      strict = true;
+    };
+  };
+
+  # bind a roster once and take every door off one compiled base. skadi builds
+  # three doors per fleet; before this each one compiled its own registry,
+  # stages, and descriptor set from the same roster.
+  mkResolvers =
+    roster:
+    let
+      base = resolveLib.engineArgsFor roster;
+      door = args: resolverFor (args // { inherit roster base; });
+    in
+    lib.mapAttrs (_: door) doorTable
+    // {
+      resolverFor = door;
+      profiled = profileArgs: door { inherit profileArgs; };
+      systemProfiled =
+        profileArgs:
+        door {
+          inherit profileArgs;
+          scope = "system";
+        };
     };
 
-  mkResolveSystemMatrix =
-    roster:
-    {
-      units,
-      contextFor ? ({ hostName }: { host.id = hostName; }),
-    }:
-    let
-      base = resolveLib.engineArgsFor roster;
-      contexts = matrixLib.mkSystemContexts {
-        inherit roster;
-        contextFor = names: axes.contextFor base.registry (contextFor names);
-      };
-    in
-    builtins.seq (lib.all (assertScope "system") units) (
-      matrixLib.report {
-        inherit roster contexts;
-        inherit (base) registry stages;
-        scope = "system";
-        unit.children = map translate units;
-      }
-    );
+  # the mkResolve* names aspects and tests already bind, generated from the same
+  # table so there is no second implementation to keep in step.
+  legacyDoors = {
+    mkResolve = "resolve";
+    mkResolveSystem = "resolveSystem";
+    mkResolveTrace = "trace";
+    mkResolveSystemTrace = "systemTrace";
+    mkResolvePrepared = "prepared";
+    mkResolveSystemPrepared = "systemPrepared";
+    mkResolveMatrix = "matrix";
+    mkResolveSystemMatrix = "systemMatrix";
+    mkResolveStrict = "strict";
+    mkResolveSystemStrict = "systemStrict";
+  };
 
-  mkResolveProfiled =
-    profileArgs: roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-      profiles = profileArgs.profiles or mergeLib.builtinProfiles;
-      profiledMerge = (mergeLib.mkMerge (profileArgs // { inherit profiles; })).mergeTracked;
-      translateProfiled = translateWith (builtins.attrNames profiles);
-    in
-    units: rawCtx:
-    engine.resolve {
-      inherit (base) registry stages;
-      merge = profiledMerge;
-      ctx = axes.contextFor base.registry rawCtx;
-    } { children = map translateProfiled units; };
+  doors = lib.mapAttrs (
+    _: name: roster:
+    (mkResolvers roster).${name}
+  ) legacyDoors;
 
-  mkResolveSystemProfiled =
-    profileArgs: roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-      profiles = profileArgs.profiles or mergeLib.builtinProfiles;
-      profiledMerge = (mergeLib.mkMerge (profileArgs // { inherit profiles; })).mergeTracked;
-      translateProfiled = translateWith (builtins.attrNames profiles);
-    in
-    units: rawCtx:
-    builtins.seq (lib.all (assertScope "system") units) (
-      engine.resolve {
-        inherit (base) registry stages;
-        merge = profiledMerge;
-        ctx = axes.contextFor base.registry rawCtx;
-      } { children = map translateProfiled units; }
-    );
-
-  # opt-in strict siblings validate the ctx's
-  # roster-backed context names before delegating to the exact same
-  # resolve function, so the permissive path is byte-identical by
-  # construction rather than kept in sync by hand. mode is a separate
-  # function, not a flag -- the same precedent mkresolvesystem already set
-  # against mkresolve.
-  mkResolveStrict =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-      resolveFn = mkResolve roster;
-    in
-    units: rawCtx:
-    let
-      ctx = axes.contextFor base.registry rawCtx;
-    in
-    builtins.seq (resolveLib.validateRosterCtx roster ctx) (resolveFn units rawCtx);
-
-  # the descriptor projection fills unavailable entity keys with null, so strict
-  # system validation checks the host while every forbidden axis stays global.
-  mkResolveSystemStrict =
-    roster:
-    let
-      base = resolveLib.engineArgsFor roster;
-      resolveFn = mkResolveSystem roster;
-    in
-    units: rawCtx:
-    let
-      ctx = axes.contextFor base.registry rawCtx;
-    in
-    builtins.seq (resolveLib.validateRosterCtx roster ctx) (resolveFn units rawCtx);
+  mkResolveProfiled = profileArgs: roster: (mkResolvers roster).profiled profileArgs;
+  mkResolveSystemProfiled = profileArgs: roster: (mkResolvers roster).systemProfiled profileArgs;
 in
-{
+doors
+// {
   inherit
-    mkResolve
-    mkResolveSystem
-    mkResolveTrace
-    mkResolveSystemTrace
-    mkResolvePrepared
-    mkResolveMatrix
-    mkResolveSystemMatrix
-    mkResolveStrict
-    mkResolveSystemStrict
+    mkResolvers
+    resolverFor
     mkResolveProfiled
     mkResolveSystemProfiled
     translate
     claimKeys
     ;
+  # callers that build their own enclosing unit need to narrow a claim into the
+  # scope they are about to resolve in, or scopeGuard rejects the wrapper for
+  # carrying an axis the scope cannot bind.
+  projectClaims = axes.projectClaims axisDescriptors;
   inherit (resolveLib) define toRoster mkRoster;
 }
