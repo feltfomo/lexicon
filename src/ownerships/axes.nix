@@ -828,6 +828,81 @@ let
         map (key: key // { inherit (descriptor) scopeError; }) descriptor.authorKeys
     ) axisDescriptors;
 
+  # every scope violation in the tree rather than the first one. the old caller
+  # threw on `head offending`, so a unit that set two forbidden keys reported
+  # one and hid the other behind the next build.
+  scopeViolationsFor =
+    axisDescriptors: scope: units:
+    let
+      forbidden = forbiddenKeysFor axisDescriptors scope;
+      go =
+        unit:
+        builtins.concatMap (
+          key: lib.optional (unit ? ${key.name}) (key.scopeError scope key.name unit.${key.name})
+        ) forbidden
+        ++ builtins.concatMap go (unit.children or [ ]);
+    in
+    builtins.concatMap go units;
+
+  # a claim projected into a scope keeps only the axes that scope can bind. a
+  # host-only slice inherits its parent's host narrowing and drops the user one,
+  # which is what lets an enclosing declaration hand its claim to children
+  # without widening what the scope is allowed to express.
+  projectClaims =
+    axisDescriptors: scope: claims:
+    removeAttrs claims (map (key: key.name) (forbiddenKeysFor axisDescriptors scope));
+
+  # levenshtein distance, kept here because every closed key vocabulary in the
+  # subsystem wants the same "did you mean" on an unknown name.
+  editDistance =
+    a: b:
+    let
+      aChars = lib.stringToCharacters a;
+      bChars = lib.stringToCharacters b;
+      bLen = builtins.length bChars;
+      columns = lib.range 0 (bLen - 1);
+      step =
+        previous: i:
+        let
+          aChar = builtins.elemAt aChars i;
+          go =
+            row: j:
+            row
+            ++ [
+              (lib.min (lib.min (builtins.elemAt previous (j + 1) + 1) (builtins.elemAt row j + 1)) (
+                builtins.elemAt previous j + (if aChar == builtins.elemAt bChars j then 0 else 1)
+              ))
+            ];
+        in
+        builtins.foldl' go [ (i + 1) ] columns;
+    in
+    builtins.elemAt (builtins.foldl' step (lib.range 0 bLen) (
+      lib.range 0 (builtins.length aChars - 1)
+    )) bLen;
+
+  # a short name has to be a near-exact match before it is worth suggesting;
+  # "pkg" is one edit away from far too much to guess at.
+  suggest =
+    candidates: name:
+    let
+      threshold = if builtins.stringLength name <= 4 then 1 else 3;
+      near = builtins.filter (entry: entry.distance <= threshold) (
+        map (candidate: {
+          inherit candidate;
+          distance = editDistance name candidate;
+        }) candidates
+      );
+      ranked = builtins.sort (x: y: x.distance < y.distance) near;
+    in
+    if ranked == [ ] then null else (builtins.head ranked).candidate;
+
+  suggestionFor =
+    candidates: name:
+    let
+      match = suggest candidates name;
+    in
+    if match == null then "" else " -- did you mean '${match}'?";
+
   # project only entity keys named by the instantiated registry. a narrowed axis
   # whose raw entity is absent receives null; the engine's missing-context phase
   # rejects it before selection. predicate axes contribute no key because their
@@ -880,6 +955,11 @@ in
     leafStagesFor
     aliasValidationCheck
     forbiddenKeysFor
+    scopeViolationsFor
+    projectClaims
+    editDistance
+    suggest
+    suggestionFor
     contextFor
     ctxClaimFor
     ctxLabelFor
