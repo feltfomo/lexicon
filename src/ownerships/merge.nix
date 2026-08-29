@@ -309,6 +309,42 @@ let
           inherit provenance;
         };
 
+      # what happens at a path is decided once, as a record, before anything at
+      # that path runs. the tag names the arm; the arms are a lazy table, so
+      # deciding costs nothing the chosen arm would not have cost anyway.
+      treatmentFor =
+        path: a: b: contributors:
+        let
+          decision = if profilingEnabled then profileDecision path contributors else null;
+          bothAttrs = mergeAttrs a.value && mergeAttrs b.value;
+          takeRight =
+            profilingEnabled
+            && !decision.unitDisagreement
+            && decision.profile.attrsetTreatment == "take-right"
+            && builtins.any (key: b.value ? ${key}) (builtins.attrNames a.value);
+          unknownTreatment =
+            profilingEnabled
+            && !builtins.elem decision.profile.attrsetTreatment [
+              "deep"
+              "take-right"
+            ];
+        in
+        {
+          inherit decision contributors;
+          tag =
+            if bothAttrs then
+              if takeRight then
+                "take-right"
+              else if unknownTreatment then
+                "bad-treatment"
+              else
+                "deep"
+            else if isList a.value && isList b.value then
+              "list"
+            else
+              "scalar";
+        };
+
       # authorization is the first operation at every node. scalar equality,
       # list strategy selection, and conflict policy dispatch happen only after
       # every contributor at that path has passed the caller's predicate.
@@ -316,10 +352,11 @@ let
         path: a: b:
         let
           contributors = a.contributors ++ b.contributors;
-          checked = if lockingEnabled then authorize path contributors else true;
-          profilesChecked =
-            if profilingEnabled then lib.all validateContributorProfile contributors else true;
-          decision = if profilingEnabled then profileDecision path contributors else null;
+          gate = builtins.seq (if lockingEnabled then authorize path contributors else true) (
+            if profilingEnabled then lib.all validateContributorProfile contributors else true
+          );
+          plan = treatmentFor path a b contributors;
+          inherit (plan) decision;
           listProfile =
             if decision.unitDisagreement then
               failMerge (mergeProblem {
@@ -336,8 +373,6 @@ let
               })
             else
               decision.profile;
-          attrKeysOverlap = builtins.any (key: b.value ? ${key}) (builtins.attrNames a.value);
-
           deepMerge =
             let
               keys = lib.attrNames (a.value // b.value);
@@ -373,41 +408,29 @@ let
                 children = lib.mapAttrs (_: child: child.provenance) children;
               };
             };
-        in
-        builtins.seq checked (
-          builtins.seq profilesChecked (
-            if mergeAttrs a.value && mergeAttrs b.value then
-              if
-                profilingEnabled
-                && !decision.unitDisagreement
-                && decision.profile.attrsetTreatment == "take-right"
-                && attrKeysOverlap
-              then
-                let
-                  right = if b ? provenance then b else adoptNode path b;
-                in
-                {
-                  inherit (right) value;
-                  inherit contributors;
-                  provenance = {
-                    inherit path contributors;
-                    children = right.provenance.children;
-                  };
-                }
-              else if
-                profilingEnabled
-                && !builtins.elem decision.profile.attrsetTreatment [
-                  "deep"
-                  "take-right"
-                ]
-              then
-                failMerge (mergeProblem {
-                  code = "attrset-treatment-unknown";
-                  message = "unknown attrset treatment ${safeRender decision.profile.attrsetTreatment} in merge profile ${safeRender decision.name}";
-                })
-              else
-                deepMerge
-            else if isList a.value && isList b.value then
+
+          arms = {
+            deep = deepMerge;
+
+            "take-right" =
+              let
+                right = if b ? provenance then b else adoptNode path b;
+              in
+              {
+                inherit (right) value;
+                inherit contributors;
+                provenance = {
+                  inherit path contributors;
+                  children = right.provenance.children;
+                };
+              };
+
+            "bad-treatment" = failMerge (mergeProblem {
+              code = "attrset-treatment-unknown";
+              message = "unknown attrset treatment ${safeRender decision.profile.attrsetTreatment} in merge profile ${safeRender decision.name}";
+            });
+
+            list =
               let
                 name = if profilingEnabled then listProfile.listStrategy else listStrategyFor path;
                 strategy =
@@ -433,18 +456,19 @@ let
                   inherit path contributors;
                   children = { };
                 };
-              }
-            else
-              {
-                value = if profilingEnabled then scalarProfile.scalarPolicy path a b else conflictPolicy path a b;
-                inherit contributors;
-                provenance = {
-                  inherit path contributors;
-                  children = { };
-                };
-              }
-          )
-        );
+              };
+
+            scalar = {
+              value = if profilingEnabled then scalarProfile.scalarPolicy path a b else conflictPolicy path a b;
+              inherit contributors;
+              provenance = {
+                inherit path contributors;
+                children = { };
+              };
+            };
+          };
+        in
+        builtins.seq gate arms.${plan.tag};
 
       mergeTracked =
         entries:
