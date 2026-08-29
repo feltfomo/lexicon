@@ -19,7 +19,6 @@ let
     concatMap
     filter
     all
-    length
     ;
 
   inherit (krisis) safeShape;
@@ -47,11 +46,12 @@ let
     registry: unit:
     let
       go =
-        parent: node:
+        path: parent: node:
         let
           eff = narrowClaim registry parent (node.claim or { });
           self = lib.optional (node ? value) (
             {
+              key = path;
               claim = eff;
               inherit (node) value;
             }
@@ -60,9 +60,12 @@ let
             // lib.optionalAttrs (node ? mergeProfile) { inherit (node) mergeProfile; }
           );
         in
-        self ++ concatMap (go eff) (node.children or [ ]);
+        self
+        ++ lib.concatLists (
+          lib.imap0 (index: child: go "${path}/${toString index}" eff child) (node.children or [ ])
+        );
     in
-    go (topClaim registry) unit;
+    go "0" (topClaim registry) unit;
 
   # stages register against a closed set of pipeline views. rejecting an
   # unknown view keeps a misspelled coverage rule from silently failing open.
@@ -106,10 +109,22 @@ let
     let
       matrix = map (stage: map (leaf: stage.run registry leaf) leaves) (stagesFor "leaf" stages);
       diagnostics = concatMap (row: lib.concatLists row) matrix;
+      # transposed once, so the later phases join on the leaf's own key instead
+      # of each re-deriving the same position.
+      columns = lib.imap0 (index: leaf: {
+        inherit (leaf) key;
+        diagnostics = concatMap (row: builtins.elemAt row index) matrix;
+      }) leaves;
     in
     {
       value = if diagnostics == [ ] then leaves else throwDiags diagnostics;
-      trace = builtins.genList (i: concatMap (row: builtins.elemAt row i) matrix) (length leaves);
+      trace = map (column: column.diagnostics) columns;
+      byKey = builtins.listToAttrs (
+        map (column: {
+          name = column.key;
+          value = column.diagnostics;
+        }) columns
+      );
       reports = map (diagnosticsForStage: {
         view = "leaf";
         diagnostics = diagnosticsForStage;
@@ -258,6 +273,7 @@ let
         {
           inherit leaf axisResults selected;
           report = {
+            inherit (leaf) key;
             identity = identifyUnit {
               unit = leaf.value;
               label = leaf.label or null;
@@ -432,6 +448,7 @@ let
           ) observation.missing;
         in
         {
+          inherit (leaf) key;
           inherit diagnostics requirements;
         }
       ) leaves;
@@ -440,6 +457,12 @@ let
     {
       value = if diagnostics == [ ] then ctx else throwDiags diagnostics;
       trace = map (entry: entry.requirements) entries;
+      byKey = builtins.listToAttrs (
+        map (entry: {
+          name = entry.key;
+          value = entry.requirements;
+        }) entries
+      );
     };
 
   # prepared leaves have already passed leaf and tree checks. matrix projection
@@ -468,6 +491,7 @@ let
       inherit survivors;
       selectionTrace = selection.trace;
       ctxTrace = ctxObservation.trace;
+      ctxByKey = ctxObservation.byKey;
       survivorTrace = survivorObservation.trace;
     };
 
@@ -521,14 +545,17 @@ let
     {
       inherit (merged) value;
       mergeProvenance = merged.provenance;
-      trace = builtins.genList (
-        i:
-        (builtins.elemAt selected.selectionTrace i)
+      # joined on the leaf key every observation carries. this was a genList
+      # zipping three parallel lists by index, which only held while all three
+      # phases preserved compose order exactly.
+      trace = map (
+        entry:
+        entry
         // {
-          checkResults = builtins.elemAt leafObservation.trace i;
-          ctxRequirements = builtins.elemAt selected.ctxTrace i;
+          checkResults = leafObservation.byKey.${entry.key} or [ ];
+          ctxRequirements = selected.ctxByKey.${entry.key} or { };
         }
-      ) (length selected.selectionTrace);
+      ) selected.selectionTrace;
       stageReports = {
         leaf = leafObservation.reports;
         tree = treeTrace;
