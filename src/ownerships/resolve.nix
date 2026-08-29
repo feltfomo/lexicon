@@ -9,13 +9,19 @@
   axiom,
   descriptors ? null,
   relations ? null,
+  # a caller that already compiled the descriptor set hands it in so the whole
+  # subsystem validates descriptors once. surface.nix used to compile its own,
+  # which meant three doors on one roster paid for three identical compiles.
+  compiled ? null,
 }:
 let
   engine = import ./engine.nix { inherit lib krisis axiom; };
   axes = import ./axes.nix { inherit lib krisis axiom; };
-  descriptorSet = axes.compileDescriptors (
-    if descriptors == null then axes.descriptors else descriptors
-  );
+  descriptorSet =
+    if compiled != null then
+      compiled
+    else
+      axes.compileDescriptors (if descriptors == null then axes.descriptors else descriptors);
   axisDescriptors = descriptorSet.descriptors;
   relationRegistrations = axes.validateRelations axisDescriptors (
     if relations == null then axes.relations else relations
@@ -57,10 +63,9 @@ let
       ++ axes.leafStagesFor axisDescriptors roster;
     };
 
-  validateRosterCtx =
-    roster: ctx:
+  validateCtxWith =
+    args: ctx:
     let
-      args = engineArgsFor roster;
       claim = (engine.topClaim args.registry) // axes.ctxClaimFor axisDescriptors ctx;
       label = "standalone ctx ${axes.ctxLabelFor axisDescriptors ctx}";
       leaf = {
@@ -69,6 +74,10 @@ let
       };
     in
     builtins.seq (engine.check args.stages args.registry [ leaf ]) ctx;
+
+  # the roster form is the same check with the engine args built on the spot,
+  # for callers that hold a roster rather than a compiled base.
+  validateRosterCtx = roster: validateCtxWith (engineArgsFor roster);
 
   resolveWith =
     {
@@ -87,5 +96,11 @@ let
 in
 {
   inherit (rosterLib) define toRoster mkRoster;
-  inherit resolveWith engineArgsFor validateRosterCtx;
+  inherit
+    resolveWith
+    engineArgsFor
+    validateRosterCtx
+    validateCtxWith
+    descriptorSet
+    ;
 }
