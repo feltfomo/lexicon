@@ -24,12 +24,15 @@ in
     mkResolveTrace
     mkResolveSystemTrace
     mkResolvePrepared
+    mkResolveSystemPrepared
     mkResolveMatrix
     mkResolveSystemMatrix
     mkResolveStrict
     mkResolveSystemStrict
     mkResolveProfiled
     mkResolveSystemProfiled
+    resolverFor
+    mkResolvers
     translate
     claimKeys
     define
