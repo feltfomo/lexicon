@@ -1,16 +1,8 @@
 # Ownerships architecture
 
-Ownerships is descriptor-driven at the author and roster boundaries and axis-agnostic in the engine.
-
-## Optional unit discovery
-
-`import-units.nix` is a standalone input convenience in front of the resolver pipeline. It does not add a selection stage or infer ownership from file paths.
-
-`importUnits` recursively discovers regular `.nix` files, sorts them by relative path, imports them, calls function files with the supplied `args`, and flattens one-unit and list-returning files into one unit list. It validates only the outer unit shape; payload fields remain lazy.
-
-`importUnitSets` classifies a mixed tree through explicit top-level `system` and `home` directories and returns both collections. It rejects loose root `.nix` files and unknown top-level directories rather than guessing which module system owns their payload.
-
-The resulting lists enter the same translation and resolver pipeline as manually assembled lists.
+Ownerships is descriptor-driven at the author and roster boundaries, and
+axis-agnostic in the engine. The engine never branches on `host`, `user`, or
+`when`.
 
 ## Pipeline
 
@@ -27,11 +19,23 @@ optional file discovery
 → merge
 ```
 
-Each diagnostic phase fully aggregates its diagnostics before throwing. A failed earlier phase prevents later phases from evaluating.
+Each diagnostic phase aggregates every diagnostic it can find before throwing.
+A failed phase prevents later phases from evaluating.
+
+## Optional unit discovery
+
+`import-units.nix` sits in front of the pipeline as an input convenience. It
+adds no selection stage and infers no ownership from file paths.
+
+`importUnits` discovers `.nix` files recursively, sorts them by relative path,
+imports them, calls function files with `args`, and flattens the results.
+`importUnitSets` classifies a mixed tree through explicit `system` and `home`
+directories and rejects anything it cannot classify. Both validate only the
+outer unit shape; payload fields stay lazy.
 
 ## Translation
 
-`surface.nix` converts self-labeling units into the engine grammar:
+`surface.nix` converts self-labeling units into engine grammar:
 
 ```nix
 {
@@ -41,7 +45,7 @@ Each diagnostic phase fully aggregates its diagnostics before throwing. A failed
 }
 ```
 
-becomes conceptually:
+becomes, conceptually:
 
 ```nix
 {
@@ -51,46 +55,50 @@ becomes conceptually:
 }
 ```
 
-The surface validates reserved-key shape, recursive scope restrictions, `value` exclusivity, and profiled-door names. It contains no claim algebra or selection logic.
+The surface validates reserved-key shape, scope restrictions, `value`
+exclusivity, and profile names. It holds no claim algebra and no selection
+logic.
+
+## The resolver carrier
+
+`surface.nix` exposes one resolver body, `resolverFor`, parameterized on scope,
+projection, strictness, and merge profile. The named `mkResolve*` doors are
+generated from a table over it. [Doors](doors.md) covers the surface itself.
+
+The structural consequence is that a door is a row of data rather than a
+function body, so behaviour cannot diverge between two doors that should agree.
 
 ## Descriptor compilation
 
-`axes.compileDescriptors` validates a descriptor set once and projects:
+`axes.compileDescriptors` validates a descriptor set once and projects ordered
+descriptors, ordered author-key metadata, public claim keys, and the
+descriptors that have roster projection. Surface validation, registry
+construction, and roster construction reuse that compiled metadata.
 
-- ordered descriptors;
-- ordered author-key metadata;
-- public claim keys;
-- descriptors with roster projection.
+A compiled descriptor set can be handed to `resolverFor` as `base`, which is
+how `mkResolvers` builds a dozen doors for one roster while compiling its
+descriptors once.
 
-Surface validation, registry construction, and roster construction reuse this compiled metadata instead of repeatedly rediscovering it.
-
-A descriptor owns:
-
-- axis name and implementation;
-- author keys, ordering, shape validation, and parsing;
-- allowed scopes and scope-specific errors;
-- context claim and label projection;
-- optional declaration constructor and roster projector;
-- optional leaf stages.
+A descriptor owns its axis name and implementation, author keys and their
+ordering, shape validation and parsing, allowed scopes and scope-specific
+errors, context claim and label projection, an optional declaration constructor
+and roster projector, and optional leaf stages.
 
 The production descriptors are `host`, `user`, and `when`.
 
 ## Compose
 
-`engine.compose` walks the translated tree. At each node it narrows the parent's effective claim with the node's own claim on every registered axis.
+`engine.compose` walks the translated tree, narrowing the parent's effective
+claim with each node's own claim on every registered axis.
 
-Each config-bearing node produces one leaf containing:
+Every config-bearing node produces one leaf carrying its effective claim, an
+opaque payload, optional label and source, an optional merge profile, and a
+stable `key` derived from its path in the tree.
 
-- effective claim;
-- opaque payload;
-- optional label and source;
-- optional merge profile.
-
-Nodes without payload may scope descendants. Identity and merge profile do not inherit.
+Nodes without payload may still scope their descendants. Identity and merge
+profile do not inherit.
 
 ## Stages
-
-Stages have one of three views:
 
 ```nix
 {
@@ -101,72 +109,95 @@ Stages have one of three views:
 
 Unknown views or missing callbacks throw.
 
-### Leaf stages
+**Leaf stages** run one rule over one composed leaf. Production order is
+ambiguous-alias validation, per-axis satisfiability, registered cross-axis
+relations, then descriptor-contributed stages. Diagnostics flatten in stage
+order, then leaf order.
 
-Run one rule over one composed leaf. Production order is:
+**Tree stages** receive `{ registry; leaves; }` after leaf validation and
+before context demand. They express whole-declaration invariants independent of
+the current build.
 
-1. ambiguous alias validation;
-1. per-axis satisfiability;
-1. registered cross-axis relations;
-1. descriptor-contributed leaf stages.
-
-Diagnostics flatten in stage order, then leaf order.
-
-### Tree stages
-
-Receive `{ registry; leaves; }` after leaf validation and before context demand. They express whole-declaration invariants independent of the current build.
-
-### Survivor stages
-
-Receive `{ registry; ctx; survivors; }` after selection. They express current-build coverage such as requiring exactly one selected provider.
+**Survivor stages** receive `{ registry; ctx; survivors; }` after selection.
+They express current-build coverage, such as requiring exactly one selected
+provider.
 
 ## Context demand and selection
 
-A set axis with a non-global claim requires the entity named by its `ctxKey`. Global claims short-circuit selection and do not read the context entity.
+A set axis with a non-global claim requires the entity named by its `ctxKey`. A
+global claim short-circuits and never reads the context entity.
 
-This is why an untagged unit can resolve without host or user values. Missing context is an error only when an authored claim actually narrows that axis.
+This is why an untagged unit resolves without host or user values. Missing
+context is an error only when an authored claim actually narrows that axis.
 
-`selectPrepared` is the shared boundary used by ordinary resolution and matrix projection. It performs:
+It is also why strict validation cannot be attached to the context value. A
+globally owned unit never demands the context, so a check that only fires when
+the context is forced would never run for it. Strict doors validate before the
+resolve body instead.
 
-1. context-demand validation;
-1. per-axis selection;
-1. survivor-stage execution;
-1. selection, context, and survivor traces.
+`selectPrepared` is the shared boundary used by both ordinary resolution and
+matrix projection. It performs context-demand validation, per-axis selection,
+survivor stages, and the selection, context, and survivor traces. Sharing this
+boundary is what keeps matrix behaviour from drifting away from real
+resolution.
 
-Keeping this boundary shared prevents matrix behavior from drifting from real resolution.
+## Stable leaf keys
+
+Selection, context, and survivor results are exposed both as lists and as
+`byKey` and `ctxByKey` maps keyed by the leaf's `key`.
+
+The lists are positional and any stage that filters one of them shifts the
+others. Rejoining by key is order-independent, which is how `applyPrepared`
+re-associates a prepared half with a fresh context.
 
 ## Contributor projection and merge
 
-Selected leaves become tracked entries. Each contributor carries:
+Selected leaves become tracked entries. Each contributor carries a safe
+identity, opaque effective owners, and an optional merge profile.
 
-- safe identity;
-- opaque effective owners;
-- optional merge profile.
+The merge layer interprets value shape and merge policy, never ownership
+semantics. Ordinary resolve projects only the merged value; trace callers can
+inspect the lazy provenance sibling.
 
-The merge layer interprets value shape and merge policy, never ownership semantics. Ordinary resolve projects only the merged value. Trace callers can inspect the lazy provenance sibling.
+Within merge, the treatment at a path is decided before it is applied. The
+decision is a tagged record and the arms are a lazy table keyed by that tag, so
+what will happen at a path is a value you can inspect without running the
+merge.
 
-## Plain and diagnostic projections
+## Projections
 
-- Plain resolve returns only the merged value.
-- Trace runs the same full pipeline and exposes decisions and provenance.
-- Matrix uses compose, leaf stages, tree stages, context demand, selection, and survivor stages, but deliberately does not merge payloads.
-- Strict resolve additionally validates the supplied context tuple against the roster.
-- Profiled resolve activates merge-profile semantics and validation.
+- **Plain resolve** returns only the merged value.
+- **Trace** runs the same pipeline and exposes decisions and provenance.
+- **Prepared** splits the unit-only half from the context-only half.
+- **Matrix** runs compose, leaf stages, tree stages, context demand, selection,
+  and survivor stages, but deliberately does not merge payloads.
+- **Strict** additionally validates the supplied context against the roster.
+- **Profiled** activates merge-profile semantics and validation.
 
 ## Laziness boundaries
 
-Ownerships must preserve:
+Ownerships must preserve all of these:
 
-- imported files force only the unit shell needed for normalization; payload fields remain lazy;
+- imported files force only the unit shell needed for normalization;
 - inactive payloads are never merged;
 - safe identity does not serialize arbitrary payloads;
 - ordinary resolve does not force trace details;
-- merge provenance remains lazy unless inspected or required by locks/profiles;
-- unused merge-profile registrations remain lazy;
-- matrix reports expose only identity, shallow shape, claims, decisions, and path names.
+- merge provenance stays lazy unless inspected or required by locks or
+  profiles;
+- unused merge-profile registrations stay lazy;
+- matrix reports expose only identity, shallow shape, claims, decisions, and
+  path names.
+
+The counterweight is that anything which must *always* happen cannot be hung
+off a value a caller might never force. Validation that has to run belongs
+before the body that returns the result.
 
 ## Extending the pipeline
 
-Add a descriptor for new axis vocabulary. Add relation data for cross-axis compatibility. Add a stage only when an invariant belongs to an existing pipeline boundary.
+Add a descriptor for new axis vocabulary. Add relation data for cross-axis
+compatibility. Add a stage only when an invariant belongs at an existing
+pipeline boundary. Add a projection by adding a row to the projections table.
 
-Do not teach the engine a new axis name. Do not implement alternate selection in matrix or trace. Do not add a merged-output stage until a real invariant requires that boundary and its safe data contract is defined.
+Do not teach the engine a new axis name. Do not implement alternate selection
+in matrix or trace. Do not add a merged-output stage until a real invariant
+requires that boundary and its safe data contract is defined.

@@ -25,11 +25,39 @@
 }
 ```
 
-`label`, `source`, and `mergeProfile` do not inherit. Claims do inherit through narrowing.
+`label`, `source`, and `mergeProfile` do not inherit. Claims do inherit,
+through narrowing.
 
 ## Public facade
 
-All functions are exported from `src/ownerships/default.nix`.
+All of these are exported from `src/ownerships/default.nix`.
+
+### The carrier
+
+| Function | Result |
+| --- | --- |
+| `resolverFor { roster, base ? ..., scope ? "user", projection ? "value", strict ? false, profileArgs ? null }` | One resolver built from the four axes. |
+| `mkResolvers roster` | Every door for that roster, over one compiled descriptor set. |
+
+Prefer `mkResolvers` whenever a call site needs more than one projection. It
+compiles the roster's descriptors once and shares them:
+
+```nix
+let doors = ownerships.mkResolvers roster;
+in {
+  config = doors.resolve units ctx;
+  audit = doors.matrix { inherit units; };
+}
+```
+
+Its keys are `resolve`, `resolveSystem`, `trace`, `systemTrace`, `prepared`,
+`systemPrepared`, `matrix`, `systemMatrix`, `strict`, `systemStrict`,
+`profiled`, `systemProfiled`, and `resolverFor` rebound to the shared base.
+
+### Named doors
+
+Generated from a table over `resolverFor`, so a name cannot drift from its
+behaviour. See [doors](doors.md).
 
 | Function | Result |
 | --- | --- |
@@ -37,26 +65,48 @@ All functions are exported from `src/ownerships/default.nix`.
 | `mkResolveSystem roster units ctx` | System-scope merged value. |
 | `mkResolveTrace roster units ctx` | User value, decisions, stages, and provenance. |
 | `mkResolveSystemTrace roster units ctx` | System trace. |
+| `mkResolvePrepared roster units` | User resolver with the ctx-free half already done. |
+| `mkResolveSystemPrepared roster units` | System prepared resolver. |
 | `mkResolveMatrix roster { units; contextFor ? ...; }` | User fleet projection. |
 | `mkResolveSystemMatrix roster { units; contextFor ? ...; }` | System fleet projection. |
 | `mkResolveStrict roster units ctx` | User resolve after roster-validating the context. |
 | `mkResolveSystemStrict roster units ctx` | System strict resolve. |
 | `mkResolveProfiled args roster units ctx` | User resolve with merge profiles enabled. |
 | `mkResolveSystemProfiled args roster units ctx` | System profiled resolve. |
+
+### Rosters and units
+
+| Function | Result |
+| --- | --- |
 | `translate unit` | Translate author syntax to engine grammar. |
 | `claimKeys` | Ordered public claim-key list. |
 | `define.<axis>` | Standalone declaration constructor. |
 | `toRoster declarations` | Project the default descriptor roster. |
 | `mkRoster descriptors` | Construct a custom descriptor-driven roster facade. |
 | `importUnits { dir; args ? { }; }` | Recursively import one unit collection. |
-| `importUnitSets { dir; args ? { }; }` | Import optional `system` and `home` collections from one tree. |
+| `importUnitSets { dir; args ? { }; }` | Import optional `system` and `home` collections. |
 
-The first argument set is curried. For example:
+The roster argument is curried:
 
 ```nix
 resolve = ownerships.mkResolve roster;
 value = resolve units ctx;
 ```
+
+## Prepared resolvers
+
+`prepared` splits the work in two. Translation, composition, leaf stages, and
+tree stages depend only on the units, so they run once when the units are
+handed in. The returned function is context demand, selection, survivor stages,
+and merge:
+
+```nix
+let resolveForHost = ownerships.mkResolveSystemPrepared roster units;
+in lib.genAttrs hostNames (name: resolveForHost { host = hostFor name; })
+```
+
+Use it when one unit list is resolved against many contexts. For a single
+context it is the same work in a different order.
 
 ## Unit import helpers
 
@@ -69,20 +119,14 @@ units = ownerships.importUnits {
 };
 ```
 
-Behavior:
+Recursively visits directories, imports regular `.nix` files, ignores other
+regular files, and rejects symlinks and unknown entry types rather than
+following or silently skipping them. Files are sorted by relative path before
+import, which is what makes ordered list concatenation deterministic. Function
+files receive `args`. Each file returns one unit attrset or a list of them, and
+all results flatten into one list. Only the outer unit shell is forced.
 
-- recursively visits directories;
-- imports regular files ending in `.nix`;
-- ignores regular non-Nix files;
-- rejects symlink and unknown filesystem entry types;
-- sorts files by relative path before import;
-- calls function files with `args`;
-- accepts one unit attrset or a list of unit attrsets from each file;
-- flattens all results into one list;
-- rejects non-attrset results with the relative source path;
-- validates the outer unit shell without forcing payload fields.
-
-The helper does not assign a scope. Pass the resulting list to the appropriate user or system resolver.
+It assigns no scope. Pass the result to the resolver you want.
 
 ### `importUnitSets`
 
@@ -93,26 +137,13 @@ unitSets = ownerships.importUnitSets {
 };
 ```
 
-The root may contain `system`, `home`, or both as directories. The result always has both keys; a missing collection is an empty list:
+The root may contain `system`, `home`, or both. The result always has both
+keys; a missing collection is an empty list. At that root, loose `.nix` files
+and unknown directories are errors — a plain attrset does not reveal which
+module system owns it, so the boundary has to be explicit. Non-Nix regular
+files at the root are ignored.
 
-```nix
-{
-  system = [ ... ];
-  home = [ ... ];
-}
-```
-
-At the mixed-tree root:
-
-- loose `.nix` files are rejected as unclassifiable;
-- directories other than `system` and `home` are rejected;
-- `system` or `home` entries that are not directories are rejected;
-- regular non-Nix files are ignored;
-- unsupported filesystem entry types are rejected.
-
-Each recognized collection uses the same recursive behavior and ordering as `importUnits`.
-
-## Current public claim keys
+## Claim keys
 
 In stable validation order:
 
@@ -126,7 +157,8 @@ In stable validation order:
 ]
 ```
 
-Custom descriptor surfaces may append keys without changing the production default.
+Custom descriptor surfaces may append keys without changing the production
+default.
 
 ## Scope rules
 
@@ -136,91 +168,66 @@ Custom descriptor surfaces may append keys without changing the production defau
 | user | yes | no | `user` |
 | when | yes | yes | none |
 
-System scope recursively rejects forbidden keys before engine selection.
+System scope recursively rejects forbidden keys before selection, and reports
+**every** offending key in the tree rather than the first one found.
 
 ## Built-in merge values
 
-List strategies:
+List strategies: `ordered-concat`, `dedup-union`, `take-right`.
 
-- `ordered-concat`
-- `dedup-union`
-- `take-right`
+Profiles: `strict-ordered`, `last-wins`.
 
-Profiles:
+Attrset treatments: `deep`, `take-right`.
 
-- `strict-ordered`
-- `last-wins`
-
-Attrset treatments:
-
-- `deep`
-- `take-right`
-
-Conflict policies are functions receiving `path`, left tracked node, and right tracked node.
+Conflict policies are functions receiving `path` and the left and right tracked
+nodes.
 
 ## Stage API
 
-Leaf stage:
-
 ```nix
-{
-  view = "leaf";
-  run = registry: leaf: diagnostics;
-}
+{ view = "leaf";      run = registry: leaf: diagnostics; }
+{ view = "tree";      run = { registry, leaves }: diagnostics; }
+{ view = "survivors"; run = { registry, ctx, survivors }: diagnostics; }
 ```
 
-Tree stage:
+Diagnostics are domain records the engine converts to Krisis diagnostics.
+Common fields are `kind`, `unit`, `label`, `source`, `axis` or `axes`,
+`claims`, and `reason`.
 
-```nix
-{
-  view = "tree";
-  run = { registry, leaves }: diagnostics;
-}
-```
+## Leaf keys
 
-Survivor stage:
+Every composed leaf carries a `key` derived from its position in the tree —
+`"0"`, `"0/1"`, `"0/1/2"`. Selection, context, and survivor stages expose
+`byKey` and `ctxByKey` alongside their lists, and prepared resolvers rejoin on
+the key rather than zipping by index.
 
-```nix
-{
-  view = "survivors";
-  run = { registry, ctx, survivors }: diagnostics;
-}
-```
-
-Diagnostics use domain records that the engine converts to Krisis diagnostics. Common fields are `kind`, `unit`, `label`, `source`, `axis` or `axes`, `claims`, and `reason`.
+A key describes position in one report. It is not durable source identity;
+reordering the unit list changes it.
 
 ## Error classes
 
 ### Author shape
 
-- unit is not an attrset;
-- malformed claim value;
-- both polarities on one axis;
-- malformed children, value, label, source, or profile;
-- `value` mixed with inline payload;
-- forbidden scope key.
+Unit is not an attrset; malformed claim value; both polarities on one axis;
+malformed children, value, label, source, or profile; `value` mixed with inline
+payload; forbidden scope key.
 
 ### Impossible declaration
 
-- unknown member;
-- disjoint nested claim;
-- empty include;
-- ambiguous alias;
-- no compatible pair for a registered relation.
+Unknown member; disjoint nested claim; empty include; ambiguous alias; no
+compatible pair for a registered relation.
 
 ### Context
 
-A narrowed axis has a non-null `ctxKey`, but the build context supplies no entity.
-
-Strict doors additionally reject unknown or incompatible supplied contexts even when authored claims are global.
+A narrowed axis has a non-null `ctxKey` but the build context supplies no
+entity. Strict doors additionally reject unknown or incompatible supplied
+contexts, even when every authored claim is global.
 
 ### Merge
 
-- differing strict scalar values;
-- foreign write beneath a lock;
-- unknown or malformed strategy;
-- unknown or malformed activated profile;
-- incompatible contributor profiles.
+Differing strict scalar values; foreign write beneath a lock; unknown or
+malformed strategy; unknown or malformed activated profile; incompatible
+contributor profiles.
 
 ### Stage
 
@@ -228,35 +235,39 @@ Unknown view, malformed callback, or a stage-produced structured diagnostic.
 
 ### Unit import
 
-- non-attrset `args`;
-- imported file returns neither a unit attrset nor a list of unit attrsets;
-- unsafe filesystem entry type;
-- mixed tree has a loose root `.nix` file;
-- mixed tree has an unknown top-level directory;
-- mixed tree has no `system` or `home` directory.
+Non-attrset `args`; a file returning neither a unit attrset nor a list of them;
+unsafe filesystem entry type; loose root `.nix` file in a mixed tree; unknown
+top-level directory in a mixed tree.
 
 ## Glossary
 
-- **unit**: author attrset containing payload and optional ownership metadata;
-- **claim**: restriction along registered axes;
-- **axis**: implementation of one ownership dimension;
-- **descriptor**: author, context, scope, axis, and roster metadata for an axis;
-- **top/global**: the identity claim that selects everyone;
-- **narrow/meet**: combine parent and child claims without widening;
-- **leaf**: config-bearing composed node with effective claim;
-- **stage**: validation callback at a pipeline boundary;
-- **relation**: compatibility rule between two axes;
-- **roster**: canonical members, aliases, membership, dimensions, and display data;
-- **context**: concrete entities for one resolve;
-- **survivor**: selected leaf after context matching;
-- **contributor**: survivor identity and effective owners carried to merge;
-- **provenance**: path-aligned contributor tree;
-- **matrix**: structural selection report across modeled contexts.
+- **unit** — author attrset containing payload and optional ownership metadata
+- **claim** — restriction along registered axes
+- **axis** — implementation of one ownership dimension
+- **descriptor** — author, context, scope, axis, and roster metadata for an axis
+- **top/global** — the identity claim that selects everyone
+- **narrow/meet** — combine parent and child claims without widening
+- **leaf** — config-bearing composed node with an effective claim
+- **stage** — validation callback at a pipeline boundary
+- **relation** — compatibility rule between two axes
+- **roster** — canonical members, aliases, membership, dimensions, display data
+- **context** — concrete entities for one resolve
+- **survivor** — selected leaf after context matching
+- **contributor** — survivor identity and effective owners carried to merge
+- **provenance** — path-aligned contributor tree
+- **matrix** — structural selection report across modeled contexts
 
 ## Lower-level seams
 
-`resolve.nix` exports `resolveWith`, `engineArgsFor`, and `validateRosterCtx`. `engine.nix`, `axes.nix`, `merge.nix`, and `matrix.nix` export additional focused seams for tests and subsystem composition.
+`resolve.nix` exports `resolveWith`, `engineArgsFor`, and `validateCtxWith`.
+`engine.nix`, `axes.nix`, `merge.nix`, and `matrix.nix` export further focused
+seams for tests and subsystem composition. `surface.nix` additionally exports
+`projectClaims`, which narrows a claim into a scope so an extension can build
+an enclosing unit without tripping the scope guard.
 
-These are reachable by importing the file, not through the facade. `default.nix` deliberately does not re-export them, and the furnish suite asserts their absence, so a consumer cannot reach the engine by accident.
+These are reachable by importing the file, not through the facade.
+`default.nix` deliberately does not re-export them and the furnish suite
+asserts their absence, so a consumer cannot reach the engine by accident.
 
-These are not ordinary aspect APIs. Preserve facade behavior when changing them, and add parity and forcing tests around any new seam.
+They are not ordinary aspect APIs. Preserve facade behaviour when changing
+them, and add parity and forcing tests around any new seam.

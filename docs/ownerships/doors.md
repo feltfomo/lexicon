@@ -1,7 +1,8 @@
 # doors
 
-a door is a resolver built for one roster. there is one carrier, `resolverFor`,
-and every named door is a row in a table over it.
+a door is a resolver built for one roster. `surface.nix` used to hand write one
+function body per door, ten of them, each recompiling the roster's descriptor
+set. there is one carrier now and the named doors are generated from a table.
 
 ## resolverFor
 
@@ -18,8 +19,7 @@ resolverFor {
 
 `scope` is `user` or `system`. it decides which claim keys a unit is allowed to
 carry and which context builder the matrix projection uses. a unit that carries
-a key its scope cannot bind is reported by name rather than ignored, and every
-offending key in the tree is named, not just the first.
+a key its scope cannot bind is reported by name rather than ignored.
 
 `projection` is one of four.
 
@@ -30,15 +30,8 @@ offending key in the tree is named, not just the first.
 | `prepared` | a resolver with translate and compose already done, re-run per context |
 | `matrix` | the fleet view, every context resolved at once |
 
-`strict` validates the build context against the roster before resolving. an
-unknown host name, an unknown user name, and a host and user pair that cannot
-co-exist are all errors. a user whose host membership is unknown is rescued
-rather than rejected, since the roster does not claim to know where it lives.
-
-the validation runs before the resolve body, not from inside the context. a
-globally owned unit narrows on nothing and never demands the context, so a
-check hung off the context thunk would never run for exactly the declarations
-that are hardest to reason about.
+`strict` turns a widening merge into an error instead of a last write. it is
+the same flag the `mkResolve*Strict` names set.
 
 `profileArgs` is passed through to the merge profile when the roster's units
 select one. an unknown profile name is reported with the nearest legal one.
@@ -57,7 +50,9 @@ builds every door for a roster over one compiled descriptor set. prefer it
 whenever a call site needs more than one projection, which is most inspection
 code.
 
-## the named doors
+## the legacy names
+
+every name that existed before this pass still exists.
 
 | name | scope | projection | strict |
 | --- | --- | --- | --- |
@@ -73,8 +68,8 @@ code.
 | `mkResolveSystemStrict` | system | value | yes |
 
 they are generated from that table rather than written out, so a name and its
-behaviour cannot drift apart. a combination the table does not name is reachable
-by calling `resolverFor` directly.
+behaviour cannot drift apart. `mkResolveSystemPrepared` is new and exists
+because the table implied it.
 
 `mkResolveProfiled` and `mkResolveSystemProfiled` stay curried with the profile
 arguments first, because that is how their call sites read.
@@ -82,4 +77,5 @@ arguments first, because that is how their call sites read.
 ## adding a projection
 
 add a row to the projections table. the named doors, the scope guard and the
-unknown projection message all pick it up.
+unknown projection message all pick it up. before this you wrote two more
+function bodies and hoped you remembered both scopes.
