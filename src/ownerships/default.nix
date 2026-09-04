@@ -35,6 +35,7 @@ in
     mkResolvers
     translate
     claimKeys
+    projectClaims
     define
     toRoster
     mkRoster

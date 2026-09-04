@@ -9,6 +9,19 @@ is useful without the layers above it.
 | **Furnish** | what files should exist on a machine, and how they are kept that way | you want managed files with a real lifecycle, not just store symlinks |
 | **Program** | all of the above, from one declaration | you are declaring an aspect |
 
+## Add it to a flake
+
+```nix
+inputs.lexicon = {
+  url = "github:feltfomo/lexicon";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+
+That one input carries Axiom, Krisis, and Furnish Coordinator. Consumers don't
+add or align those repositories themselves. Lexicon binds them behind its
+`lib` functions while still accepting explicit overrides for fixtures.
+
 ## Which one do I want
 
 **Program** is the abstraction over the other two. One `program { ... }` block

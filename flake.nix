@@ -43,28 +43,41 @@
         "aarch64-linux"
       ];
 
-      # every library stays a function of its dependencies. the consumer supplies
-      # lib, krisis, axiom, and the ownership doors, so nothing here pins a
-      # nixpkgs on a caller's behalf.
-      #
-      # the coordinator is the exception, because it's ours rather than the
-      # caller's: the two surfaces that need it get it filled in from our own
-      # input. args comes last so a suite can still override it with a throw to
-      # prove the pure path never forces the builder.
+      # lexicon owns its framework dependencies. callers may override them for
+      # fixtures, but ordinary consumers only add lexicon and pass runtime doors.
       flake.lib =
         let
+          dependenciesFor =
+            args:
+            let
+              lib = args.lib or inputs.nixpkgs.lib;
+              axiom = args.axiom or inputs.axiom.lib.axiom { inherit lib; };
+              krisis = args.krisis or inputs.krisis.lib.krisis { inherit lib axiom; };
+            in
+            {
+              inherit lib axiom krisis;
+            };
+          withDependencies = path: args: import path (dependenciesFor args // args);
           withCoordinator =
-            path: args: import path ({ inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args);
+            path: args:
+            withDependencies path ({ inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args);
+          withRuntimeDependencies =
+            path: args:
+            import path (
+              removeAttrs
+                (dependenciesFor args // { inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args)
+                [
+                  "lib"
+                ]
+            );
         in
         {
-          ownerships = import ./src/ownerships;
-          furnish = import ./src/furnish;
-          furnishRuntime = withCoordinator ./src/furnish/runtime.nix;
+          ownerships = withDependencies ./src/ownerships;
+          furnish = withDependencies ./src/furnish;
+          furnishRuntime = withRuntimeDependencies ./src/furnish/runtime.nix;
           program = withCoordinator ./src/program.nix;
-          report = import ./src/program/report.nix;
-          den = import ./src/den.nix;
-          # so a consumer wanting the binary as a package or app builds it with
-          # the same builder the reconcile unit uses, still without an input.
+          report = withDependencies ./src/program/report.nix;
+          den = withDependencies ./src/den.nix;
           inherit (inputs.furnish-coordinator.lib) mkCoordinator;
         };
 
