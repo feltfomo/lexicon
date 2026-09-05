@@ -1,5 +1,7 @@
 {
-  description = "lexicon: the furnish, ownerships, and program libraries";
+  description = "lexicon: declarative configuration and project commands with ownerships, furnish, program, and praxis";
+
+  nixConfig.extra-experimental-features = [ "pipe-operators" ];
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -13,15 +15,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     axiom.url = "github:feltfomo/axiom-nix";
-    # one axiom across the closure, so krisis's schemas and ours are the same
-    # values instead of two copies that merely look alike.
+    # keep schema and validation behavior on one dependency version
     krisis = {
       url = "github:feltfomo/krisis";
       inputs.axiom.follows = "axiom";
     };
-    # furnish links files natively through this rust binary, so the coordinator
-    # is lexicon's dependency and not a consumer's. a config adds lexicon and
-    # gets the linker with it.
+    # lexicon owns the coordinator version used by its manifests
     furnish-coordinator = {
       url = "github:feltfomo/furnish-coordinator";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -43,8 +42,7 @@
         "aarch64-linux"
       ];
 
-      # lexicon owns its framework dependencies. callers may override them for
-      # fixtures, but ordinary consumers only add lexicon and pass runtime doors.
+      # explicit dependency overrides keep isolated fixtures possible
       flake.lib =
         let
           dependenciesFor =
@@ -76,6 +74,7 @@
           furnish = withDependencies ./src/furnish;
           furnishRuntime = withRuntimeDependencies ./src/furnish/runtime.nix;
           program = withCoordinator ./src/program.nix;
+          praxis = withDependencies ./src/praxis.nix;
           report = withDependencies ./src/program/report.nix;
           den = withDependencies ./src/den.nix;
           inherit (inputs.furnish-coordinator.lib) mkCoordinator;
@@ -201,18 +200,26 @@
           axiom = inputs.axiom.lib.axiom { inherit lib; };
           krisis = inputs.krisis.lib.krisis { inherit lib axiom; };
           ownerships = import ./src/ownerships { inherit lib krisis axiom; };
+          praxis = inputs.self.lib.praxis;
+          praxisTests = import ./tests/praxis { inherit lib krisis axiom; };
+          praxisCommands = praxis {
+            inherit pkgs;
+            discoverRoot = "flake.nix";
+            commands = {
+              fmt = "nix run path:.#formatter.${pkgs.stdenv.hostPlatform.system}";
+              test = "nix flake check path:. -L";
+              gate = {
+                description = "Format and run the complete Lexicon flake check";
+                lock = "lexicon-gate";
+                steps = [
+                  { command = "fmt"; }
+                  { command = "test"; }
+                ];
+              };
+            };
+          };
 
-          # a two-host fleet declared right here. skadi binds these doors to den's
-          # real roster; the suites only need one that's unambiguous and stable,
-          # and a synthetic fleet keeps them from failing whenever a real host
-          # joins.
-          #
-          # lumi is the away host. several suites prove a payload stays unforced
-          # by claiming a host that isn't the build ctx, and a claim on a name the
-          # roster has never heard of is a hard error rather than an inactive
-          # unit, so the away host has to be declared for "inactive" to mean
-          # inactive. feltfomo belongs to both so the host/user relation stays
-          # satisfiable.
+          # a declared away host distinguishes inactive payloads from unknown claims
           roster = ownerships.toRoster [
             (ownerships.define.host "khion" { system = "x86_64-linux"; })
             (ownerships.define.host "lumi" { system = "x86_64-linux"; })
@@ -226,8 +233,6 @@
           resolve = ownerships.mkResolve roster;
           resolveSystem = ownerships.mkResolveSystem roster;
 
-          # the shape den.nix's hostPrincipals projects: the host itself, then
-          # every user on it.
           hostCtx = {
             id = "x86_64-linux/khion";
             name = "khion";
@@ -290,12 +295,24 @@
         in
         {
           treefmt = import ./formatter.nix;
+          packages = praxisCommands.packages // {
+            praxis = praxisCommands.package;
+          };
+          apps = praxisCommands.apps // {
+            praxis = {
+              type = "app";
+              program = "${praxisCommands.cli}/bin/praxis";
+            };
+          };
 
           checks = {
+            praxis-pure = gate "praxis-pure-tests" praxisTests;
+            praxis-integration = import ./tests/praxis/integration.nix { inherit pkgs praxis; };
+            praxis-runtime = import ./tests/praxis/runtime.nix { inherit pkgs praxis; };
+            praxis-runner = praxisCommands.runner;
             furnish-pure = gate "furnish-pure-tests" furnishTests;
             program-boundary = gate "program-boundary-tests" programTests;
-            # the import-units suite has no gate of its own; the engine suite's ok
-            # forces it.
+            # the engine suite includes import-unit boundary tests
             ownerships-engine = gate "ownerships-engine-tests" (ownershipsTest ./tests/ownerships/engine.nix);
             ownerships-roster = gate "ownerships-roster-tests" (ownershipsTest ./tests/ownerships/roster.nix);
             ownerships-surface = gate "ownerships-surface-tests" (
@@ -310,6 +327,10 @@
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
               bashInteractive
+              cargo
+              rustc
+              rustfmt
+              clippy
               deadnix
               delve
               git

@@ -1,13 +1,17 @@
 # Lexicon
 
-Lexicon is three layers. Each one is a usable library on its own, and each one
-is useful without the layers above it.
+Lexicon adds declarative vocabulary to Nix through independently usable
+subsystems. Ownerships, Furnish, and Program form the configuration stack.
+Praxis sits alongside them as a command utility, not a fourth layer. Declare a
+sequence once, then run it through one executable. Start with [Praxis](praxis.md)
+or go straight to [usage](praxis/usage.md) and the [reference](praxis/reference.md).
 
-| Layer | What it decides | Reach for it when |
+| Subsystem | What it decides | Reach for it when |
 | --- | --- | --- |
 | **Ownerships** | which configuration applies to which host and user, and how the survivors merge | you want host and user targeting for plain Nix values |
 | **Furnish** | what files should exist on a machine, and how they are kept that way | you want managed files with a real lifecycle, not just store symlinks |
 | **Program** | all of the above, from one declaration | you are declaring an aspect |
+| **Praxis** | which project commands run, in what order, and when they fail | you want `nix run .#gate` from a declarative command set |
 
 ## Add it to a flake
 
@@ -68,7 +72,17 @@ Each arrow is a boundary you can enter at. Program enters at the top, a
 standalone NixOS config can enter at ownership units, and a tool that already
 knows its file list can enter at furnish declarations.
 
+Praxis doesn't enter this stack. It turns a project's `commands` into apps and
+packages while leaving host configuration and file lifecycles alone.
+
 ## Documentation
+
+**Praxis**
+
+- [Praxis](praxis.md) — declare several commands and run them as one
+- [Usage](praxis/usage.md) — three declaration layouts, arguments, scripts, and installation
+- [Reference](praxis/reference.md) — declaration fields, outputs, and CLI
+- [Architecture](praxis/architecture.md) — runner, migration, and checks
 
 **Program**
 
@@ -93,9 +107,27 @@ knows its file list can enter at furnish declarations.
 - [Declaration contract](furnish/declaration-contract.md)
 - [Runtime integration](furnish/runtime-integration.md)
 
+## Shared runtime machinery
+
+Axiom supplies reusable runtime types, accumulating validation, parser-backed
+schema fields, stable string sets, and indexed requirements/phases. Krisis adds
+path-aware type diagnostics, safe summaries, and a shared spelling suggester.
+Praxis consumes these boundaries; Furnish and Ownerships retain their existing
+authority, selection, and merge contracts. The Axiom `language/` implementation
+is not used by these additions.
+
+Shared source uses `|>`. Nix 2.25 needs `extra-experimental-features = pipe-operators`
+(plural), or acceptance of the flake's setting. Raw source imports and consuming
+flakes must enable the feature at their own entry point. The tested Lix version
+supports pipes directly. See [coordinated local development](local-development.md)
+for checking unpublished Axiom/Krisis changes without modifying dependency locks.
+
 ## Verification
 
 ```fish
 nix fmt
 nix flake check -L
 ```
+
+Or use the same steps through Praxis: `nix run .#gate`. The repository also
+exposes `nix run .#fmt` and `nix run .#test` individually.

@@ -55,8 +55,7 @@ let
 
   resolve = units: ctx: lib.foldl' merge { } (map (collect ctx) units);
   resolveSystem = resolve;
-  # the fake resolver is already ctx-pure, so the prepared door is the same
-  # function; only program.nix's wiring of the split is under test here.
+  # the resolver fixture has no preparation state
   resolvePrepared = resolve;
   program = import ../../src/program.nix {
     inherit
@@ -525,6 +524,14 @@ let
 in
 rec {
   tests = {
+    suggestions-use-shared-policy =
+      let
+        report = import ../../src/program/report.nix { inherit lib krisis axiom; };
+      in
+      report.suggest [ "bat" "car" ] "cat" == "bat"
+      && report.suggestionFor [ "bat" "car" ] "cat" == " -- did you mean 'bat'?"
+      && report.suggestionFor [ "unrelated" ] "cat" == ""
+      && report.editDistance "kitten" "sitting" == 3;
     bounded-output-shapes =
       builtins.attrNames packageOnly == [ "homeManager" ]
       && builtins.attrNames fileOnly == [ "nixos" ]
