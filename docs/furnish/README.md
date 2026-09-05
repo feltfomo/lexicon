@@ -1,85 +1,55 @@
 # Furnish
 
-Furnish compiles file declarations into a deterministic desired-state manifest,
-and wires that manifest into NixOS activation. Nix proves the manifest is
-well-formed; a Rust coordinator applies it on the machine.
+Furnish manages declared files on a machine. Its Nix compiler produces a
+desired-state manifest; the Furnish coordinator reconciles that manifest with
+the filesystem and an applied-state ledger.
 
-It is the machinery behind `program.files` and `program.directories`. Reach for
-it directly when you want managed files without the aspect layer — see
-[Usage](USAGE.md).
+Use it directly in NixOS for managed files, or let Program translate application
+file entries into Furnish declarations. Program is an optional authoring layer,
+not a prerequisite.
 
-The reason it exists rather than a pile of `home.file` entries is the
-`writable` representation. A store symlink is immutable, which is wrong for any
-config file the application itself rewrites. Furnish can install real, writable
-content and still tell you later whether it drifted.
+## Pick a representation and policy
 
-This documentation covers the Nix boundary only. The coordinator's
-reconciliation algorithms, crash recovery, and ledger implementation belong to
-a separate pass.
-
-## Responsibilities
-
-The Nix layer owns the versioned manifest and diagnostic contract, declaration
-validation, Ownerships-backed selection, destination normalization, host-wide
-collision detection, executor validation and capability selection, retained
-artifact materialization, manifest emission, and NixOS activation wiring.
-
-It deliberately performs no filesystem mutation during evaluation.
-
-## Data flow
-
-```text
-Program file entries
-→ principal-aware Furnish declarations
-→ shape validation
-→ ownership selection
-→ destination normalization
-→ collision index
-→ executor selection
-→ artifact validation
-→ manifest JSON
-→ furnish-coordinator reconcile
-```
-
-## Documentation
-
-- [Usage](USAGE.md) — standalone compile, writable files, runtime wiring
-- [Architecture](architecture.md) — the pipeline and its stages
-- [Declaration contract](declaration-contract.md) — every field
-- [Runtime integration](runtime-integration.md) — activation, service, ledger
-
-## Public surface
-
-`src/furnish/default.nix` takes `resolve` and `resolveSystem` from Ownerships
-and exports:
-
-| Export | Role |
+| Representation | Result |
 | --- | --- |
-| `compile` | Compile declarations and executors into manifest projections. |
-| `contract` | Versioned constants and manifest constructors. |
-| `core` | Validation, selection, indexing, diagnostics, and test seams. |
-| `files.mkDeclarations` | Lower selected home-relative file entries to declarations. |
-| `runtime` | NixOS module import. |
+| `symlink` | A link to immutable source content |
+| `writable` | A real file the application can modify |
 
-Only `files.mkDeclarations` and the runtime module are used by Program. Most
-`core` exports exist for internal composition and tests.
+For writable files, choose what should happen when runtime content differs
+from the recorded baseline:
 
-## Invariants
+- `error` stops reconciliation on a conflict.
+- `source-wins` restores the declared content.
+- `runtime-wins` preserves the current runtime content.
 
-- No declaration is silently selected when Ownerships is disabled.
-- Inactive ownership payloads are not forced.
-- Every managed destination stays lexically beneath its managed root.
-- Filesystem identity is canonical before collision detection.
-- Collisions fail with all claimants; source order never chooses a winner.
-- Executor ordering is deterministic by priority and identity.
-- Unselected executor implementations remain lazy.
-- Every manifest entry names its conflict policy and lifecycle strategies.
-- An enabled runtime emits an empty manifest when there are no declarations, so
-  retirement can still occur.
+The ledger records applied state. It can detect divergence; it cannot tell
+whether a person or an application made a particular edit.
 
-## Verification
+## Guides
 
-```fish
-nix fmt
-nix flake check -L
-```
+- [Usage](USAGE.md): standalone NixOS wiring, declarations, and pure compilation.
+- [Declaration contract](declaration-contract.md): authority, paths, sources, executors, and lifecycle fields.
+- [Runtime integration](runtime-integration.md): activation, services, durable state, and coordinator behavior.
+- [Architecture](architecture.md): validation, selection, collision checking, and manifest generation.
+
+## What the compiler checks
+
+Furnish validates declaration shapes, selects active ownership claims,
+normalizes destinations, checks host-wide collisions, chooses an executor,
+and emits the manifest. It does not mutate the filesystem during evaluation.
+Inactive ownership payloads and unused executors remain lazy.
+
+Two declarations cannot claim the same filesystem destination, even if their
+content is identical. Each destination must remain beneath its managed root.
+An enabled runtime still emits an empty manifest when all declarations are
+removed, so the coordinator can retire previously managed content.
+
+## Public API
+
+`inputs.lexicon.lib.furnish` takes `resolve` and `resolveSystem` along with
+optional dependency overrides. It exports `compile`, `contract`, `core`, and
+`files.mkDeclarations`. Use `inputs.lexicon.lib.furnishRuntime { }` to obtain
+the NixOS module with Lexicon's coordinator dependency wired in.
+
+The coordinator is a separate package. Its reconciliation, recovery, and
+ledger implementation are not duplicated in the Nix library.

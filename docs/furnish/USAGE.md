@@ -1,186 +1,19 @@
 # Using Furnish
 
-Furnish decides what files should exist on a machine and keeps them that way.
-The Nix side is a pure compiler that produces a manifest. A Rust coordinator
-reads that manifest during activation and boot and does the actual work.
+## Manage a writable file in NixOS
 
-Most people should use `program.files` and `program.directories`. This guide is
-for the cases where you want the file machinery without the aspect layer.
-
-## Why not just symlink into the store
-
-A store symlink is immutable. That is exactly right for a config file you own
-and exactly wrong for a config file the application owns.
-
-Plenty of programs rewrite their own config — they persist window positions, a
-last-opened path, a theme toggle you flipped in a GUI. Symlink it and the write
-fails or the app replaces your link. Copy it by hand and you have no idea, six
-months later, whether the file on disk still matches what you declared.
-
-That is the `writable` representation.
-
-| Representation | On disk | Good for |
-| --- | --- | --- |
-| `symlink` | a link into the Nix store | files you own outright |
-| `writable` | real content, copied | files the application also writes |
-
-A `writable` file is tracked against an applied-state ledger, so Furnish can
-tell the difference between a file you changed, a file the app changed, and a
-file that drifted. What it does about that is your `onConflict` choice.
-
-| Policy | Meaning |
-| --- | --- |
-| `error` | divergence from the recorded baseline stops the rebuild |
-| `source-wins` | your declared content is restored |
-| `runtime-wins` | whatever is on disk is kept |
-
-`runtime-wins` is the honest answer for a file an app genuinely owns. Use
-`error` when you want to know before anything is overwritten.
-
-## Standalone compile
-
-Furnish needs Ownerships resolvers, because selection is an ownership question:
+The runtime module supplies the coordinator and built-in executors. It can be
+used without Program or Den:
 
 ```nix
-let
-  ownerships = import ./src/ownerships { inherit lib krisis axiom; };
-
-  roster = ownerships.toRoster [
-    (ownerships.define.host "khion" { system = "x86_64-linux"; })
-    (ownerships.define.user "feltfomo" { hosts = [ "khion" ]; })
-  ];
-
-  furnish = import ./src/furnish {
-    inherit lib krisis axiom;
-    resolve = ownerships.mkResolve roster;
-    resolveSystem = ownerships.mkResolveSystem roster;
-  };
-in
-furnish.compile {
-  declarations = [ ... ];
-  executors = [ ... ];
-  ctx = {
-    host = { name = "khion"; system = "x86_64-linux"; };
-    user = { name = "feltfomo"; };
-  };
-  raw = { };
-  provider = furnish.core.mkEnabledProvider {
-    resolve = ownerships.mkResolve roster;
-    resolveSystem = ownerships.mkResolveSystem roster;
-  };
-}
-```
-
-You get back `manifestData`, `manifestDocument`, `manifestJson`, and your `raw`
-passed through untouched. `manifestPath` is `null` — writing to the store is
-`runtime.nix`'s job, not the compiler's.
-
-An empty declaration list is a genuine no-op. It will not force your resolvers
-or your executors.
-
-### If selection already happened
-
-When the caller has already picked the declarations for this principal, use
-`furnish.core.offProvider` instead. It accepts only untagged declarations, and
-a leftover ownership key is a loud error rather than a silent promotion to
-global.
-
-## A writable declaration
-
-```nix
+{ inputs, ... }:
 {
-  label = "ghostty config";
-  filesystemNamespace = "x86_64-linux/khion";
-  authority = {
-    scope = "user";
-    identity = "feltfomo";
+  imports = [ (inputs.lexicon.lib.furnishRuntime { }) ];
+
+  users.users.alice = {
+    isNormalUser = true;
+    home = "/home/alice";
   };
-  managedRoot = "/home/feltfomo";
-  destination = ".config/ghostty/config";
-  representation = "writable";
-  source = {
-    kind = "path";
-    value = ./ghostty-config;
-  };
-  onConflict = "runtime-wins";
-  provenance.source = "configuration/terminals.nix";
-}
-```
-
-The destination may be absolute or relative to `managedRoot`. It is normalized
-lexically and must end up a strict descendant of the root. No filesystem lookup
-happens during evaluation, so this proof holds during a pure build.
-
-See [the declaration contract](declaration-contract.md) for every field.
-
-## Generated content
-
-`source.value` is lazy and is only forced if the declaration is selected, so it
-can be a derivation:
-
-```nix
-{
-  label = "generated theme";
-  representation = "writable";
-  source = {
-    kind = "path";
-    value = pkgs.writeText "colors.toml" (builtins.toJSON palette);
-  };
-  onConflict = "source-wins";
-  # ...
-}
-```
-
-`source-wins` fits generated content. The file is derived from your
-configuration, so a local edit is drift and restoring it is correct.
-
-## Lowering home-relative files
-
-If you already have a list of `{ src, dest }` entries, `files.mkDeclarations`
-does the lowering:
-
-```nix
-furnish.files.mkDeclarations {
-  filesystemNamespace = "x86_64-linux/khion";
-  principals = [
-    {
-      authority = {
-        scope = "user";
-        identity = "feltfomo";
-      };
-      managedRoot = "/home/feltfomo";
-    }
-  ];
-  files = [
-    {
-      src = ./fish/config.fish;
-      dest = ".config/fish/config.fish";
-      representation = "writable";
-      onConflict = "runtime-wins";
-    }
-  ];
-}
-```
-
-One declaration per entry per user principal. System principals are skipped,
-because a home-relative destination has no meaning for one. An absent
-`representation` stays `symlink`, which keeps existing call sites behaving the
-way they already did.
-
-## Wiring the runtime
-
-The NixOS module is curried on its cross-repo dependencies, because a module
-cannot be handed flake inputs:
-
-```nix
-furnishRuntime = inputs.lexicon.lib.furnishRuntime { inherit krisis axiom; };
-```
-
-Apply it once and pass the result around. Then:
-
-```nix
-{
-  imports = [ furnishRuntime ];
 
   lexicon.furnish = {
     enable = true;
@@ -189,39 +22,133 @@ Apply it once and pass the result around. Then:
       durability = "durable";
       requiresMountsFor = [ "/var/lib" ];
     };
-    declarations = [ ... ];
+    declarations = [ {
+      label = "terminal configuration";
+      filesystemNamespace = "x86_64-linux/workstation";
+      authority = { scope = "user"; identity = "alice"; };
+      managedRoot = "/home/alice";
+      destination = ".config/terminal/config";
+      representation = "writable";
+      source = { kind = "path"; value = ./terminal-config; };
+      onConflict = "runtime-wins";
+      provenance.source = "configuration/terminal.nix";
+    } ];
   };
 }
 ```
 
-`durability` is an assertion about your storage layout, not a request. Furnish
-does not arrange persistence itself. If `/var/lib` is on tmpfs, say `ephemeral`
-and mean it — the coordinator's safety reasoning depends on knowing whether the
-ledger survives a reboot.
+Pass `inputs` through your NixOS `specialArgs`, and provide the referenced
+`terminal-config` source file. The example assumes `/var/lib` persists across
+boots. Furnish does not make it persistent: `durability` describes your actual
+storage layout. Use `ephemeral` if the ledger will be lost on reboot.
 
-See [runtime integration](runtime-integration.md) for activation ordering, the
-service, and the ledger contract.
+This declaration has already chosen its user and host namespace, so it has no
+Ownerships claim fields. If you add ownership-tagged declarations, configure
+an enabled Ownerships provider rather than sending those claims to the default
+disabled provider. See [runtime integration](runtime-integration.md).
 
-## Collisions
+## Decide who owns changes
 
-Two declarations claiming one path is an error, even when both would write
-identical content. Source order never picks a winner, and the diagnostic lists
-every claimant with its authority and provenance.
+A `symlink` keeps content in the store; an application cannot edit that target.
+A `writable` file contains real runtime content. Its conflict policy decides
+what to do when it diverges from the applied baseline:
 
-The check is host-wide, not per-user. `buildHostIndex` projects every
-declaration across every principal before comparing, which is what catches one
-user colliding with another, or a user colliding with system authority.
+| Policy | Use when |
+| --- | --- |
+| `error` | You want a conflict reported before replacement |
+| `source-wins` | The declaration is authoritative, such as a generated theme |
+| `runtime-wins` | The application or user owns runtime edits |
 
-Identity is `<filesystem namespace>:<absolute destination>`:
+The ledger records what was applied. It does not identify who made later edits.
+Choose a policy based on the file's ownership, not on an assumption that all
+runtime changes are disposable.
 
-```text
-x86_64-linux/khion:/home/feltfomo/.config/ghostty/config
+## Destinations and collisions
+
+A destination can be absolute or relative to `managedRoot`, but it must
+normalize to a strict descendant of that root. Evaluation checks paths
+lexically; it does not inspect the receiving machine's filesystem.
+
+`filesystemNamespace` identifies a filesystem, not an authority. Alice and a
+system service writing on the same host must use the same namespace so their
+claims can collide. Two active declarations claiming one normalized path are
+an error even if their source content is identical. Source order never selects
+a winner.
+
+See the [declaration contract](declaration-contract.md) for authority scopes,
+lifecycle strategies, retained artifacts, and executor capabilities.
+
+## Generated content
+
+A selected source can be a derivation:
+
+```nix
+source = {
+  kind = "path";
+  value = pkgs.writeText "application-colors.toml" ''
+    background = "#202020"
+  '';
+};
+onConflict = "source-wins";
 ```
 
-The namespace is the filesystem, not the authority. Several authorities write
-into one host's filesystem, which is exactly why the index is keyed this way.
+Unselected source payloads stay lazy. Keep secrets out of these sources: Nix
+store content and generated manifests are not secret storage.
 
-## Inspecting what was compiled
+## Compile without activation
+
+The pure compiler can be used from another library or a test. This function
+takes already-defined declarations, executors, and an Ownerships context:
+
+```nix
+{ lexicon, lib, resolve, resolveSystem, declarations, executors, ctx }:
+let
+  furnish = lexicon.lib.furnish { inherit lib resolve resolveSystem; };
+in
+furnish.compile {
+  inherit declarations executors ctx;
+  raw = { };
+  provider = furnish.core.mkEnabledProvider { inherit resolve resolveSystem; };
+}
+```
+
+The result contains `manifestData`, `manifestDocument`, `manifestJson`, and the
+unchanged `raw` input. `manifestPath` is `null`; the runtime module materializes
+it in the store.
+
+If selection has already happened, use `furnish.core.offProvider`. It accepts
+only untagged declarations, so a forgotten ownership key is an error rather
+than an implicit global file. An empty declaration list does not force
+resolvers or executor implementations.
+
+## Lower home-relative entries
+
+`files.mkDeclarations` converts file entries for selected user principals:
+
+```nix
+furnish.files.mkDeclarations {
+  filesystemNamespace = "x86_64-linux/workstation";
+  principals = [ {
+    authority = { scope = "user"; identity = "alice"; };
+    managedRoot = "/home/alice";
+  } ];
+  files = [ {
+    src = ./config.fish;
+    dest = ".config/fish/config.fish";
+    representation = "writable";
+    onConflict = "runtime-wins";
+  } ];
+}
+```
+
+It emits one declaration per entry and user principal. System principals are
+skipped because a home-relative destination has no system home. Omitted
+`representation` means `symlink`. Program uses this helper for application file
+entries, but it is also available directly.
+
+## Inspect and troubleshoot
+
+Inspect the compiled system configuration:
 
 ```nix
 config.lexicon.furnish.manifestData
@@ -229,25 +156,15 @@ config.lexicon.furnish.manifestPath
 config.lexicon.furnish.ledgerPath
 ```
 
-Do not hand-edit the generated manifest. It is a system-closure artifact and
-the next evaluation replaces it.
+Don't hand-edit the generated manifest; the next build replaces it. Activation,
+service ordering, and recovery are covered by [runtime integration](runtime-integration.md).
 
-## Troubleshooting
-
-**Destination escapes the managed root.** Normalization is lexical and `..` is
-not allowed to climb out. The destination also cannot equal the root itself.
-
-**No executor satisfies a declaration.** An executor needs
-`lifecycle-baseline` plus the capability matching your `representation`. The
-error lists the enabled executors and what each one can do.
-
-**A declaration was silently skipped.** It was inactive, not dropped. Its
-ownership claim did not match the context you compiled for.
-
-**An ownership key reached `offProvider`.** Selection was supposed to happen
-upstream. Treating a leftover claim as global would install a file on a machine
-that never asked for it, so it is an error instead.
-
-**An enabled host has no declarations.** It still gets a manifest, with an
-empty entry list. That is deliberate — an empty desired state is how the
-coordinator learns to retire files that left your configuration.
+- A destination escape means the normalized path left its managed root or
+  equaled the root itself.
+- An executor error means no enabled executor supplies the lifecycle baseline
+  and representation capabilities the declaration requires.
+- An inactive declaration did not match its Ownerships context. Inspect its
+  claims before changing its source.
+- A claim reaching `offProvider` means selection is still needed upstream.
+- An enabled runtime with no declarations emits an empty desired state so the
+  coordinator can retire removed content.

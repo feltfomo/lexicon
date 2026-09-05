@@ -101,9 +101,9 @@ fn wait_for_exit(notification: Option<&OwnedFd>) -> Result<()> {
     }
     Ok(())
 }
-pub fn execute(command: &mut Command, interactive: bool) -> Result<i32> {
+pub fn execute(command: &mut Command, interactive: bool, deadline: Option<Instant>) -> Result<i32> {
     use std::io::IsTerminal;
-    cancelled()?;
+    crate::interaction::deadline(deadline)?;
     let terminal = if interactive && std::io::stdin().is_terminal() {
         let tty = OpenOptions::new()
             .read(true)
@@ -118,6 +118,7 @@ pub fn execute(command: &mut Command, interactive: bool) -> Result<i32> {
     } else {
         None
     };
+    // the child leads a fresh group so cancellation includes its descendants
     command.process_group(0);
     let mut child = command.spawn().map_err(|e| {
         fail(
@@ -141,7 +142,13 @@ pub fn execute(command: &mut Command, interactive: bool) -> Result<i32> {
     let result = (|| {
         let notification = exit_notification(group)?;
         let mut cancelled_at = None;
+        let mut timed_out = false;
         loop {
+            if deadline.is_some_and(|at| Instant::now() >= at) && cancelled_at.is_none() {
+                timed_out = true;
+                group_signal(group, libc::SIGTERM);
+                cancelled_at = Some(Instant::now());
+            }
             let signal = SIGNAL.load(Ordering::SeqCst);
             if signal != 0 && cancelled_at.is_none() {
                 group_signal(group, signal);
@@ -151,12 +158,13 @@ pub fn execute(command: &mut Command, interactive: bool) -> Result<i32> {
                 group_signal(group, libc::SIGKILL);
             }
             match child.try_wait() {
-                Ok(Some(status)) => break Ok(status_code(status)),
+                Ok(Some(status)) => break Ok(if timed_out { 124 } else { status_code(status) }),
                 Ok(None) => wait_for_exit(notification.as_ref())?,
                 Err(error) => break Err(fail(70, error.to_string())),
             }
         }
     })();
+    // a successful leader can leave background members holding output pipes
     group_signal(group, libc::SIGTERM);
     if unsafe { libc::kill(-group, 0) } == 0 {
         thread::sleep(Duration::from_millis(100));

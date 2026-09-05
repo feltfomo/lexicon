@@ -11,8 +11,8 @@ Furnish separates pure evaluation from runtime mutation. The Nix compiler proves
 | `core.nix` | Pure compiler and validation pipeline. |
 | `files.nix` | Convert selected home-relative entries into principal-aware declarations. |
 | `runtime.nix` | NixOS options, native executors, manifest retention, activation, and service wiring. |
-| `coordinator.nix` | One canonical Rust package derivation. |
-| `tests.nix` | Pure regression, forcing, collision, and lowering proofs. |
+| `furnish-coordinator` flake input | Coordinator package and runtime protocol implementation. |
+| `tests/furnish/` | Pure regression, forcing, collision, and lowering checks. |
 
 ## Pure compiler
 
@@ -52,7 +52,7 @@ Executor shape validation similarly leaves `materialize` lazy until an executor 
 
 Selection happens one declaration at a time. Furnish does not merge declaration payloads through Ownerships.
 
-`offProvider` is used after Program has already selected declarations for the current principal. It accepts only untagged declarations. A remaining ownership key is a loud error because silently treating it as global would be unsafe.
+`offProvider` is used when selection has already happened, whether in Program or another caller. It accepts only untagged declarations. A remaining ownership key is an error rather than an implicit global claim.
 
 ### 3. Destination normalization
 

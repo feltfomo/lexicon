@@ -1,118 +1,153 @@
 # Praxis reference
 
-`inputs.lexicon.lib.praxis { ... }` validates the declarations with Axiom and
-reports errors through Krisis. Unknown fields are errors, not ignored options.
+`inputs.lexicon.lib.praxis { ... }` returns compiled outputs. Unknown fields are
+errors. Names and references are validated before packaging; selected command
+outputs do not force unrelated command bodies.
 
-These fields are independent of file layout. You can write the declaration in
-`flake.nix`, export it from one `praxis.nix`, or import a file per command into
-`commands`. The [usage guide](usage.md) shows all three. Imports are ordinary
-Nix: a command file returns a string, step list, or command record, optionally
-from a function whose arguments you supply. A bare path isn't a command.
-
-## Project
+## Project fields
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `pkgs` | required | Package set for the shared runner and runtime inputs. |
-| `commands` | `{}` | Named strings, step lists, or command records. |
-| `cwd` | `null` | Absolute runtime directory string. Otherwise inherit caller cwd. |
-| `discoverRoot` | `null` | Find the nearest ancestor containing this relative file marker. Mutually exclusive with `cwd`. |
-| `requireRoot` | `false` | Require invocation at the resolved live root with matching `flake.nix`. |
-| `root` | `null` | Nix path containing a regular `flake.nix`; required only for the opt-in guard. Never a runtime cwd. |
+| `pkgs` | required | Nixpkgs package set for the runner and launchers |
+| `commands` | `{ }` | Attribute set of command declarations |
+| `root` | `null` | Build-time Nix path used by the optional root guard |
+| `cwd` | `null` | Absolute runtime working directory |
+| `discoverRoot` | `null` | Relative marker used for nearest-ancestor discovery |
+| `requireRoot` | `false` | Require the caller to match the declared root's flake |
+| `ui` | `{ }` | Project-wide UI defaults |
 
-Command names match `[a-zA-Z0-9][a-zA-Z0-9_-]*`. `praxis` is reserved for the
-dispatcher. Runtime directory and script paths are strings, not Nix paths.
+`cwd` and `discoverRoot` are mutually exclusive. `requireRoot` needs `root`
+containing a regular `flake.nix`. It is a check, not an implicit directory change.
 
-## Command record
+## Commands
+
+A string is shorthand for one `run` step. A list is shorthand for `{ steps =
+list; }`. A record accepts:
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `steps` | required | Nonempty ordered list. |
-| `description` | `"Run <name>"` | Help and package description. |
-| `runtimeInputs` | `[]` | Derivations added to the command's child PATH. |
-| `env` | `{}` | Environment names mapped to literal strings. |
-| `cwd` | `null` | Absolute or clean relative runtime directory. |
-| `parameters` | `[]` | Typed named or positional arguments. |
-| `lock` | `null` | Command-style name of a nonblocking user-wide lock. |
-## Step
+| `steps` | required | Nonempty ordered list |
+| `description` | `"Run <name>"` | Help and list text |
+| `runtimeInputs` | `[ ]` | Executable packages prepended to PATH |
+| `env` | `{ }` | Literal string environment overrides |
+| `cwd` | `null` | Directory relative to the enclosing scope, or absolute |
+| `lock` | `null` | Same-user advisory lock name |
+| `parameters` | `[ ]` | Parameter declarations |
+| `parameterGroups` | `[ ]` | Exclusive or required-together groups |
+| `category` | `null` | Display category |
+| `aliases` | `[ ]` | Dispatcher aliases; unique across the manifest |
+| `examples` | `[ ]` | Usage examples shown in help |
+| `hidden` | `false` | Omit from default list and completion |
+| `deprecated` | `null` | Warning text; execution is still allowed |
+| `timeout` | `null` | Whole-command seconds, including nested steps and prompts |
+| `ui` | `{ }` | Command UI overrides |
 
-A string is shorthand for `{ run = "..."; }`. Records choose exactly one form:
+Command names match `[a-zA-Z0-9][a-zA-Z0-9_-]*`; `praxis` is reserved. Aliases
+cannot shadow command names. They do not create wrapper packages.
 
-| Form | Value | Execution |
-| --- | --- | --- |
-| `run` | Nonempty string | Pinned Bash with `--noprofile --norc -euo pipefail -c`; step `args` become `$1` onward. |
-| `exec` | Nonempty argv list | Direct process, no shell parsing. First item must be a nonempty executable string. |
-| `script` | Clean relative path string | Live regular file contained within the step cwd. |
-| `command` | Declared name | Expand a referenced command with its own argument binding. |
+## Steps
 
-Every form supports `label` (defaults to source/name/executable), `args = []`,
-`env = {}`, `cwd = null`, `confirm = null`, and `forwardArgs = false`.
-`interactive = false` is the default; enable it on executable steps to inherit
-stdin and hand over a controlling terminal. Noninteractive stdin is closed.
-`interpreter` is an optional nonempty executable name or path, only for scripts.
-Declare interpreter arguments in your script or use `exec` instead.
+A string is a `run` step. A record must have exactly one execution form:
 
-An argv item is a string or `{ param = "name"; }`. No implicit splitting,
-interpolation, globbing, or evaluation occurs. At most one step per command
-can have `forwardArgs = true`. References and cycles are checked before launch.
+| Form | Value |
+| --- | --- |
+| `run` | Nonempty Bash source |
+| `exec` | Nonempty argv list; first entry is a literal executable |
+| `script` | Clean relative live-script path |
+| `command` | Reference to a declared command |
+| `prompt` | Prompt record described below |
+
+Shared fields are `label`, `cwd`, `env`, `when`, `timeout`, and `ui`. Executable
+and reference steps also accept `args`, `confirm`, and `forwardArgs`.
+`interactive = true` gives an executable step stdin and foreground terminal
+ownership; it is not allowed on references or prompt steps. Only `script`
+accepts `interpreter`, which is a single executable name/path, not a shell line.
+
+`args` and `exec` entries are strings or `{ param = "declared-name"; }`. An
+empty string is a valid literal argument. At most one step in each command can
+receive pass-through arguments. Reference arguments bind the referenced
+command's parameters; they are not automatically inherited by name.
+
+A missing label uses the executable, script, reference, or prompt message.
+Long and multiline `run` source uses `<command> (step <number>)` instead.
+
+### Prompt record
+
+- `type`: `confirm` (default), `acknowledge`, or `select`.
+- `message`: required nonempty text.
+- `name`: optional response name; required for selection.
+- `acknowledgement`: required exact text for `acknowledge`; otherwise absent.
+- `choices`: nonempty, unique strings for `select`; otherwise absent.
+- `default`: a boolean for confirmation, one declared choice for selection,
+  or absent. Acknowledgement has no default.
+
+Prompt steps cannot also declare `args`, `forwardArgs`, `interactive`, or
+`confirm`. See the [interaction policy](interaction.md#prompt-steps).
+
+### Conditions and timeouts
+
+`when.parameters` maps parameter names to string/int/bool equality values.
+`when.platforms` is a list of OS or architecture-OS names. `when.env` maps
+variable names to exact strings or `null` for absence. Fields combine with AND;
+platform alternatives combine with OR. Empty conditions match.
+
+Timeouts are positive integer seconds, at most 604800. A reference timeout
+covers the expansion. Command and nested deadlines are shared budgets, not
+per-child resets. Earliest expiry wins; exit status is 124.
 
 ## Parameters
 
-Each record has `name`, `description = ""`, `type = "string"`,
-`positional = false`, `required = false`, and `default = null`.
-Types are `string`, signed 64-bit `int`, `bool`, and nonempty `path`. A path is a
-string value; it is not an existence check or an automatic cwd change.
-Names match `[a-zA-Z][a-zA-Z0-9-]*`; `help`, `plain`, and `yes` are reserved.
-Names must also be unique after conversion to uppercase environment names.
-Required parameters cannot have defaults. Boolean positionals are not supported.
-Required positionals must come before optional ones.
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `name` | required | `[a-zA-Z][a-zA-Z0-9-]*` name |
+| `description` | `""` | Help text |
+| `type` | `"string"` | `string`, `int`, `bool`, or `path` |
+| `required` | `false` | Require a CLI/environment value |
+| `positional` | `false` | Bind by position instead of a named flag |
+| `default` | `null` | Static typed default, normalized into the manifest |
+| `choices` | `[ ]` | Typed enum values; empty means unrestricted |
+| `env` | `null` | Runtime environment source |
+| `short` | `null` | One letter, excluding `h`, `y`, `q`, and `v` |
+| `sensitive` | `false` | Runtime-only named string input |
 
-Named values accept `--name=value` or `--name value`. A bare boolean flag means
-true; use `--name=false` for false. Use the equals form for values beginning with
-reserved option tokens. Missing optional booleans become `false`; other missing
-optional values become empty strings. Duplicates, unknown flags, missing values,
-and wrong types fail before execution. `--` begins pass-through arguments, not
-positional binding. Values are also available as `PRAXIS_ARG_<UPPER_NAME>` with
-hyphens changed to underscores.
+Names must have unique `PRAXIS_ARG_<UPPER_NAME>` forms. Runner option names are
+reserved. Required positional arguments precede optional ones. Named flags may
+be interleaved with positionals. Boolean parameters cannot be positional.
 
-## Scope and lifecycle
+`int` uses signed 64-bit decimal values. `path` means a nonempty runtime string,
+not a Nix path or an existence check. Choices and defaults use the declared
+type. CLI values take precedence over environment values, then static defaults.
 
-A command inherits the invoking scope. Its `cwd`, `env`, and runtime input PATH
-are applied, then step overrides. A referenced command starts from that step's
-scope and applies its own overrides. Referenced-command inputs precede enclosing
-inputs, which precede the inherited PATH; an explicit `env.PATH` overrides that
-PATH. Parameter environment values override the command's `env` entries;
-step environment entries apply last. A confirmation on a reference is inherited
-by each executable step it expands to.
+A group is `{ type = "exclusive"; parameters = [ "a" "b" ]; }` or
+`{ type = "together"; parameters = [ "a" "b" ]; }`. It needs at least two
+unique, declared, non-sensitive names. Groups count explicit CLI/environment
+presence, not static defaults.
 
-All reachable locks are acquired in sorted order before execution and held
-until cleanup. They use advisory `flock` files under private `/tmp/praxis-<uid>`.
-Lock files remain after exit so competing processes use the same inode. Do not
-delete lock files while commands may be running. Locks do not cross machines,
-users, or separate `/tmp` namespaces.
-## Outputs and CLI
+Sensitive parameters have no static values, choices, positional form, or argv
+substitution. See [runtime credentials](security.md#runtime-credentials).
 
-- `packages.<name>` and `apps.<name>` — direct executable and flake app.
-- `cli` — packaged dispatcher named `praxis`.
-- `package` — dispatcher plus every direct executable.
-- `runner` — shared implementation; normally use a launcher, not this directly.
-- `manifests.<name>` — manifest value for one reachable command set.
-- `manifest` — complete normalized manifest value, with `version = 1`.
-- `diagnostics.<name>` — structured reachable declaration errors without building.
-- `diagnosticSummaries.<name>` — `total`, `hasErrors`, `bySeverity`, and `byCode` counts for that reachable command set, without rendering messages or forcing siblings.
+## UI record
 
-Typed argument/default errors keep the existing Praxis codes and add safe `context.validation` metadata with a zero-based path, expected shape, actual outer shape, and reason. Failed argument alternatives can emit multiple diagnostics at one path; a successful alternative discards earlier failures.
+`ui` accepts `output`, `color`, `progress`, and `notifications`. All are sparse
+overrides. Notification fields are `success`, `failure`, `bell`, `desktop`, and
+`command` (a nonempty literal argv list). [Interaction settings](interaction.md#ui-settings)
+define precedence, CLI overrides, output channels, and notification behavior.
 
-`praxis list`, `praxis show NAME`, `praxis plan NAME [ARGS]`, `praxis run NAME
-[ARGS]`, `praxis completions fish|bash|zsh`, and `praxis --version` form the CLI.
-Direct commands and `run` accept `--help`, `--plain`, and `--yes` before `--`.
-`plan` emits JSON and performs argument/root-policy validation, not execution.
+## Outputs
 
-## Exit statuses
+| Attribute | Contents |
+| --- | --- |
+| `packages.<name>` | Individual command launcher |
+| `apps.<name>` | Nix app for that launcher |
+| `manifests.<name>` | Selected command plus reachable declarations |
+| `manifest` | All-command manifest |
+| `runner` | Shared runtime package |
+| `cli` | Dispatcher package |
+| `package` | Dispatcher and individual launchers |
+| `diagnostics.<name>` | Structured selected-command diagnostics |
+| `diagnosticSummaries.<name>` | Total, severity/code counts, and `hasErrors` |
 
-Child failures preserve the child's exit code. Signals use `128 + signal`.
-Praxis errors use 64 for usage, arguments, unknown commands, root guard, or
-declined confirmation; 65 for invalid manifests, cycles, or script escapes; 66 for missing runtime
-files/directories; 70 for internal process errors; 73 for lock storage errors;
-74 for I/O errors; 75 for a busy lock; 126 for a non-executable/permission failure;
-and 127 for a missing executable. Earlier side effects are never rolled back.
+Manifest version is 1. `plan` defaults to JSON with bound parameters, expanded
+steps, reference chains, conditions, prompts, deadlines, and sensitive source
+descriptors. Consumers should tolerate additional fields. Execution `--json`
+is a separate newline-delimited event stream, not one plan document.

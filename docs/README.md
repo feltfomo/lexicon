@@ -1,133 +1,72 @@
 # Lexicon
 
-Lexicon adds declarative vocabulary to Nix through independently usable
-subsystems. Ownerships, Furnish, and Program form the configuration stack.
-Praxis sits alongside them as a command utility, not a fourth layer. Declare a
-sequence once, then run it through one executable. Start with [Praxis](praxis.md)
-or go straight to [usage](praxis/usage.md) and the [reference](praxis/reference.md).
+Lexicon provides four libraries for Nix projects. Use them independently or
+connect them where their responsibilities meet.
 
-| Subsystem | What it decides | Reach for it when |
+| Library | Use it for | Start here |
 | --- | --- | --- |
-| **Ownerships** | which configuration applies to which host and user, and how the survivors merge | you want host and user targeting for plain Nix values |
-| **Furnish** | what files should exist on a machine, and how they are kept that way | you want managed files with a real lifecycle, not just store symlinks |
-| **Program** | all of the above, from one declaration | you are declaring an aspect |
-| **Praxis** | which project commands run, in what order, and when they fail | you want `nix run .#gate` from a declarative command set |
+| Ownerships | Select and merge configuration for a host, user, or custom axis | [Ownerships](ownerships/README.md) |
+| Furnish | Declare managed files and reconcile their on-disk state | [Furnish](furnish/README.md) |
+| Program | Package an application's modules, files, directories, and theme as an aspect | [Program](program.md) |
+| Praxis | Package project commands with typed inputs and an execution policy | [Praxis](praxis.md) |
 
-## Add it to a flake
+## Choose a starting point
 
-```nix
-inputs.lexicon = {
-  url = "github:feltfomo/lexicon";
-  inputs.nixpkgs.follows = "nixpkgs";
-};
-```
+**Selecting configuration.** Define a roster and resolve ownership-tagged units.
+Ownerships returns values; it doesn't install packages, write files, or execute
+commands. Start with [standalone resolution](ownerships/USAGE.md).
 
-That one input carries Axiom, Krisis, and Furnish Coordinator. Consumers don't
-add or align those repositories themselves. Lexicon binds them behind its
-`lib` functions while still accepting explicit overrides for fixtures.
+**Managing files.** Furnish compiles declarations into a desired-state manifest
+and offers NixOS wiring for the coordinator that applies it. Use `symlink` for
+immutable content or `writable` when an application needs a real file. Start
+with [Furnish usage](furnish/USAGE.md) and choose a conflict policy deliberately.
 
-## Which one do I want
+**Describing an application.** Program gathers package selection, Home Manager
+imports, NixOS slices, files, directory expansion, and generated themes into
+an aspect. It uses Ownerships for selection and Furnish for managed files.
+[Program usage](program.md) shows the declaration and the required integration
+context.
 
-**Program** is the abstraction over the other two. One `program { ... }` block
-becomes ownership units, a Home Manager module, a NixOS module, and Furnish
-declarations. If its vocabulary covers what you are declaring, stop there — you
-get the validation and the diagnostics for free.
+**Running project work.** Praxis compiles commands into launchers and a
+`praxis` dispatcher. It does not require Program, Furnish, Ownerships, or Den.
+Start with [a small command set](praxis/usage.md), then add
+[interaction policies](praxis/interaction.md) where needed.
 
-```nix
-den.aspects.hyprland = program {
-  hosts = [ "khion" "lumi" ];
-  pkg = pkgs: pkgs.pyprland;
-  nixos = { pkgs, ... }: [ ... ];
-  files = [ ... ];
-};
-```
+## Connections between libraries
 
-**Ownerships** on its own is the right tool when you have plain Nix values that
-differ per machine or per person. It has no opinion about NixOS, Home Manager,
-or files. You hand it units and a context, it hands you one merged value.
+- Program uses Ownerships claims to choose application configuration.
+- Program lowers selected file entries into Furnish declarations.
+- Furnish can use Ownerships resolvers directly, without Program.
+- A Lexicon Den adapter supplies roster and principal context to these
+  libraries. Den's internal configuration is not a Praxis or Furnish API.
+- Praxis can use an Ownerships roster or an existing Den adapter to populate
+  [parameter choices](praxis/adapters.md). Those choices do not authorize an
+  operation or make Praxis a fleet controller.
 
-```nix
-resolve [
-  { shared = true; }
-  { hosts = [ "khion" ]; desktop = true; }
-] { host = { name = "khion"; system = "x86_64-linux"; }; user.name = "feltfomo"; }
-```
+The public factories live under `inputs.lexicon.lib`. They supply Lexicon's
+Axiom and Krisis dependencies. Prefer them in consumer flakes; direct imports
+from `src/` require those dependencies to be supplied explicitly.
 
-**Furnish** on its own is the right tool when the interesting part is the file,
-not the targeting. Its reason to exist is the `writable` representation — a
-file the application is allowed to rewrite, tracked against a ledger so the
-next rebuild knows whether the change came from you or from the app.
+## Working on Lexicon
 
-## How they stack
-
-```text
-program declaration
-  → ownership units          (who gets this)
-  → resolved per host/user   (what applies here)
-  → furnish declarations     (which files should exist)
-  → manifest                 (handed to the coordinator)
-```
-
-Each arrow is a boundary you can enter at. Program enters at the top, a
-standalone NixOS config can enter at ownership units, and a tool that already
-knows its file list can enter at furnish declarations.
-
-Praxis doesn't enter this stack. It turns a project's `commands` into apps and
-packages while leaving host configuration and file lifecycles alone.
-
-## Documentation
-
-**Praxis**
-
-- [Praxis](praxis.md) — declare several commands and run them as one
-- [Usage](praxis/usage.md) — three declaration layouts, arguments, scripts, and installation
-- [Reference](praxis/reference.md) — declaration fields, outputs, and CLI
-- [Architecture](praxis/architecture.md) — runner, migration, and checks
-
-**Program**
-
-- [Program](program.md) — the declaration vocabulary and what it emits
-
-**Ownerships**
-
-- [Overview](ownerships/README.md)
-- [Usage](ownerships/USAGE.md) — standalone, NixOS, and Home Manager
-- [Doors](ownerships/doors.md) — the resolver carrier and the generated names
-- [Architecture](ownerships/architecture.md)
-- [Merge and provenance](ownerships/merge-and-provenance.md)
-- [Rosters and extension](ownerships/rosters-and-extension.md)
-- [Trace and matrix inspection](ownerships/inspection.md)
-- [Reference](ownerships/reference.md)
-
-**Furnish**
-
-- [Overview](furnish/README.md)
-- [Usage](furnish/USAGE.md) — standalone compile and writable files
-- [Architecture](furnish/architecture.md)
-- [Declaration contract](furnish/declaration-contract.md)
-- [Runtime integration](furnish/runtime-integration.md)
-
-## Shared runtime machinery
-
-Axiom supplies reusable runtime types, accumulating validation, parser-backed
-schema fields, stable string sets, and indexed requirements/phases. Krisis adds
-path-aware type diagnostics, safe summaries, and a shared spelling suggester.
-Praxis consumes these boundaries; Furnish and Ownerships retain their existing
-authority, selection, and merge contracts. The Axiom `language/` implementation
-is not used by these additions.
-
-Shared source uses `|>`. Nix 2.25 needs `extra-experimental-features = pipe-operators`
-(plural), or acceptance of the flake's setting. Raw source imports and consuming
-flakes must enable the feature at their own entry point. The tested Lix version
-supports pipes directly. See [coordinated local development](local-development.md)
-for checking unpublished Axiom/Krisis changes without modifying dependency locks.
-
-## Verification
+Run from the checkout root, using the appropriate system in place of
+`x86_64-linux`:
 
 ```fish
-nix fmt
-nix flake check -L
+nix run path:.#formatter.x86_64-linux
+and nix flake check path:. -L
 ```
 
-Or use the same steps through Praxis: `nix run .#gate`. The repository also
-exposes `nix run .#fmt` and `nix run .#test` individually.
+`path:.` includes newly created files before staging. Checks build and test
+artifacts; they do not activate a host configuration. Host activation and
+release publication are separate operations.
+
+The development shell includes the Nix and Rust tooling used by the checks:
+
+```fish
+nix develop path:.
+```
+
+Axiom and Krisis use Nix pipe operators. If your Nix version asks for the
+feature, enable `pipe-operators` for that invocation or in your own Nix
+configuration. Do not treat unrelated flake configuration as implicitly trusted.

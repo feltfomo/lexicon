@@ -26,6 +26,7 @@ let
   envName = lib.strings.isValidPosixName;
   parameters = import ./parameters.nix { inherit lib fields; };
   inherit (fields) nullable;
+  interaction = import ./interaction.nix { inherit lib fields; };
   cwdField =
     subject:
     field subject "cwd" "cwd must be an absolute string or a clean relative directory" (
@@ -44,6 +45,7 @@ let
     raw:
     let
       shape = closed "project" "praxis" {
+        ui = interaction.uiField "praxis.ui";
         pkgs = {
           required = true;
           onMissing = _: diagnostic "praxis" "pkgs" "pkgs is required";
@@ -95,7 +97,7 @@ let
     ) shape;
 
   step =
-    subject: input:
+    subject: fallbackLabel: input:
     let
       raw = if builtins.isString input then { run = input; } else input;
       record = builtins.isAttrs raw;
@@ -106,6 +108,7 @@ let
             "exec"
             "script"
             "command"
+            "prompt"
           ]
         else
           [ ];
@@ -114,6 +117,10 @@ let
         exec = { };
         script = { };
         command = { };
+        prompt = { };
+        ui = interaction.uiField subject;
+        timeout = interaction.timeoutField subject;
+        when = interaction.conditionField subject;
         interpreter = { };
         label = field subject "label-shape" "label must be a non-empty string" nonEmptyString;
         args = fields.typed "${subject}.args" "args-shape" parameters.argumentsType // {
@@ -136,7 +143,7 @@ let
       structural = validation.collect [
         shape.diagnostics
         (validation.optional (record && builtins.length forms != 1) (
-          diagnostic subject "execution-form" "define exactly one of run, exec, script or command"
+          diagnostic subject "execution-form" "define exactly one of run, exec, script, command or prompt"
         ))
         (validation.optional (record && raw ? interpreter && !(raw ? script)) (
           diagnostic subject "interpreter-form" "interpreter is only valid with script"
@@ -153,7 +160,9 @@ let
           command = commandName;
         };
         execution =
-          if kind == "exec" then
+          if kind == "prompt" then
+            interaction.prompt subject spec.prompt
+          else if kind == "exec" then
             validation.andThen (
               args:
               validation.fromDiagnostics (validation.optional (
@@ -171,6 +180,13 @@ let
           (validation.optional (spec ? interpreter && !nonEmptyString spec.interpreter) (
             diagnostic subject "interpreter-shape" "interpreter must be one executable name or path"
           ))
+          (validation.optional
+            (
+              kind == "prompt"
+              && (spec.args != [ ] || spec.forwardArgs || spec.interactive || spec.confirm != null)
+            )
+            (diagnostic subject "prompt" "prompt steps cannot take args, forwardArgs, interactive or confirm")
+          )
           (validation.optional (kind == "command" && spec.interactive) (
             diagnostic subject "interactive" "put interactive on the executable step, not a command reference"
           ))
@@ -181,7 +197,18 @@ let
         spec
         // {
           inherit kind;
-          label = spec.label or (if kind == "exec" then builtins.head spec.exec else spec.${kind});
+          ${kind} = execution.value;
+          label =
+            spec.label or (
+              if kind == "exec" then
+                builtins.head spec.exec
+              else if kind == "prompt" then
+                spec.prompt.message
+              else if kind == "run" && (lib.hasInfix "\n" spec.run || builtins.stringLength spec.run > 80) then
+                fallbackLabel
+              else
+                spec.${kind}
+            );
         }
         // lib.optionalAttrs (kind == "script") { interpreter = spec.interpreter or null; }
       )
@@ -217,6 +244,39 @@ let
         else
           input;
       shape = closed "command" subject {
+        ui = interaction.uiField subject;
+        timeout = interaction.timeoutField subject;
+        category =
+          field subject "category" "category must be a non-empty string" (nullable nonEmptyString)
+          // {
+            default = null;
+          };
+        aliases =
+          field subject "aliases" "aliases must be distinct command-style names" (
+            v:
+            builtins.isList v
+            && builtins.all (a: commandName a && a != name && a != "praxis") v
+            && builtins.length v == builtins.length (axiom.sets.unique v)
+          )
+          // {
+            default = [ ];
+          };
+        examples = field subject "examples" "examples must be strings" interaction.strings // {
+          default = [ ];
+        };
+        hidden = field subject "hidden" "hidden must be boolean" builtins.isBool // {
+          default = false;
+        };
+        deprecated =
+          field subject "deprecated" "deprecated must be a notice or null" (nullable nonEmptyString)
+          // {
+            default = null;
+          };
+        parameterGroups =
+          field subject "parameter-group" "parameterGroups must be a list" builtins.isList
+          // {
+            default = [ ];
+          };
         description =
           field subject "description-shape" "description must be a string" builtins.isString
           // {
@@ -251,12 +311,23 @@ let
         spec:
         let
           steps = validation.sequence (
-            lib.imap1 (index: step "${subject}.steps[${toString index}]") spec.steps
+            lib.imap1 (
+              index: step "${subject}.steps[${toString index}]" "${name} (step ${toString index})"
+            ) spec.steps
           );
           params = validation.sequence (
             lib.imap1 (index: parameters.parameter "${subject}.parameters[${toString index}]") spec.parameters
           );
+          groups = validation.sequence (
+            lib.imap1 (i: interaction.group "${subject}.parameterGroups[${toString i}]") spec.parameterGroups
+          );
+          sensitive = lib.filter (p: p.sensitive) params.value;
+          sensitiveNames = map (p: p.name) sensitive;
+          sensitiveEnv = lib.concatMap (
+            p: [ "PRAXIS_ARG_${parameters.envKey p.name}" ] ++ lib.optional (p.env != null) p.env
+          ) sensitive;
           diagnostics = validation.collect [
+            groups.diagnostics
             (lib.concatLists (
               lib.imap1 (
                 index: input:
@@ -271,6 +342,12 @@ let
           ];
           names = map (p: p.name) params.value;
           parameterNames = axiom.sets.index names;
+          parameterSpecs = builtins.listToAttrs (
+            map (p: {
+              inherit (p) name;
+              value = p;
+            }) params.value
+          );
           environmentNames = builtins.groupBy parameters.envKey names;
           # named flags do not participate in positional ordering
           ordering =
@@ -295,7 +372,43 @@ let
                 invalid = false;
               }
               params.value;
+          shorts = builtins.filter (v: v != null) (map (p: p.short) params.value);
           semantic = validation.collect [
+            (validation.optional (builtins.length shorts != builtins.length (axiom.sets.unique shorts)) (
+              diagnostic subject "parameter-short" "short flags must be unique"
+            ))
+            (lib.concatMap (
+              g:
+              validation.optional
+                (builtins.any (
+                  n: !(builtins.hasAttr n parameterNames) || builtins.elem n sensitiveNames
+                ) g.parameters)
+                (diagnostic subject "parameter-group" "groups must name declared, non-sensitive parameters")
+            ) groups.value)
+            (lib.concatMap (
+              s:
+              validation.collect [
+                (parameters.references subject parameterNames (
+                  map (param: { inherit param; }) (builtins.attrNames s.when.parameters)
+                ))
+                (parameters.conditionDiagnostics subject parameterSpecs s.when.parameters)
+                (validation.optional (
+                  builtins.any (a: builtins.isAttrs a && builtins.elem a.param sensitiveNames) (
+                    s.args ++ (s.exec or [ ])
+                  )
+                  || builtins.any (n: builtins.elem n sensitiveNames) (builtins.attrNames (s.when.parameters or { }))
+                ) (diagnostic subject "parameter-sensitive" "sensitive values cannot appear in argv or conditions"))
+                (validation.optional
+                  (builtins.any (
+                    n: builtins.hasAttr n s.env || builtins.hasAttr n spec.env || builtins.hasAttr n (s.when.env or { })
+                  ) sensitiveEnv)
+                  (
+                    diagnostic subject "parameter-sensitive"
+                      "sensitive environment sources cannot be overridden or inspected by conditions"
+                  )
+                )
+              ]
+            ) steps.value)
             (validation.optional (
               builtins.length names != builtins.length (builtins.attrNames environmentNames)
             ) (diagnostic subject "parameter-name" "parameter names must have unique environment names"))
@@ -315,8 +428,17 @@ let
           validation.fromDiagnostics semantic (
             spec
             // {
-              steps = steps.value;
+              steps = map (
+                s:
+                s
+                // {
+                  when = s.when // {
+                    parameters = builtins.mapAttrs (_: fields.text) s.when.parameters;
+                  };
+                }
+              ) steps.value;
               parameters = params.value;
+              parameterGroups = groups.value;
             }
           )
         ) (validation.fromDiagnostics diagnostics null)

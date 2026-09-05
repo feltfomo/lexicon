@@ -1,9 +1,14 @@
 mod arguments;
 mod cli;
+mod completion;
+mod inspect;
+mod interaction;
 mod model;
+mod notify;
 mod plan;
 mod process;
 mod run;
+mod ui;
 
 use model::{Manifest, Result, fail};
 fn main() {
@@ -24,7 +29,7 @@ fn entry() -> Result<()> {
     if args.next().as_deref() != Some("--manifest") {
         return Err(fail(
             64,
-            "usage: praxis --manifest FILE list|show|plan|run|completions",
+            "usage: praxis --manifest FILE list|show|plan|run|doctor|completions",
         ));
     }
     let path = args

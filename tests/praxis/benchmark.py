@@ -53,10 +53,17 @@ with tempfile.TemporaryDirectory(prefix="praxis-benchmark-") as directory:
                                          "required": True, "positional": False, "default": None}
                                         for i in range(2000)]), [f"--arg{i}=value" for i in range(2000)]),
     ]
+    large = manifest([step()])
+    large["commands"] = {f"cmd{i}": dict(large["commands"]["bench"]) for i in range(10000)}
+    cases.extend([
+        ("list-10000-commands", "list", large, []),
+        ("complete-10000-commands", "complete", large, ["run", "cmd99"]),
+    ])
     for name, action, value, arguments in cases:
         path = root / f"{name}.json"
         path.write_text(json.dumps(value))
-        measure(name, [str(runner), "--manifest", str(path), action, "bench", *arguments], root)
+        target = [] if action in ["list", "complete"] else ["bench"]
+        measure(name, [str(runner), "--manifest", str(path), action, *target, *arguments], root)
 
 expression = (
     'let flake = builtins.getFlake ("path:" + toString ./.); '

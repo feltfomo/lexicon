@@ -5,7 +5,9 @@
   problem,
 }:
 rec {
-  inherit (axiom) validation types;
+  inherit (axiom) validation types sets;
+  text = value: if builtins.isBool value then (if value then "true" else "false") else toString value;
+  envKey = value: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] value);
   diagnostic =
     subject: code: message:
     problem {

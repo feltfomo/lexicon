@@ -75,6 +75,11 @@
           furnishRuntime = withRuntimeDependencies ./src/furnish/runtime.nix;
           program = withCoordinator ./src/program.nix;
           praxis = withDependencies ./src/praxis.nix;
+          praxisAdapters =
+            {
+              lib ? inputs.nixpkgs.lib,
+            }:
+            import ./src/praxis/adapters.nix { inherit lib; };
           report = withDependencies ./src/program/report.nix;
           den = withDependencies ./src/den.nix;
           inherit (inputs.furnish-coordinator.lib) mkCoordinator;
@@ -342,6 +347,7 @@
               marksman
               nixd
               nixfmt
+              python3
               shellcheck
               shfmt
               statix

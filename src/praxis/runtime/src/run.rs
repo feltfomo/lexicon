@@ -6,7 +6,7 @@ use crate::{
 use std::{
     collections::BTreeSet,
     fs::{self, File, OpenOptions},
-    io::{self, IsTerminal, Write},
+    io,
     os::{
         fd::AsRawFd,
         unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt},
@@ -44,6 +44,7 @@ fn locks(names: &BTreeSet<String>) -> Result<Vec<File>> {
             {
                 return Err(fail(65, "invalid lock name"));
             }
+            // keep lock inodes stable so contenders cannot acquire different files
             let file = OpenOptions::new()
                 .read(true)
                 .write(true)
@@ -68,45 +69,14 @@ fn locks(names: &BTreeSet<String>) -> Result<Vec<File>> {
         })
         .collect()
 }
-fn confirmation(prompt: &str, yes: bool) -> Result<()> {
-    if yes {
-        return Ok(());
-    }
-    if !io::stdin().is_terminal() {
-        return Err(fail(64, "confirmation needs a terminal or --yes"));
-    }
-    eprint!("{} [y/N] ", clean(prompt));
-    io::stderr().flush().map_err(|e| fail(74, e.to_string()))?;
-    let mut descriptor = libc::pollfd {
-        fd: libc::STDIN_FILENO,
-        events: libc::POLLIN,
-        revents: 0,
-    };
-    loop {
-        process::cancelled()?;
-        let ready = unsafe { libc::poll(&mut descriptor, 1, 100) };
-        if ready > 0 {
-            break;
-        }
-        if ready < 0 && io::Error::last_os_error().kind() != io::ErrorKind::Interrupted {
-            return Err(fail(74, io::Error::last_os_error().to_string()));
-        }
-    }
-    let mut answer = String::new();
-    io::stdin()
-        .read_line(&mut answer)
-        .map_err(|e| fail(74, e.to_string()))?;
-    if matches!(answer.trim(), "y" | "Y" | "yes") {
-        Ok(())
-    } else {
-        Err(fail(64, "cancelled; earlier steps were not rolled back"))
-    }
-}
-fn child(step: &Invocation) -> Result<Command> {
+pub fn child(step: &Invocation) -> Result<Command> {
     let cwd = step
         .cwd
         .canonicalize()
         .map_err(|e| fail(66, format!("working directory {}: {e}", step.cwd.display())))?;
+    if !cwd.is_dir() {
+        return Err(fail(66, "working directory is not a directory"));
+    }
     let mut program = std::ffi::OsString::from(&step.program);
     let mut prefix = Vec::new();
     if let Some(relative) = &step.script {
@@ -169,73 +139,268 @@ fn child(step: &Invocation) -> Result<Command> {
         .stderr(Stdio::inherit());
     Ok(child)
 }
-fn state(color: bool, code: &str, name: &str) -> String {
-    if color {
-        format!("\x1b[{code}m{name}\x1b[0m")
-    } else {
-        name.into()
-    }
+fn eligible(step: &Invocation, answers: &std::collections::BTreeMap<String, String>) -> bool {
+    step.conditions.iter().all(|c| {
+        c.parameters_match
+            && (c.platforms.is_empty()
+                || c.platforms.iter().any(|p| {
+                    p == std::env::consts::OS
+                        || p.strip_prefix(std::env::consts::ARCH)
+                            .and_then(|s| s.strip_prefix('-'))
+                            == Some(std::env::consts::OS)
+                }))
+            && c.env.iter().all(|(key, expected)| {
+                if let Some(actual) = answers.get(key).or_else(|| step.env.get(key)) {
+                    expected.as_deref() == Some(actual.as_str())
+                } else {
+                    // non-unicode environment values are present, not absent
+                    std::env::var_os(key).as_deref()
+                        == expected.as_deref().map(std::ffi::OsStr::new)
+                }
+            })
+    })
 }
-pub fn execute(plan: &Plan, plain: bool, yes: bool) -> Result<()> {
+pub fn execute(plan: &Plan, options: &crate::ui::Options) -> Result<()> {
+    use crate::{interaction, model::Prompt, notify, ui};
+    use std::{collections::BTreeMap, time::Duration};
     process::install()?;
-    let _locks = locks(&plan.locks)?;
-    let color = !plain
-        && io::stderr().is_terminal()
-        && std::env::var_os("NO_COLOR").is_none()
-        && std::env::var_os("CI").is_none()
-        && std::env::var("TERM").as_deref() != Ok("dumb");
-    let total = plan.steps.len();
     let started = Instant::now();
-    eprintln!(
-        "{} {}\n  {}\n  {total} pending",
-        state(color, "1;36", "praxis"),
-        clean(&plan.command),
-        clean(&plan.cwd.to_string_lossy())
-    );
-    for (index, step) in plan.steps.iter().enumerate() {
-        let number = index + 1;
-        let at = Instant::now();
-        eprintln!(
-            "{} [{number}/{total}] {}",
-            state(color, "36", "running"),
-            clean(&step.label)
-        );
-        let result = (|| {
-            process::cancelled()?;
-            for prompt in &step.confirmations {
-                confirmation(prompt, yes)?;
-            }
-            process::cancelled()?;
-            let code = process::execute(&mut child(step)?, step.interactive)?;
-            if code == 0 {
-                Ok(())
-            } else {
-                Err(fail(
-                    code,
-                    format!("{} failed (exit {code}): {}", step.command, step.label),
-                ))
-            }
-        })();
-        if let Err(error) = result {
-            eprintln!(
-                "{} [{number}/{total}] {} ({:.2}s)\n  {index} succeeded, 1 failed, {} skipped; earlier effects were not rolled back",
-                state(color, "31", "failed"),
-                clean(&step.label),
-                at.elapsed().as_secs_f64(),
-                total - number
-            );
-            return Err(error);
+    let root_deadline = plan.timeout.map(|s| started + Duration::from_secs(s));
+    let mut config = plan.ui.overlay(&options.ui);
+    let json = config.mode() == "json"
+        || plan
+            .steps
+            .iter()
+            .any(|s| s.ui.overlay(&options.ui).mode() == "json");
+    if json {
+        config.output = Some("json".into());
+    }
+    let mut policy = options.policy;
+    policy.non_interactive |= json;
+    let _locks = locks(&plan.locks)?;
+    let total = plan.steps.len();
+    let mut succeeded = 0;
+    let mut skipped = 0;
+    let mut failed = 0;
+    let mut answers = BTreeMap::new();
+    let mut budgets = BTreeMap::new();
+    let mut secrets: BTreeMap<(Option<String>, String), String> = BTreeMap::new();
+    for (name, notice) in &plan.notices {
+        if json {
+            ui::json(&serde_json::json!({"event":"deprecated", "command":name,"message":notice}))?;
+        } else {
+            eprintln!("praxis: {} is deprecated: {}", clean(name), clean(notice));
         }
+    }
+    ui::event(
+        &config,
+        "started",
+        &plan.command,
+        &plan.command,
+        0,
+        total,
+        0.0,
+    )?;
+    let result = (|| {
+        for (index, step) in plan.steps.iter().enumerate() {
+            interaction::deadline(root_deadline)?;
+            let mut config = step.ui.overlay(&options.ui);
+            if json {
+                config.output = Some("json".into());
+            }
+            if !eligible(step, &answers) {
+                skipped += 1;
+                ui::event(
+                    &config,
+                    "skipped",
+                    &step.command,
+                    &step.label,
+                    index + 1,
+                    total,
+                    0.0,
+                )?;
+                continue;
+            }
+            let at = Instant::now();
+            let mut deadline = root_deadline;
+            for budget in &step.budgets {
+                let end = *budgets
+                    .entry(budget.id)
+                    .or_insert_with(|| at + Duration::from_secs(budget.seconds));
+                deadline = Some(deadline.map_or(end, |d| d.min(end)));
+            }
+            if let Some(seconds) = step.timeout {
+                let end = at + Duration::from_secs(seconds);
+                deadline = Some(deadline.map_or(end, |d| d.min(end)));
+            }
+            ui::event(
+                &config,
+                "running",
+                &step.command,
+                &step.label,
+                index + 1,
+                total,
+                0.0,
+            )?;
+            let result = (|| {
+                interaction::deadline(deadline)?;
+                if step.interactive && (policy.non_interactive || std::env::var_os("CI").is_some())
+                {
+                    return Err(fail(
+                        64,
+                        "interactive step is disabled in non-interactive execution",
+                    ));
+                }
+                for message in &step.confirmations {
+                    interaction::ask(
+                        &Prompt {
+                            kind: "confirm".into(),
+                            message: message.clone(),
+                            name: None,
+                            acknowledgement: None,
+                            choices: vec![],
+                            default: None,
+                        },
+                        policy,
+                        deadline,
+                    )?;
+                }
+                if let Some(prompt) = &step.prompt {
+                    let value = interaction::ask(prompt, policy, deadline)?;
+                    if let Some(name) = &prompt.name {
+                        answers.insert(
+                            format!(
+                                "PRAXIS_PROMPT_{}",
+                                name.replace('-', "_").to_ascii_uppercase()
+                            ),
+                            value,
+                        );
+                    }
+                    return Ok(());
+                }
+                let mut child = child(step)?;
+                child.envs(&answers);
+                // inherited sources never escape into an unrelated or unmasked child
+                for key in &plan.sensitive_env {
+                    child.env_remove(key);
+                }
+                for (key, secret) in step.secrets.iter() {
+                    let cache_key = (secret.source.clone(), secret.name.clone());
+                    let value = match secrets.entry(cache_key) {
+                        std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
+                        std::collections::btree_map::Entry::Vacant(entry) => {
+                            let value = match secret.source.as_ref().map(std::env::var).transpose()
+                            {
+                                Ok(Some(value)) => value,
+                                Ok(None) | Err(std::env::VarError::NotPresent) => {
+                                    if !secret.required && policy.unattended() {
+                                        String::new()
+                                    } else {
+                                        interaction::secret(
+                                            &format!("{}:", secret.name),
+                                            policy,
+                                            deadline,
+                                        )?
+                                    }
+                                }
+                                Err(_) => {
+                                    return Err(fail(
+                                        64,
+                                        "sensitive environment input must be UTF-8",
+                                    ));
+                                }
+                            };
+                            entry.insert(value)
+                        }
+                    };
+                    // each binding enforces requiredness, including a cached optional value
+                    if secret.required && value.is_empty() {
+                        return Err(fail(64, "required sensitive input is empty"));
+                    }
+                    child.env(key, value.as_str());
+                }
+                // secret-bearing children have no output channel into runner logs
+                if !step.secrets.is_empty() {
+                    child.stdout(Stdio::null()).stderr(Stdio::null());
+                } else if json {
+                    child.stdout(Stdio::from(io::stderr()));
+                }
+                if config.mode() == "verbose" {
+                    eprintln!(
+                        "  cwd={} program={} argv={}{}",
+                        clean(&step.cwd.to_string_lossy()),
+                        clean(&step.program),
+                        step.args.len(),
+                        if step.secrets.is_empty() {
+                            ""
+                        } else {
+                            " [sensitive output suppressed]"
+                        }
+                    );
+                }
+                let code = process::execute(&mut child, step.interactive, deadline)?;
+                if code == 0 {
+                    Ok(())
+                } else {
+                    Err(fail(
+                        code,
+                        format!("{} failed (exit {code}): {}", step.command, step.label),
+                    ))
+                }
+            })();
+            if result.is_ok() {
+                succeeded += 1;
+            } else {
+                failed += 1;
+            }
+            ui::event(
+                &config,
+                if result.is_ok() {
+                    "succeeded"
+                } else {
+                    "failed"
+                },
+                &step.command,
+                &step.label,
+                index + 1,
+                total,
+                at.elapsed().as_secs_f64(),
+            )?;
+            if step.notify {
+                let _ = notify::send(
+                    &config,
+                    &step.label,
+                    result.is_ok(),
+                    &step.cwd,
+                    &plan.sensitive_env,
+                );
+            }
+            result?;
+        }
+        Ok(())
+    })();
+    let not_run = total.saturating_sub(succeeded + skipped + failed);
+    if json {
+        ui::json(
+            &serde_json::json!({"event":"finished","command":plan.command,"total":total,"succeeded":succeeded,"skipped":skipped,"failed":failed,"not_run":not_run,"success":result.is_ok(),"code":result.as_ref().err().map_or(0, |e: &crate::model::Failure| e.code),"seconds":started.elapsed().as_secs_f64()}),
+        )?;
+    } else if config.mode() != "quiet" && config.progress != Some(false) {
         eprintln!(
-            "{} [{number}/{total}] {} ({:.2}s)",
-            state(color, "32", "succeeded"),
-            clean(&step.label),
-            at.elapsed().as_secs_f64()
+            "{succeeded} succeeded, {skipped} skipped, {failed} failed, {not_run} not run ({:.2}s){}",
+            started.elapsed().as_secs_f64(),
+            if result.is_err() {
+                "; earlier effects were not rolled back"
+            } else {
+                ""
+            }
         );
     }
-    eprintln!(
-        "{total} succeeded ({:.2}s)",
-        started.elapsed().as_secs_f64()
+    let _ = notify::send(
+        &config,
+        &plan.command,
+        result.is_ok(),
+        &plan.cwd,
+        &plan.sensitive_env,
     );
-    Ok(())
+    result
 }

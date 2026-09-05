@@ -1,73 +1,71 @@
 # Praxis
 
-Declare project commands in Nix. Run them as ordinary executables.
-
-Praxis runs programs, live scripts, and other declared commands in order. It
-stops at the first failure and preserves its exit code. It doesn't need NixOS,
-Home Manager, Ownerships, or a particular directory layout. The runner targets
-Linux; Nix is needed to build its packages, not to dispatch an installed command.
-
-## Start with one command set
-
-Add Lexicon to your flake:
+Praxis packages a project's commands as Nix apps and executables. Each command
+is an ordered sequence of shell scripts, literal executable calls, live script
+files, prompts, or references to other commands.
 
 ```nix
-inputs.lexicon = {
-  url = "github:feltfomo/lexicon";
-  inputs.nixpkgs.follows = "nixpkgs";
-};
-```
-
-In a flake-parts `perSystem` function, with `inputs` in scope:
-
-```nix
-perSystem = { pkgs, ... }:
-  let
-    tasks = inputs.lexicon.lib.praxis {
-      inherit pkgs;
-      discoverRoot = "flake.nix";
-      commands = {
-        fmt = "nix fmt";
-        check = "nix flake check -L";
-        gate = [ { command = "fmt"; } { command = "check"; } ];
+let
+  tasks = inputs.lexicon.lib.praxis {
+    inherit pkgs;
+    commands = {
+      fmt = "nix fmt";
+      test = "nix flake check -L";
+      check = {
+        description = "Format and test the project";
+        lock = "project-check";
+        steps = [
+          { command = "fmt"; }
+          { command = "test"; }
+        ];
       };
     };
-  in {
-    apps = tasks.apps;
-    packages = tasks.packages // { praxis = tasks.package; };
-    devShells.default = pkgs.mkShell { packages = [ tasks.package ]; };
   };
+in
+{
+  packages = tasks.packages // { praxis = tasks.package; };
+  apps = tasks.apps // {
+    praxis = { type = "app"; program = "${tasks.cli}/bin/praxis"; };
+  };
+}
 ```
 
-These example commands expect your project to provide a formatter and checks.
-They use the caller's `nix` or `lix`; Praxis doesn't replace it. Lexicon supplies
-Axiom and Krisis internally, so you don't add those as consumer inputs.
+This example belongs inside a per-system output where `pkgs` and `inputs` are
+available. [Usage](praxis/usage.md) includes complete output wiring and ways to
+split command declarations across files.
 
 ```fish
-nix run .#gate
-nix develop
-gate
-praxis plan gate
+nix run .#praxis -- list
+nix run .#praxis -- show check
+nix run .#praxis -- plan check --plain
+nix run .#check
 ```
 
-`discoverRoot` starts at the caller's directory and walks upward to the nearest
-marker. Omit it to keep caller-relative behavior. `cwd` is a runtime string,
-not `./.` or another Nix path. Each step gets its own process; a `cd` or export
-inside one step doesn't leak into the next.
+A command runs from the caller's working directory unless you configure a
+working directory or root-discovery policy. Each executable step gets a fresh
+process. References preserve their order and repetitions; they are not
+parallel dependencies. Failure stops later steps without rolling back earlier
+ones.
 
-## Split by responsibility, compile once
+## Guides
 
-The [usage guide](praxis/usage.md) shows all three layouts: declarations in
-`flake.nix`, a standalone `praxis.nix` containing the whole command set, and
-[one file per command](praxis/usage.md#one-file-per-command). The latter keeps
-both commands and project settings outside the flake. Only output wiring stays
-there, or in a separate flake-parts adapter. All three use the same options and
-compile to the same manifest.
+- [Usage](praxis/usage.md): packaging, scripts, references, arguments, and inspection.
+- [Interaction](praxis/interaction.md): choices, prompts, conditions, UI, notifications, and timeouts.
+- [Reference](praxis/reference.md): declaration fields and output attributes.
+- [Security](praxis/security.md): runtime credentials, shell boundaries, roots, and cancellation.
+- [Roster adapters](praxis/adapters.md): optional Ownerships and Den inputs.
+- [Architecture](praxis/architecture.md): evaluation and execution boundaries.
+- [Runtime dependencies](praxis/dependencies.md): evaluated CLI, terminal, progress, and notification libraries.
 
-- [Usage](praxis/usage.md) covers arguments, scripts, composition, and installation.
-- [Reference](praxis/reference.md) lists fields, outputs, scope, and exit statuses.
-- [Architecture](praxis/architecture.md) explains the validation and runner boundaries.
+## Inspection before execution
 
-`praxis plan` prints the expanded command without executing it. It isn't a
-dry-run implementation for arbitrary programs. Nothing retries, resumes, or
-rolls back a partially completed command.
+`show` displays a command's declaration, parameters, prompts, locks, examples,
+and metadata. `plan` binds arguments and expands references without running
+steps. It defaults to JSON for scripts; `--plain` and `--verbose` select human
+output. `doctor` checks the project root and current executable, directory,
+and script availability without running the command.
+
+Use `--non-interactive` for unattended work and add `--yes` only when accepting
+confirmations is intended. Typed acknowledgement is never bypassed by
+`--yes`. Read the [prompt policy](praxis/interaction.md#prompt-steps) before
+putting a command in CI.

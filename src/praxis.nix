@@ -56,7 +56,12 @@ let
     version = 1;
     bash = "${pkgs.bash}/bin/bash";
     project = {
-      inherit (project) cwd discoverRoot requireRoot;
+      inherit (project)
+        cwd
+        discoverRoot
+        requireRoot
+        ui
+        ;
       expectedFlake =
         if project.requireRoot then builtins.readFile (project.root + "/flake.nix") else null;
     };

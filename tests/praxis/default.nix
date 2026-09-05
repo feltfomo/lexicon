@@ -109,6 +109,158 @@ let
 in
 rec {
   tests = {
+    multiline-label-is-not-source =
+      (builtins.head (manifestCommand (single "printf first\nprintf second")).steps).label
+      == "gate (step 1)";
+    choices-normalize =
+      (builtins.head
+        (manifestCommand (single {
+          parameters = [
+            {
+              name = "count";
+              type = "int";
+              choices = [
+                1
+                2
+              ];
+              default = 2;
+              short = "c";
+              env = "COUNT";
+            }
+          ];
+          steps = [ "true" ];
+        })).parameters
+      ).choices == [
+        "1"
+        "2"
+      ];
+    choice-default-rejected = rejects "parameter-default" {
+      parameters = [
+        {
+          name = "mode";
+          choices = [ "one" ];
+          default = "two";
+        }
+      ];
+      steps = [ "true" ];
+    };
+    choice-type-rejected = rejects "parameter-choices" {
+      parameters = [
+        {
+          name = "mode";
+          choices = [ 1 ];
+        }
+      ];
+      steps = [ "true" ];
+    };
+    short-collision = rejects "parameter-short" {
+      parameters = [
+        {
+          name = "one";
+          short = "o";
+        }
+        {
+          name = "two";
+          short = "o";
+        }
+      ];
+      steps = [ "true" ];
+    };
+    sensitive-default-not-forced = rejects "parameter-sensitive" {
+      parameters = [
+        {
+          name = "token";
+          sensitive = true;
+          default = poison;
+        }
+      ];
+      steps = [ "true" ];
+    };
+    sensitive-argv-rejected = rejects "parameter-sensitive" {
+      parameters = [
+        {
+          name = "token";
+          sensitive = true;
+        }
+      ];
+      steps = [
+        {
+          exec = [
+            "true"
+            { param = "token"; }
+          ];
+        }
+      ];
+    };
+    invalid-group = rejects "parameter-group" {
+      parameters = [ { name = "one"; } ];
+      parameterGroups = [
+        {
+          type = "exclusive";
+          parameters = [
+            "one"
+            "missing"
+          ];
+        }
+      ];
+      steps = [ "true" ];
+    };
+    invalid-condition = rejects "parameter-reference" {
+      steps = [
+        {
+          run = "true";
+          when.parameters.typo = true;
+        }
+      ];
+    };
+    invalid-timeout = rejects "timeout" {
+      timeout = 0;
+      steps = [ "true" ];
+    };
+    invalid-ui = rejects "ui" {
+      ui.output = "mystery";
+      steps = [ "true" ];
+    };
+    typed-prompt-needs-acknowledgement = rejects "prompt" {
+      steps = [
+        {
+          prompt = {
+            type = "acknowledge";
+            message = "Type it";
+          };
+        }
+      ];
+    };
+    select-needs-valid-default = rejects "prompt" {
+      steps = [
+        {
+          prompt = {
+            type = "select";
+            message = "Choose";
+            name = "choice";
+            choices = [ "a" ];
+            default = "b";
+          };
+        }
+      ];
+    };
+    optional-adapters-stay-outside-core =
+      let
+        adapters = import ../../src/praxis/adapters.nix { inherit lib; };
+      in
+      (adapters.fromDen {
+        roster = {
+          hosts = [
+            "x86_64-linux/b"
+            "aarch64-linux/a"
+          ];
+          users = [ "person" ];
+        };
+        unrelated = poison;
+      }).host.choices == [
+        "aarch64-linux/a"
+        "x86_64-linux/b"
+      ];
     type-errors-keep-all-reachable-paths =
       map (d: d.context.validation.path)
         (single {
@@ -457,6 +609,10 @@ rec {
           required = false;
           positional = false;
           description = "";
+          choices = [ ];
+          env = null;
+          short = null;
+          sensitive = false;
         }
       ];
     duplicate-parameter = rejects "parameter-name" {
@@ -547,6 +703,146 @@ rec {
         { name = "TWO-WORDS"; }
       ];
       steps = [ "true" ];
+    };
+    parameter-condition-types-must-match = rejects "condition" {
+      parameters = [
+        {
+          name = "enabled";
+          type = "bool";
+        }
+      ];
+      steps = [
+        {
+          run = "true";
+          when.parameters.enabled = "true";
+        }
+      ];
+    };
+    parameter-conditions-must-use-choices = rejects "condition" {
+      parameters = [
+        {
+          name = "mode";
+          choices = [
+            "debug"
+            "release"
+          ];
+        }
+      ];
+      steps = [
+        {
+          run = "true";
+          when.parameters.mode = "other";
+        }
+      ];
+    };
+    typed-parameter-conditions-are-valid =
+      (single {
+        parameters = [
+          {
+            name = "count";
+            type = "int";
+            choices = [ 2 ];
+            default = 2;
+          }
+        ];
+        steps = [
+          {
+            run = "true";
+            when.parameters.count = 2;
+          }
+        ];
+      }).diagnostics.gate == [ ];
+    reachable-aliases-cannot-collide =
+      builtins.any (d: d.code == "praxis/aliases")
+        (compile {
+          commands = {
+            gate = [
+              { command = "a"; }
+              { command = "b"; }
+            ];
+            a = {
+              aliases = [ "both" ];
+              steps = [ "true" ];
+            };
+            b = {
+              aliases = [ "both" ];
+              steps = [ "true" ];
+            };
+            unrelated = poison;
+          };
+        }).diagnostics.gate;
+    selected-alias-check-keeps-siblings-lazy =
+      (compile {
+        commands = {
+          gate = {
+            aliases = [ "g" ];
+            steps = [ "true" ];
+          };
+          unrelated = poison;
+        };
+      }).diagnostics.gate == [ ];
+    sensitive-sources-cannot-feed-referenced-defaults =
+      builtins.any (d: d.code == "praxis/parameter-sensitive")
+        (compile {
+          commands = {
+            gate = {
+              parameters = [
+                {
+                  name = "token";
+                  sensitive = true;
+                  env = "DEPLOY_TOKEN";
+                }
+              ];
+              steps = [ { command = "child"; } ];
+            };
+            child = {
+              parameters = [
+                {
+                  name = "ordinary";
+                  env = "DEPLOY_TOKEN";
+                }
+              ];
+              steps = [ "true" ];
+            };
+          };
+        }).diagnostics.gate;
+    sensitive-keys-cannot-be-overridden-in-references =
+      builtins.any (d: d.code == "praxis/parameter-sensitive")
+        (compile {
+          commands = {
+            gate = {
+              parameters = [
+                {
+                  name = "token";
+                  sensitive = true;
+                }
+              ];
+              steps = [ { command = "child"; } ];
+            };
+            child = {
+              env.PRAXIS_ARG_TOKEN = "not-a-secret";
+              steps = [ "true" ];
+            };
+          };
+        }).diagnostics.gate;
+    sensitive-sources-cannot-replace-prompt-results = rejects "parameter-sensitive" {
+      parameters = [
+        {
+          name = "token";
+          sensitive = true;
+          env = "PRAXIS_PROMPT_TARGET";
+        }
+      ];
+      steps = [
+        {
+          prompt = {
+            type = "select";
+            message = "Target";
+            name = "target";
+            choices = [ "local" ];
+          };
+        }
+      ];
     };
     shared-reference-diagnostics-stay-ordered =
       map (diagnostic: diagnostic.code)

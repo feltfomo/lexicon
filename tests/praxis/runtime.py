@@ -56,7 +56,7 @@ with tempfile.TemporaryDirectory(prefix="praxis ") as directory:
     assert [step["command"] for step in plan["steps"]] == ["first", "first", "last", "last"]
     assert not (root / "trace").exists()
     value = "two ' words $(touch injected)\nend"
-    response = invoke("run", "literal", value, "--count=-7", "--color", "--destination=a b", "--", "", "--flag", cwd=root)
+    response = invoke("run", "literal", value, "--count=-7", "--colorize", "--destination=a b", "--", "", "--flag", cwd=root)
     assert json.loads(response.stdout) == [[value, "-7", "", "--flag"], "true", "a b"]
     assert not (root / "injected").exists()
     assert json.loads(invoke("run", "forwarding", "--", "--only-child", cwd=root).stdout)[0] == ["nested literal", "4", "--only-child"]
@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory(prefix="praxis ") as directory:
     assert invoke("run", "cwd", cwd=root / "nested", selected=discovered).stdout.strip() == str(root / "nested")
     for shell in ["fish", "bash", "zsh"]:
         completion = invoke("completions", shell, cwd=root).stdout
-        assert "literal" in completion and "count" in completion
+        assert "literal" in completion and "complete" in completion
         if shell != "zsh":
             subprocess.run([shell, "-n"], input=completion, text=True, check=True)
     def limit_descriptors():
