@@ -15,3 +15,7 @@
     expected = "lexicon";
   };
 }
+// import ./krisis.nix {
+  inherit fx;
+  inherit (lexicon) krisis;
+}

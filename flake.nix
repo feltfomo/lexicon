@@ -83,6 +83,9 @@
               }
               ''
                 export HOME="$(realpath .)"
+                # nix-unit's bundled evaluator still gates pipe operators and
+                # only reads them from the environment
+                export NIX_CONFIG="extra-experimental-features = pipe-operators"
                 nix-unit --eval-store "$HOME" ${suite}
                 touch $out
               '';

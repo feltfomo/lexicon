@@ -5,4 +5,7 @@
   inherit lib fx;
 
   version = "0.0.0";
+
+  # every other subsystem reports through it
+  krisis = import ./krisis { inherit lib fx; };
 }
