@@ -30,20 +30,40 @@ pub fn aliases(manifest: &Manifest) -> Result<BTreeMap<String, String>> {
     let sensitive_env = plan::sensitive_environment(manifest);
     let protected = |name: &str| sensitive_env.contains(name);
     let valid_name = |value: &str| {
-        value != "praxis"
-            && value
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_alphanumeric)
+        value
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
             && value
                 .bytes()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'-' | b'_'))
     };
+    if !valid_name(&manifest.name) {
+        return Err(fail(65, "invalid dispatcher name"));
+    }
     for (name, command) in &manifest.commands {
-        if !valid_name(name) || command.aliases.iter().any(|a| !valid_name(a)) {
+        if !valid_name(name)
+            || name == &manifest.name
+            || command
+                .aliases
+                .iter()
+                .any(|a| !valid_name(a) || a == &manifest.name)
+        {
             return Err(fail(65, "invalid command name or alias"));
         }
         validate_ui(&command.ui)?;
+        if command
+            .steps
+            .iter()
+            .filter(|step| step.forward_args)
+            .count()
+            > 1
+        {
+            return Err(fail(
+                65,
+                "at most one step may receive pass-through arguments",
+            ));
+        }
         if command
             .timeout
             .into_iter()
@@ -178,13 +198,18 @@ pub fn aliases(manifest: &Manifest) -> Result<BTreeMap<String, String>> {
     }
     Ok(aliases)
 }
-pub fn help(name: &str, command: &Command, config: &Ui) -> Result<()> {
+pub fn help(prefix: &str, name: &str, command: &Command, config: &Ui) -> Result<()> {
     if config.mode() == "json" {
         return ui::json(&serde_json::json!({"command": name, "declaration": command}));
     }
     let mut text = format!(
-        "{}\n\nUsage: {} [OPTIONS]",
-        clean(&command.description),
+        "{}\n\nUsage: {} {}",
+        clean(if command.description.is_empty() {
+            name
+        } else {
+            &command.description
+        }),
+        clean(prefix),
         clean(name)
     );
     for p in command.parameters.iter().filter(|p| !p.sensitive) {
@@ -203,7 +228,12 @@ pub fn help(name: &str, command: &Command, config: &Ui) -> Result<()> {
             if p.required { ">" } else { "]" }
         ));
     }
-    text.push_str("\n\n  --help, -h           Show help\n  --yes, -y            Accept confirmations, not acknowledgements\n  --non-interactive    Never read prompt input\n  --output MODE        concise, verbose, quiet, plain, json\n  --plain              Disable terminal styling\n  --verbose, -v        Include execution details\n  --quiet, -q          Only runner errors (child output is unchanged)\n  --json               JSON events; child output goes to stderr\n  --color MODE         auto, always, never\n  --no-progress        Hide human progress\n  --notify WHEN        never, success, failure, always\n  --bell               Ring on completion\n");
+    if command.forwarding() {
+        text.push_str(" [ARGS...]");
+    }
+    text.push_str(&format!(
+        "\n\nRunner options go before {name}; use '{prefix} help' to list them.\n"
+    ));
     for p in &command.parameters {
         text.push_str(&format!(
             "\n  {}{} ({})  {}",
@@ -225,6 +255,13 @@ pub fn help(name: &str, command: &Command, config: &Ui) -> Result<()> {
         if let Some(env) = &p.env {
             text.push_str(&format!(" [env: {}]", clean(env)));
         }
+    }
+    text.push_str(&format!("\n\nScope: {}", command.scope.as_str()));
+    if let Some(step) = command.steps.iter().find(|step| step.forward_args) {
+        text.push_str(&format!(
+            "\nArguments: remaining argv -> {}",
+            clean(&step.label)
+        ));
     }
     if let Some(category) = &command.category {
         text.push_str(&format!("\n\nCategory: {}", clean(category)));
@@ -251,7 +288,11 @@ pub fn help(name: &str, command: &Command, config: &Ui) -> Result<()> {
             group.parameters.join(", ")
         ));
     }
-    text.push_str("\n\nSteps:\n");
+    text.push_str(if command.kind == crate::model::CommandKind::Task {
+        "\n\nActions:\n"
+    } else {
+        "\n\nCommand:\n"
+    });
     for step in &command.steps {
         text.push_str(&format!("  {}", clean(&step.label)));
         match &step.action {
@@ -293,8 +334,13 @@ pub fn list(manifest: &Manifest, all: bool, config: &Ui) -> Result<()> {
     let mut text = String::new();
     for (name, c) in commands {
         text.push_str(&format!(
-            "{}\t{}{}{}\n",
+            "{}\t{}{}{}{}\n",
             clean(name),
+            if c.kind == crate::model::CommandKind::Task {
+                "[task] "
+            } else {
+                ""
+            },
             c.category
                 .as_ref()
                 .map_or(String::new(), |v| format!("[{}] ", clean(v))),
@@ -317,13 +363,50 @@ pub fn list(manifest: &Manifest, all: bool, config: &Ui) -> Result<()> {
     }
     ui::output(&text)
 }
-pub fn show_plan(plan: &Plan, config: &Ui, explicit: bool) -> Result<()> {
-    if !explicit || config.mode() == "json" {
-        return ui::json(plan);
+fn execution_preview(step: &plan::Invocation) -> (String, Vec<String>) {
+    let mut program = step.program.clone();
+    let mut args = step.args.clone();
+    if let Some(script) = &step.script {
+        let path = step
+            .script_root
+            .as_deref()
+            .unwrap_or(&step.cwd)
+            .join(script)
+            .to_string_lossy()
+            .into_owned();
+        if program.is_empty() {
+            program = path;
+        } else {
+            args.insert(0, path);
+        }
+    }
+    (program, args)
+}
+pub fn show_plan(plan: &Plan, config: &Ui) -> Result<()> {
+    // inspection materializes script argv without reading or freezing live contents
+    if config.output.is_none() || config.mode() == "json" {
+        let mut value = serde_json::to_value(plan).map_err(|e| fail(70, e.to_string()))?;
+        value["environmentPolicy"] = serde_json::json!(
+            "inherit; set PWD to cwd; prepend package PATH; apply declared overrides and prompt answers; remove protected sensitive names; bind sensitive targets only during execution"
+        );
+        let steps = value["steps"]
+            .as_array_mut()
+            .ok_or_else(|| fail(70, "invalid serialized plan"))?;
+        for (value, step) in steps.iter_mut().zip(&plan.steps) {
+            let (program, args) = execution_preview(step);
+            value["program"] = serde_json::json!(program);
+            value["args"] = serde_json::json!(args);
+            if step.script.is_some() {
+                value["scriptResolution"] =
+                    serde_json::json!("canonicalize and validate confinement at execution");
+            }
+        }
+        return ui::json(&value);
     }
     let mut text = format!(
-        "{}\n  cwd: {}\n  locks: {}\n",
+        "{}\n  scope: {}\n  cwd: {}\n  locks: {}\n  environment: inherited except protected sensitive sources; declared overrides win\n  PATH: declared package prefix then inherited PATH, unless env.PATH overrides it\n",
         clean(&plan.command),
+        plan.scope.as_str(),
         clean(&plan.cwd.to_string_lossy()),
         plan.locks.iter().cloned().collect::<Vec<_>>().join(", ")
     );
@@ -392,14 +475,19 @@ pub fn show_plan(plan: &Plan, config: &Ui, explicit: bool) -> Result<()> {
                 step.secrets.len()
             ));
         }
-        if config.mode() == "verbose" {
+        if step.prompt.is_none() {
+            let (program, args) = execution_preview(step);
             text.push_str(&format!(
-                "     cwd: {}; program: {}; {} arguments; {} environment overrides\n",
-                clean(&step.cwd.to_string_lossy()),
-                clean(&step.program),
-                step.args.len(),
-                step.env.len()
+                "     cwd: {}\n     program: {:?}\n     argv: {:?}\n     env overrides: {:?}\n     PATH prefix: {:?} (unless overridden by env.PATH)\n",
+                clean(&step.cwd.to_string_lossy()), program, args, step.env, step.path
             ));
+            if let Some(script) = &step.script {
+                let base = step.script_root.as_deref().unwrap_or(&step.cwd);
+                text.push_str(&format!(
+                    "     live script: {:?} under {:?} (validated at execution)\n",
+                    script, base
+                ));
+            }
         }
     }
     ui::output(&text)

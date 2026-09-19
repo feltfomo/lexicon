@@ -66,7 +66,8 @@
   users.users.tester = {
     isNormalUser = true;
     extraGroups = [ "wheel" ];
-    hashedPassword = "$6$skadivmtest$tp5BUeNDHy1miR21O7X2QXROL/yxzqnT9XeKJ4UKI.PpyYdkise0/iV58ErEoKs5SuKbvW/xy93Mzu3lQ2Fgf0";
+    # neutral fixture credential; SSH password authentication stays disabled
+    hashedPassword = "$6$lexicontest$rXwT5uVFqlRgDESCnV8Yzir1efDVL.W8pJjj0zMmX6A83iC1DWUX4G0/Yrs4ZzhLOjDWE2dua916BFK6tkL520";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIElUx+G8NdV6W0NVEh3wpOg33mBnHY0oG9b31eds/LSs furnish-vm-test"
     ];

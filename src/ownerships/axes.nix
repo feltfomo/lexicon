@@ -1,9 +1,4 @@
-# _lib/ownerships/axes.nix
-#
-# axis implementations, authoring descriptors, and cross-axis relation data.
-# the engine consumes registries built from these records; it never learns axis
-# names, author keys, roster fields, or which scopes may use them. new axes and
-# relations extend data here instead of branching the translator or resolver.
+# descriptors keep axis names and roster fields out of the translator and resolver
 {
   lib,
   krisis,
@@ -217,8 +212,13 @@ let
           { ${name} = include [ ((roster.memberOf or (entity: entity.name)) ctx.${name}) ]; }
         else
           { };
+      # labels must also accept the canonical-id-only context used by selection
       ctxLabel =
-        ctx: if ctx ? ${name} && ctx.${name} != null then "${name} '${ctx.${name}.name}'" else null;
+        ctx:
+        if ctx ? ${name} && ctx.${name} != null then
+          "${name} '${ctx.${name}.name or ((roster.memberOf or (entity: entity.name)) ctx.${name})}'"
+        else
+          null;
     };
 
   mkPredicateDescriptor =
@@ -263,11 +263,8 @@ let
       "no user in { ${builtins.concatStringsSep ", " users} } lives on any host in { ${builtins.concatStringsSep ", " hosts} } -- this host/user co-ownership can never apply";
   };
 
-  # canonical host identity is "<system>/<name>"; a bare name is an alias. a
-  # one-arg `define.host "khion"` stays a standalone declaration (system
-  # "standalone", bare-name alias) so existing callers keep byte-identical
-  # resolve/config output; the optional attrs form federates a host onto a real
-  # system and can carry extra aliases and dimension data.
+  # standalone and federated hosts share system/name identities
+  # a bare name is an alias and can be ambiguous across systems
   canonicalHostId =
     system: name:
     canonical.qualified {
@@ -828,9 +825,7 @@ let
         map (key: key // { inherit (descriptor) scopeError; }) descriptor.authorKeys
     ) axisDescriptors;
 
-  # every scope violation in the tree rather than the first one. the old caller
-  # threw on `head offending`, so a unit that set two forbidden keys reported
-  # one and hid the other behind the next build.
+  # collect every forbidden key before evaluating any selected payload
   scopeViolationsFor =
     axisDescriptors: scope: units:
     let

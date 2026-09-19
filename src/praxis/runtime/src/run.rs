@@ -86,12 +86,14 @@ pub fn child(step: &Invocation) -> Result<Command> {
         {
             return Err(fail(65, "script must be a clean relative path"));
         }
-        let resolved = cwd
+        // a nix path keeps its project anchor when the command changes cwd
+        let script_base = step.script_root.as_deref().unwrap_or(&cwd);
+        let resolved = script_base
             .join(relative)
             .canonicalize()
             .map_err(|e| fail(66, format!("script not found {relative}: {e}")))?;
-        if !resolved.starts_with(&cwd) {
-            return Err(fail(65, "script escapes the live project root"));
+        if !resolved.starts_with(script_base) {
+            return Err(fail(65, "script escapes its live source directory"));
         }
         if !resolved.is_file() {
             return Err(fail(66, "script is not a regular file"));

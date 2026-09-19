@@ -45,7 +45,14 @@ let
     raw:
     let
       shape = closed "project" "praxis" {
-        ui = interaction.uiField "praxis.ui";
+        name = field "praxis" "name" "name must be a command-style name" commandName // {
+          default = "praxis";
+        };
+        ui =
+          if builtins.isAttrs raw && raw ? ui && raw.ui != { } then
+            interaction.uiField "praxis.ui"
+          else
+            { default = { }; };
         pkgs = {
           required = true;
           onMissing = _: diagnostic "praxis" "pkgs" "pkgs is required";
@@ -97,7 +104,7 @@ let
     ) shape;
 
   step =
-    subject: fallbackLabel: input:
+    subject: fallbackLabel: autoForward: input:
     let
       raw = if builtins.isString input then { run = input; } else input;
       record = builtins.isAttrs raw;
@@ -122,6 +129,7 @@ let
         timeout = interaction.timeoutField subject;
         when = interaction.conditionField subject;
         interpreter = { };
+        rootRelative = field subject "script-root" "rootRelative must be boolean" builtins.isBool;
         label = field subject "label-shape" "label must be a non-empty string" nonEmptyString;
         args = fields.typed "${subject}.args" "args-shape" parameters.argumentsType // {
           default = [ ];
@@ -137,7 +145,8 @@ let
             default = null;
           };
         forwardArgs = field subject "forward-args" "forwardArgs must be a boolean" builtins.isBool // {
-          default = false;
+          # a sequence needs an explicit recipient instead of broadcasting arguments
+          default = autoForward && !(record && raw ? prompt);
         };
       } raw;
       structural = validation.collect [
@@ -147,6 +156,9 @@ let
         ))
         (validation.optional (record && raw ? interpreter && !(raw ? script)) (
           diagnostic subject "interpreter-form" "interpreter is only valid with script"
+        ))
+        (validation.optional (record && raw ? rootRelative && !(raw ? script)) (
+          diagnostic subject "script-root" "rootRelative is only valid with script"
         ))
       ];
     in
@@ -197,6 +209,7 @@ let
         spec
         // {
           inherit kind;
+          # shell argument placement belongs to the authored source
           ${kind} = execution.value;
           label =
             spec.label or (
@@ -232,10 +245,12 @@ let
         } env.${name}).diagnostics
     ) (builtins.attrNames env);
 
-  command =
-    name: input:
+  command = normalizeCommand "commands";
+  task = normalizeCommand "tasks";
+  normalizeCommand =
+    collection: name: input:
     let
-      subject = "commands.${name}";
+      subject = "${collection}.${name}";
       raw =
         if builtins.isString input then
           { steps = [ input ]; }
@@ -244,6 +259,29 @@ let
         else
           input;
       shape = closed "command" subject {
+        kind =
+          field subject "kind" "kind must be command or task" (
+            v:
+            builtins.elem v [
+              "command"
+              "task"
+            ]
+          )
+          // {
+            default = "command";
+          };
+        scope =
+          field subject "scope" "scope must be project or global" (
+            value:
+            builtins.isString value
+            && builtins.elem value [
+              "project"
+              "global"
+            ]
+          )
+          // {
+            default = "project";
+          };
         ui = interaction.uiField subject;
         timeout = interaction.timeoutField subject;
         category =
@@ -255,7 +293,7 @@ let
           field subject "aliases" "aliases must be distinct command-style names" (
             v:
             builtins.isList v
-            && builtins.all (a: commandName a && a != name && a != "praxis") v
+            && builtins.all (a: commandName a && a != name) v
             && builtins.length v == builtins.length (axiom.sets.unique v)
           )
           // {
@@ -280,7 +318,7 @@ let
         description =
           field subject "description-shape" "description must be a string" builtins.isString
           // {
-            default = "Run ${name}";
+            default = "";
           };
         steps = required subject "steps-shape" "steps must be a non-empty list" (
           value: builtins.isList value && value != [ ]
@@ -300,11 +338,9 @@ let
         };
       } raw;
     in
-    if !commandName name || name == "praxis" then
+    if !commandName name then
       validation.failure [
-        (diagnostic subject "command-name"
-          "command names must match [a-zA-Z0-9][a-zA-Z0-9_-]*; praxis is reserved"
-        )
+        (diagnostic subject "command-name" "command names must match [a-zA-Z0-9][a-zA-Z0-9_-]*")
       ]
     else
       validation.andThen (
@@ -312,7 +348,10 @@ let
         let
           steps = validation.sequence (
             lib.imap1 (
-              index: step "${subject}.steps[${toString index}]" "${name} (step ${toString index})"
+              index:
+              step "${subject}.steps[${toString index}]" "${name} (step ${toString index})" (
+                builtins.length spec.steps == 1
+              )
             ) spec.steps
           );
           params = validation.sequence (
@@ -445,5 +484,5 @@ let
       ) shape;
 in
 {
-  inherit project command;
+  inherit project command task;
 }

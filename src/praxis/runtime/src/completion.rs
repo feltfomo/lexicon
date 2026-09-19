@@ -69,54 +69,83 @@ pub fn candidates(
         .split_last()
         .map_or(("", &[][..]), |(p, rest)| (p.as_str(), rest));
     let mut cursor = 0;
+    let mut options = ui::Options::default();
     while let Some(word) = previous.get(cursor).filter(|w| w.starts_with('-')) {
-        if let Some(values) = ui::option_values(word) {
-            if cursor + 1 == previous.len() {
-                return literals(values, prefix);
-            }
-            cursor += 1;
+        if let Some(values) = ui::option_values(word)
+            && cursor + 1 == previous.len()
+        {
+            return literals(values, prefix);
+        }
+        if options.take(previous, &mut cursor).ok() != Some(true) {
+            return vec![];
         }
         cursor += 1;
     }
+    let names = || {
+        manifest
+            .commands
+            .iter()
+            .filter(|(_, c)| !c.hidden)
+            .flat_map(|(name, c)| {
+                std::iter::once(name.as_str()).chain(c.aliases.iter().map(String::as_str))
+            })
+    };
     let Some(action) = previous.get(cursor) else {
         return runner_inline(prefix).unwrap_or_else(|| {
             if prefix.starts_with('-') {
                 literals(ui::RUNNER_FLAGS, prefix)
             } else {
-                literals(
-                    &["list", "show", "plan", "run", "doctor", "completions"],
+                matching(
+                    ui::ACTIONS
+                        .iter()
+                        .copied()
+                        .chain(names())
+                        .filter(|name| name.starts_with(prefix))
+                        .map(str::to_owned)
+                        .collect(),
                     prefix,
                 )
             }
         });
     };
     if action == "completions" {
-        return literals(&["fish", "bash", "zsh"], prefix);
-    }
-    if !matches!(action.as_str(), "show" | "plan" | "run" | "doctor") {
-        return runner_inline(prefix).unwrap_or_else(|| literals(ui::RUNNER_FLAGS, prefix));
-    }
-    let Some(name) = previous.get(cursor + 1) else {
-        return matching(
-            manifest
-                .commands
-                .iter()
-                .filter(|(_, c)| !c.hidden)
-                .flat_map(|(name, c)| std::iter::once(name.clone()).chain(c.aliases.clone()))
-                .collect(),
+        return literals(
+            if previous.len() == cursor + 1 {
+                &["fish", "bash", "zsh"]
+            } else {
+                &["--wrappers"]
+            },
             prefix,
         );
+    }
+    let name = if matches!(action.as_str(), "show" | "plan" | "run" | "doctor" | "help") {
+        cursor += 1;
+        let Some(name) = previous.get(cursor) else {
+            return matching(
+                names()
+                    .filter(|name| name.starts_with(prefix))
+                    .map(str::to_owned)
+                    .collect(),
+                prefix,
+            );
+        };
+        name
+    } else if ui::ACTIONS.contains(&action.as_str()) {
+        return runner_inline(prefix).unwrap_or_else(|| literals(ui::RUNNER_FLAGS, prefix));
+    } else {
+        action
     };
     let canonical = aliases.get(name).unwrap_or(name);
     let Some(command) = manifest.commands.get(canonical) else {
         return vec![];
     };
-    if command.hidden {
+    if command.hidden || matches!(action.as_str(), "show" | "help") {
         return vec![];
     }
     let parameters = ParameterIndex::new(&command.parameters);
+    let forwarding = command.forwarding();
     let mut positional = 0;
-    cursor += 2;
+    cursor += 1;
     while let Some(word) = previous.get(cursor) {
         if word == "--" {
             return vec![];
@@ -128,13 +157,10 @@ pub fn candidates(
                 }
                 cursor += 1;
             }
-        } else if let Some(values) = ui::option_values(word) {
-            if cursor + 1 == previous.len() {
-                return literals(values, prefix);
-            }
-            cursor += 1;
-        } else if !word.starts_with('-') || word.parse::<i64>().is_ok() {
+        } else if parameters.positional(word, positional).is_some() {
             positional += 1;
+        } else if forwarding {
+            return vec![];
         }
         cursor += 1;
     }
@@ -145,14 +171,8 @@ pub fn candidates(
             .map(|v| format!("{flag}{v}"))
             .collect();
     }
-    if let Some(values) = runner_inline(prefix) {
-        return values;
-    }
     if prefix.starts_with('-') {
-        let mut values = ui::RUNNER_FLAGS
-            .iter()
-            .map(|v| (*v).to_owned())
-            .collect::<Vec<_>>();
+        let mut values = Vec::new();
         for p in command
             .parameters
             .iter()
@@ -163,7 +183,7 @@ pub fn candidates(
                 values.push(format!("-{short}"));
             }
         }
-        // negative positional choices share a prefix with runner flags
+        // negative positional choices share a prefix with named flags
         if let Some(parameter) = parameters
             .positionals
             .get(positional)
@@ -179,36 +199,43 @@ pub fn candidates(
             .map_or_else(Vec::new, |p| matching(parameter_values(p, prefix), prefix))
     }
 }
-pub fn generate(manifest: &Manifest, shell: &str) -> Result<()> {
+pub fn generate(manifest: &Manifest, shell: &str, wrappers: bool) -> Result<()> {
+    let prefix = &manifest.name;
+    // dispatcher installation must not replace native tools' completion functions
     let names = manifest
         .commands
         .iter()
-        .filter(|(_, c)| !c.hidden)
+        .filter(|(_, c)| wrappers && !c.hidden)
         .map(|(n, _)| n.as_str())
         .collect::<Vec<_>>()
         .join(" ");
     let text = match shell {
         "fish" => format!(
-            r#"function __praxis_candidates
+            r#"function __{prefix}_candidates
   set -l words (commandline -opc)
   set -l current (commandline -ct)
-  if test (path basename -- "$words[1]") = praxis
+  set -l invoked (path basename -- "$words[1]")
+  if test "$invoked" = {prefix}
     command "$words[1]" complete -- $words[2..] "$current" | string escape
   else
-    command "$words[1]" --complete -- $words[2..] "$current" | string escape
+    set -l dispatcher {prefix}
+    if string match -q '*/*' -- "$words[1]"
+      set dispatcher (path dirname -- "$words[1]")/{prefix}
+    end
+    command "$dispatcher" complete -- run "$invoked" $words[2..] "$current" | string escape
   end
 end
-complete -c praxis -f -a '(__praxis_candidates)'
+complete -c {prefix} -f -a '(__{prefix}_candidates)'
 for cmd in {names}
-  complete -c $cmd -f -a '(__praxis_candidates)'
+  complete -c $cmd -f -a '(__{prefix}_candidates)'
 end
 "#
         ),
         // readline splits at equals even though it belongs to the parameter token
         "bash" => format!(
-            r#"_praxis_complete() {{
+            r#"_{prefix}_complete() {{
   local -a words=()
-  local word previous current i
+  local word previous current i dispatcher={prefix}
   for word in "${{COMP_WORDS[@]:1:COMP_CWORD}}"; do
     previous=
     if (( ${{#words[@]}} )); then previous=${{words[-1]}}; fi
@@ -220,31 +247,38 @@ end
       words+=("$word")
     fi
   done
-  if [[ ${{COMP_WORDS[0]##*/}} == praxis ]]; then
+  if [[ ${{COMP_WORDS[0]##*/}} == {prefix} ]]; then
     mapfile -t COMPREPLY < <("${{COMP_WORDS[0]}}" complete -- "${{words[@]}}")
   else
-    mapfile -t COMPREPLY < <("${{COMP_WORDS[0]}}" --complete -- "${{words[@]}}")
+    if [[ ${{COMP_WORDS[0]}} == */* ]]; then dispatcher="${{COMP_WORDS[0]%/*}}/{prefix}"; fi
+    mapfile -t COMPREPLY < <("$dispatcher" complete -- run "${{COMP_WORDS[0]##*/}}" "${{words[@]}}")
   fi
   current=${{COMP_WORDS[COMP_CWORD]}}
   if [[ $current == = || ( $COMP_CWORD -gt 0 && ${{COMP_WORDS[COMP_CWORD-1]}} == = ) ]]; then
     for i in "${{!COMPREPLY[@]}}"; do COMPREPLY[i]=${{COMPREPLY[i]#*=}}; done
   fi
 }}
-complete -F _praxis_complete praxis {names}
+complete -F _{prefix}_complete {prefix} {names}
 "#
         ),
         "zsh" => format!(
-            r#"#compdef praxis {names}
-_praxis_complete() {{
+            r#"#compdef {prefix} {names}
+_{prefix}_complete() {{
   local -a candidates
-  if [[ ${{words[1]:t}} == praxis ]]; then
+  local dispatcher={prefix}
+  if [[ ${{words[1]:t}} == {prefix} ]]; then
     candidates=("${{(@f)$("${{words[1]}}" complete -- "${{words[@]:1:$((CURRENT - 1))}}")}}")
   else
-    candidates=("${{(@f)$("${{words[1]}}" --complete -- "${{words[@]:1:$((CURRENT - 1))}}")}}")
+    if [[ ${{words[1]}} == */* ]]; then dispatcher="${{words[1]:h}}/{prefix}"; fi
+    candidates=("${{(@f)$("$dispatcher" complete -- run "${{words[1]:t}}" "${{words[@]:1:$((CURRENT - 1))}}")}}")
   fi
   compadd -- "${{candidates[@]}}"
 }}
-compdef _praxis_complete praxis {names}
+compdef _{prefix}_complete {prefix} {names}
+# autoload must answer the first request, not just register the function
+if [[ ${{funcstack[1]-}} == _{prefix} ]]; then
+  _{prefix}_complete "$@"
+fi
 "#
         ),
         _ => return Err(fail(64, "supported completion shells: fish, bash, zsh")),

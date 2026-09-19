@@ -1,7 +1,7 @@
 { pkgs }:
 pkgs.rustPlatform.buildRustPackage {
   pname = "praxis";
-  version = "0.2.0";
+  version = import ./version.nix;
   src = pkgs.lib.fileset.toSource {
     root = ./runtime;
     fileset = pkgs.lib.fileset.unions [

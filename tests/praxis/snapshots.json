@@ -1,7 +1,0 @@
-{
-  "help": "Praxis runs your declared commands.\n\n  praxis list [--all] [--json]\n  praxis show NAME\n  praxis plan NAME [ARGS] [--plain|--json]\n  praxis run NAME [--yes] [--non-interactive] [ARGS]\n  praxis doctor [NAME [ARGS]]\n  praxis completions fish|bash|zsh\n",
-  "choiceCandidates": "--mode=debug\n--mode=release\n--mode=two words\n",
-  "runEvents": ["started", "running", "succeeded", "finished"],
-  "choiceError": {"event": "error", "code": 64, "message": "mode expects one of debug, release, two words"},
-  "failedRun": {"total": 4, "succeeded": 1, "skipped": 1, "failed": 1, "not_run": 1, "success": false, "code": 23}
-}

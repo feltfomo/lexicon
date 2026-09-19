@@ -1,5 +1,5 @@
 use crate::arguments;
-use crate::model::{Action, Manifest, Prompt, Result, Ui, fail};
+use crate::model::{Action, CommandScope, Manifest, Prompt, Result, Ui, fail};
 use serde::Serialize;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -15,6 +15,8 @@ pub struct Invocation {
     pub program: String,
     pub args: Vec<String>,
     pub script: Option<String>,
+    #[serde(rename = "scriptRoot", skip_serializing_if = "Option::is_none")]
+    pub script_root: Option<PathBuf>,
     pub env: Rc<BTreeMap<String, String>>,
     pub path: String,
     pub interactive: bool,
@@ -53,6 +55,7 @@ pub struct Binding {
 #[derive(Serialize)]
 pub struct Plan {
     pub command: String,
+    pub scope: CommandScope,
     pub cwd: PathBuf,
     pub steps: Vec<Invocation>,
     pub locks: BTreeSet<String>,
@@ -74,22 +77,45 @@ pub fn sensitive_environment(manifest: &Manifest) -> BTreeSet<String> {
 fn directory(base: &Path, value: Option<&str>) -> PathBuf {
     value.map_or_else(|| base.to_path_buf(), |value| base.join(value))
 }
-fn root(manifest: &Manifest, caller: &Path) -> Result<PathBuf> {
+fn root(manifest: &Manifest, caller: &Path, scope: CommandScope) -> Result<PathBuf> {
     let project = &manifest.project;
     let root = if let Some(marker) = &project.discover_root {
-        caller
+        let found = caller
             .ancestors()
-            .find(|path| path.join(marker).is_file())
-            .ok_or_else(|| fail(64, format!("no parent contains {marker}")))?
-            .to_path_buf()
+            .find(|path| path.join(marker).symlink_metadata().is_ok())
+            .ok_or_else(|| fail(64, format!("no parent contains {marker}; configure an absolute project cwd for global commands")))?;
+        if !found
+            .join(marker)
+            .symlink_metadata()
+            .is_ok_and(|m| m.file_type().is_file())
+        {
+            return Err(fail(
+                64,
+                format!("{marker} must be a regular file, not a symlink"),
+            ));
+        }
+        found.to_path_buf()
     } else {
         directory(caller, project.cwd.as_deref())
     };
     let root = root
         .canonicalize()
         .map_err(|e| fail(64, format!("working directory {}: {e}", root.display())))?;
+    if !root.is_dir() {
+        return Err(fail(64, "project cwd must be a directory"));
+    }
+    // scope constrains entry, while references inherit the resolved execution directory
+    if scope == CommandScope::Project && !caller.starts_with(&root) {
+        return Err(fail(
+            64,
+            format!(
+                "project-scoped command; invoke from {} or a subdirectory",
+                root.display()
+            ),
+        ));
+    }
     if project.require_root {
-        if root != caller || root.starts_with("/nix/store") {
+        if (scope == CommandScope::Project && root != caller) || root.starts_with("/nix/store") {
             return Err(fail(64, "invoke from the live project root"));
         }
         let marker = root.join("flake.nix");
@@ -133,7 +159,13 @@ struct Builder<'a> {
     next_budget: usize,
 }
 impl Builder<'_> {
-    fn expand(&mut self, name: &str, args: &[String], parent: &Scope) -> Result<()> {
+    fn expand(
+        &mut self,
+        name: &str,
+        args: &[String],
+        parent: &Scope,
+        boundary: Option<usize>,
+    ) -> Result<()> {
         if self.stack.iter().any(|item| item == name) {
             return Err(fail(
                 65,
@@ -145,11 +177,15 @@ impl Builder<'_> {
             .commands
             .get(name)
             .ok_or_else(|| fail(64, format!("unknown command {name}")))?;
-        let parsed = arguments::parse(
-            &command.parameters,
-            args,
-            command.steps.iter().any(|s| s.forward_args),
-        )?;
+        let parsed = match boundary {
+            None => arguments::parse(&command.parameters, args, command.forwarding()),
+            Some(at) => arguments::parse_with_boundary(
+                &command.parameters,
+                args,
+                command.forwarding(),
+                Some(at),
+            ),
+        }?;
         arguments::groups(&command.parameter_groups, &parsed.supplied)?;
         self.plan.bindings.push(Binding {
             command: name.into(),
@@ -246,10 +282,10 @@ impl Builder<'_> {
                 self.next_budget += 1;
             }
             let mut args = arguments::resolve(&step.args, &parsed.values)?;
-            if step.forward_args && !parsed.rest.is_empty() {
-                if matches!(step.action, Action::Command { .. }) {
-                    args.push("--".into());
-                }
+            let mut forwarded_boundary = None;
+            if step.forward_args {
+                // carry the grammar boundary as metadata, not an extra argument
+                forwarded_boundary = parsed.literal_at.map(|at| args.len() + at);
                 args.extend_from_slice(parsed.rest);
             }
             let cwd = directory(&cwd, step.cwd.as_deref());
@@ -279,6 +315,7 @@ impl Builder<'_> {
                         secrets: Rc::clone(&secrets),
                         ui: step_ui,
                     },
+                    forwarded_boundary,
                 )?;
                 continue;
             }
@@ -292,7 +329,7 @@ impl Builder<'_> {
                         "pipefail".into(),
                         "-c".into(),
                         run.clone(),
-                        format!("praxis:{name}"),
+                        format!("{}:{name}", self.manifest.name),
                     ],
                     None,
                 ),
@@ -308,6 +345,7 @@ impl Builder<'_> {
                 Action::Script {
                     script,
                     interpreter,
+                    ..
                 } => (
                     interpreter.clone().unwrap_or_default(),
                     vec![],
@@ -324,6 +362,17 @@ impl Builder<'_> {
                 program,
                 args: prefix,
                 script,
+                script_root: if matches!(
+                    step.action,
+                    Action::Script {
+                        root_relative: true,
+                        ..
+                    }
+                ) {
+                    Some(self.plan.cwd.clone())
+                } else {
+                    None
+                },
                 env,
                 path: path.clone(),
                 interactive: step.interactive,
@@ -347,10 +396,14 @@ impl Builder<'_> {
     }
 }
 pub fn build(manifest: &Manifest, name: &str, args: &[String]) -> Result<Plan> {
+    let command = manifest
+        .commands
+        .get(name)
+        .ok_or_else(|| fail(64, "unknown command"))?;
     let caller = std::env::current_dir()
         .and_then(|p| p.canonicalize())
         .map_err(|e| fail(64, e.to_string()))?;
-    let cwd = root(manifest, &caller)?;
+    let cwd = root(manifest, &caller, command.scope)?;
     let scope = Scope {
         cwd: cwd.clone(),
         env: Rc::new(BTreeMap::new()),
@@ -365,25 +418,20 @@ pub fn build(manifest: &Manifest, name: &str, args: &[String]) -> Result<Plan> {
         manifest,
         plan: Plan {
             command: name.into(),
+            scope: command.scope,
             cwd,
             steps: vec![],
             locks: BTreeSet::new(),
             bindings: vec![],
-            ui: manifest.project.ui.overlay(
-                &manifest
-                    .commands
-                    .get(name)
-                    .ok_or_else(|| fail(64, "unknown command"))?
-                    .ui,
-            ),
-            timeout: manifest.commands.get(name).and_then(|c| c.timeout),
+            ui: manifest.project.ui.overlay(&command.ui),
+            timeout: command.timeout,
             notices: BTreeMap::new(),
             sensitive_env: sensitive_environment(manifest),
         },
         next_budget: 0,
         stack: vec![],
     };
-    builder.expand(name, args, &scope)?;
+    builder.expand(name, args, &scope, None)?;
     Ok(builder.plan)
 }
 
@@ -467,7 +515,8 @@ mod tests {
         child.path = "/child/bin".into();
         child.lock = Some("inner".into());
         let manifest = Manifest {
-            version: 1,
+            version: 2,
+            name: "praxis".into(),
             bash: "/bin/sh".into(),
             project: Project {
                 cwd: None,

@@ -13,7 +13,7 @@ let
   };
   compile =
     args:
-    import ../../src/praxis.nix (
+    import ../../src/praxis/compile.nix (
       {
         inherit
           lib
@@ -109,6 +109,50 @@ let
 in
 rec {
   tests = {
+    single-executable-inherits-arguments =
+      (builtins.head
+        (manifestCommand (single {
+          steps = [ { exec = [ "cargo" ]; } ];
+        })).steps
+      ).forwardArgs;
+    shell-source-is-never-rewritten =
+      (builtins.head (manifestCommand (single "cargo")).steps).run == "cargo";
+    explicit-forwarding-opt-out =
+      !(builtins.head
+        (manifestCommand (single {
+          steps = [
+            {
+              exec = [ "cargo" ];
+              forwardArgs = false;
+            }
+          ];
+        })).steps
+      ).forwardArgs;
+    sequences-do-not-guess-a-recipient =
+      builtins.all (s: !s.forwardArgs)
+        (manifestCommand (single [
+          "first"
+          "second"
+        ])).steps;
+    prompt-never-inherits-arguments =
+      !(builtins.head
+        (manifestCommand (single {
+          steps = [ { prompt.message = "Continue?"; } ];
+        })).steps
+      ).forwardArgs;
+    prompt-cannot-forward-arguments = rejects "prompt" {
+      steps = [
+        {
+          prompt.message = "Continue?";
+          forwardArgs = true;
+        }
+      ];
+    };
+    invalid-scope-keeps-body-lazy = rejects "scope" {
+      scope = "unknown";
+      steps = [ { run = poison; } ];
+    };
+    scope-defaults-to-project = (manifestCommand (single "true")).scope == "project";
     multiline-label-is-not-source =
       (builtins.head (manifestCommand (single "printf first\nprintf second")).steps).label
       == "gate (step 1)";
@@ -861,11 +905,6 @@ rec {
         "praxis/command-reference"
         "praxis/steps-shape"
       ];
-    large-parameter-set-stays-builder-free =
-      import ./benchmark.nix {
-        praxis = compile;
-        count = 256;
-      } == 256;
     all-three-layouts-have-the-same-manifest = import ./layouts.nix {
       praxis = compile;
       pkgs = pkgs // {

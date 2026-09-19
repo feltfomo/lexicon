@@ -1,72 +1,45 @@
-# Lexicon
+# Lexicon manual
 
-Lexicon provides four libraries for Nix projects. Use them independently or
-connect them where their responsibilities meet.
+Lexicon begins with **Registry**, the one place a configuration says which hosts and users exist, along with its source and live roots. **Ownerships** selects and merges Nix values for particular users and hosts. **Furnish** declares managed files, lets you inspect the compiled desired state, and can reconcile it on NixOS. **Program** groups one application's packages, modules, files, and themes. **Praxis** turns declared commands and tasks into an inspectable project CLI.
 
-| Library | Use it for | Start here |
-| --- | --- | --- |
-| Ownerships | Select and merge configuration for a host, user, or custom axis | [Ownerships](ownerships/README.md) |
-| Furnish | Declare managed files and reconcile their on-disk state | [Furnish](furnish/README.md) |
-| Program | Package an application's modules, files, directories, and theme as an aspect | [Program](program.md) |
-| Praxis | Package project commands with typed inputs and an execution policy | [Praxis](praxis.md) |
+The [feature list](features.md) is the overview: every feature grouped by subsystem, each linked to the page that teaches it. Use it when you want to know whether something exists; use the paths below when you want to learn one subsystem from the beginning.
 
-## Choose a starting point
+## Where to start
 
-**Selecting configuration.** Define a roster and resolve ownership-tagged units.
-Ownerships returns values; it doesn't install packages, write files, or execute
-commands. Start with [standalone resolution](ownerships/USAGE.md).
+If you have not used Nix, begin with [preparation](preparation.md). It covers the language and command-line concepts needed by every path.
 
-**Managing files.** Furnish compiles declarations into a desired-state manifest
-and offers NixOS wiring for the coordinator that applies it. Use `symlink` for
-immutable content or `writable` when an application needs a real file. Start
-with [Furnish usage](furnish/USAGE.md) and choose a conflict policy deliberately.
+Most configurations should start with Registry. A standalone subsystem remains valid when there are no shared fleet or root facts.
 
-**Describing an application.** Program gathers package selection, Home Manager
-imports, NixOS slices, files, directory expansion, and generated themes into
-an aspect. It uses Ownerships for selection and Furnish for managed files.
-[Program usage](program.md) shows the declaration and the required integration
-context.
+- [Registry getting started](registry/getting-started.md) writes `lexicon.nix`, evaluates one normalized fleet summary, adds a second host, and uses the files as a separate flake.
+- [Ownerships getting started](ownerships/getting-started.md) evaluates one selected preference, changes it, and moves the example into a separate flake.
+- [Furnish getting started](furnish/getting-started.md) evaluates one managed-file manifest, makes a predictable destination edit, and builds the manifest without host activation.
+- [Program getting started](program/getting-started.md) binds one claim-free target, evaluates a NixOS application setting, makes a predictable edit, and adds a Program-managed file.
+- [Praxis getting started](praxis/getting-started.md) adds the generic command to a declarative package list, exposes a declaration from `flake.nix`, and observes a declaration edit immediately.
 
-**Running project work.** Praxis compiles commands into launchers and a
-`praxis` dispatcher. It does not require Program, Furnish, Ownerships, or Den.
-Start with [a small command set](praxis/usage.md), then add
-[interaction policies](praxis/interaction.md) where needed.
+The [Registry contents](registry/README.md), [Ownerships contents](ownerships/README.md), [Furnish contents](furnish/README.md), [Program contents](program/README.md), and [Praxis contents](praxis/README.md) keep each reading order in one place.
 
-## Connections between libraries
+## Learn by task
 
-- Program uses Ownerships claims to choose application configuration.
-- Program lowers selected file entries into Furnish declarations.
-- Furnish can use Ownerships resolvers directly, without Program.
-- A Lexicon Den adapter supplies roster and principal context to these
-  libraries. Den's internal configuration is not a Praxis or Furnish API.
-- Praxis can use an Ownerships roster or an existing Den adapter to populate
-  [parameter choices](praxis/adapters.md). Those choices do not authorize an
-  operation or make Praxis a fleet controller.
+Use the [Registry reference](registry/reference.md) to add roots, dimensions, host or user metadata, or a selected context after the first example. Use [Den integration](registry/den.md) when Den already owns the fleet.
 
-The public factories live under `inputs.lexicon.lib`. They supply Lexicon's
-Axiom and Krisis dependencies. Prefer them in consumer flakes; direct imports
-from `src/` require those dependencies to be supplied explicitly.
+Use [Ownerships usage](ownerships/usage.md) for claims, nested selections, merge policies, and reusable unit files. Follow its [worked team configuration](ownerships/worked-example.md) to see those pieces together.
 
-## Working on Lexicon
+Use [Furnish usage](furnish/usage.md) for direct file-lifecycle declarations, representations, conflict policies, authority, path boundaries, state, and diagnostics. Its [Paperkite worked example](furnish/worked-example.md) combines user and system declarations without another Lexicon system.
 
-Run from the checkout root, using the appropriate system in place of
-`x86_64-linux`:
+Use [Program common usage](program/usage.md) for packages and module outputs, [files and directories](program/files.md) for automatic Furnish-backed publication, and [themes](program/themes.md) for renderer output. The [Helix worked example](program/worked-example.md) combines those application capabilities. Ownerships and Den integrations remain optional later paths.
 
-```fish
-nix run path:.#formatter.x86_64-linux
-and nix flake check path:. -L
-```
+Use [Praxis commands and tasks](praxis/commands-and-tasks.md) to choose literal argv, shell, scripts, or references; [runtime inspection](praxis/runtime.md) to list, plan, and diagnose commands; and [parameters](praxis/parameters.md) or [scripts and roots](praxis/scripts-and-roots.md) when a workflow grows. Its [reporting example](praxis/worked-example.md) keeps every effect in a copied project.
 
-`path:.` includes newly created files before staging. Checks build and test
-artifacts; they do not activate a host configuration. Host activation and
-release publication are separate operations.
+## Look something up
 
-The development shell includes the Nix and Rust tooling used by the checks:
+The [Registry reference](registry/reference.md) documents the constructor, every declaration field, normalized outputs, lookup and context helpers, and subsystem boundaries.
 
-```fish
-nix develop path:.
-```
+The [Ownerships reference](ownerships/reference.md) documents its public functions and authoring fields; [inspection](ownerships/inspection.md) and [advanced reference](ownerships/advanced-reference.md) cover traces and custom merge support.
 
-Axiom and Krisis use Nix pipe operators. If your Nix version asks for the
-feature, enable `pipe-operators` for that invocation or in your own Nix
-configuration. Do not treat unrelated flake configuration as implicitly trusted.
+The [Furnish reference](furnish/reference.md) documents declarations, compiler results, helpers, and NixOS options. [Runtime and safety](furnish/runtime.md) covers activation, boot, ledger state, and retirement; [advanced reference](furnish/advanced-reference.md) records integration and version-sensitive exports.
+
+The [Program reference](program/reference.md) documents all four constructors, direct targets, declaration fields, conditional outputs, nested file and theme shapes, and failures. Its [advanced binding reference](program/advanced-reference.md) covers custom resolver and principal callbacks.
+
+The [Praxis reference](praxis/reference.md) documents project, command, task, action, parameter, interaction, root, check, and output fields. Its [advanced reference](praxis/advanced-reference.md) covers manifests, diagnostics, adapters, wrappers, and confinement without teaching compiler schema as public syntax.
+
+Complete files live in [examples](../examples/README.md).

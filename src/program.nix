@@ -1,6 +1,6 @@
-# the program surface an aspect declares against. this file is the composition
-# root: it wires the pieces together and emits the home-manager and nixos
-# modules. the vocabularies live in program/spec.nix, the filesystem walk in
+# the program surface an aspect declares against. this composition root wires
+# the pieces together and emits the home-manager and nixos modules. the
+# vocabularies live in program/spec.nix, the filesystem walk in
 # program/directories.nix, the ownership units in program/units.nix, and the
 # diagnostics policy in program/report.nix.
 {
@@ -13,6 +13,7 @@
   resolvePrepared,
   filePrincipals,
   hostUserNames,
+  binding ? null,
 }:
 let
   furnish = import ./furnish {
@@ -24,9 +25,10 @@ let
       resolveSystem
       ;
   };
-  ownerships = import ./ownerships { inherit lib krisis axiom; };
+  ownerships = if binding == null then import ./ownerships { inherit lib krisis axiom; } else null;
   inherit (furnish) contract;
-  inherit (ownerships) claimKeys projectClaims;
+  claimKeys = if binding == null then ownerships.claimKeys else binding.claimKeys;
+  projectClaims = if binding == null then ownerships.projectClaims else _scope: claims: claims;
   programReport = import ./program/report.nix { inherit lib krisis axiom; };
   inherit (programReport)
     problem
@@ -36,6 +38,9 @@ let
     ;
   inherit (reporter) checked;
   furnishFiles = furnish.files;
+  resolvePreparedFor = if binding == null then resolvePrepared else binding.resolvePrepared;
+  filePrincipalsFor = if binding == null then filePrincipals else binding.filePrincipals;
+  hostUserNamesFor = if binding == null then hostUserNames else binding.hostUserNames;
 
   fields = import ./program/fields.nix {
     inherit
@@ -149,7 +154,8 @@ let
 in
 rawSpec:
 let
-  spec = validateSpec rawSpec;
+  boundSpec = if binding == null then rawSpec else binding.validateSpec rawSpec;
+  spec = validateSpec boundSpec;
   ownsFiles =
     (spec.files or [ ]) != [ ]
     || (spec.directories or [ ]) != [ ]
@@ -157,8 +163,8 @@ let
   needsHomeManager = (spec.pkg or null) != null || (spec.imports or [ ]) != [ ];
   # the prepared resolves translate and compose the unit set once per aspect,
   # then only re-run ctx demand/select/survivors/merge per (host, user) slice.
-  homeResolve = resolvePrepared [ (specUnit spec) ];
-  furnishResolve = resolvePrepared [ (furnishUnit spec) ];
+  homeResolve = resolvePreparedFor [ (specUnit spec) ];
+  furnishResolve = resolvePreparedFor [ (furnishUnit spec) ];
   # one read-only directory walk per declared directory, shared by every user
   # slice; shape/source errors stay once-per-aspect too.
   prewalkByIndex = builtins.listToAttrs (
@@ -175,111 +181,120 @@ let
   systemClaim = projectClaims "system" (claimsOf spec);
   authorSlices =
     args: sliceList (if builtins.isFunction spec.nixos then spec.nixos args else spec.nixos);
-in
-lib.optionalAttrs needsHomeManager {
-  homeManager =
-    {
-      pkgs,
-      lib,
-      host ? null,
-      user ? null,
-      ...
-    }:
-    let
-      resolved = homeResolve { inherit host user; };
-    in
-    {
-      imports = resolved.imports or [ ];
-      config = hmConfig lib resolved pkgs;
-    };
-}
-// lib.optionalAttrs (spec ? nixos || ownsFiles) {
-  nixos =
-    {
-      pkgs,
-      config,
-      host ? null,
-      user ? null,
-      ...
-    }:
-    let
-      # the build is handed to the author's nixos block, so a slice reads
-      # `host.system` instead of re-deriving it from pkgs.
-      slices =
-        if spec ? nixos then
-          authorSlices {
-            inherit
-              pkgs
-              config
-              host
-              user
-              ;
-          }
-        else
-          [ ];
-      rawSlice =
-        if slices == [ ] then
-          { }
-        else
-          resolveSystem [ (systemClaim // { children = slices; }) ] { inherit host; };
-      hostName = config.networking.hostName;
-      inherit (pkgs.stdenv.hostPlatform) system;
-      # the resolved host already carries its canonical id. rebuilding one from
-      # the module's hostname and platform put the same string in two places and
-      # drifted the furnish namespace when a host was renamed.
-      namespace = if host != null && host ? id then host.id else "${system}/${hostName}";
-    in
-    if !ownsFiles then
-      rawSlice
-    else
-      let
-        resolved = furnishResolve { inherit host user; };
-        selected = validateSelected (resolved.files or [ ]) (resolved.directoryEntries or [ ]
-        ) (resolved.directoryFileRules or [ ]) (resolved.themeEntries or [ ]) prewalkByIndex;
-        hostFiles = selected.files ++ selected.directoryFiles ++ themeFiles selected.themeEntries pkgs;
-        principals = filePrincipals {
-          inherit system user;
-          host = hostName;
+  fileTargetReady =
+    if binding != null && binding ? requireFileTarget then binding.requireFileTarget else true;
+  result =
+    lib.optionalAttrs needsHomeManager {
+      homeManager =
+        {
+          pkgs,
+          lib,
+          host ? null,
+          user ? null,
+          ...
+        }:
+        let
+          context = if binding == null then { inherit host user; } else binding.context;
+          resolved = homeResolve context;
+        in
+        {
+          imports = resolved.imports or [ ];
+          config = hmConfig lib resolved pkgs;
         };
-        # matugen renderers only read one config.toml each, so every aspect's
-        # entries are tagged with this user context and merged once by the
-        # shared runtime before furnish publishes the renderer config.
-        matugenThemeEntries = builtins.filter (entry: entry.runtime == "matugen") selected.themeEntries;
-        taggedMatugenEntries = builtins.concatMap (
-          principal:
-          map (
-            entry:
-            entry
-            // {
-              inherit principal;
-              filesystemNamespace = namespace;
-            }
-          ) matugenThemeEntries
-        ) principals;
-      in
-      {
-        imports = [
-          (import ./furnish/runtime.nix { inherit mkCoordinator krisis axiom; })
-          (import ./program/theme/matugen-runtime.nix { inherit krisis axiom; })
+    }
+    // lib.optionalAttrs (spec ? nixos || ownsFiles) {
+      nixos =
+        {
+          pkgs,
+          config,
+          host ? null,
+          user ? null,
+          ...
+        }:
+        let
+          context = if binding == null then { inherit host user; } else binding.context;
+          # the build is handed to the author's nixos block, so a slice reads
+          # `host.system` instead of re-deriving it from pkgs.
+          slices =
+            if spec ? nixos then
+              authorSlices {
+                inherit
+                  pkgs
+                  config
+                  ;
+                inherit (context) host user;
+              }
+            else
+              [ ];
+          rawSlice =
+            if slices == [ ] then
+              { }
+            else if binding == null then
+              resolveSystem [ (systemClaim // { children = slices; }) ] { inherit (context) host; }
+            else
+              binding.nixos slices;
+          hostName = config.networking.hostName;
+          inherit (pkgs.stdenv.hostPlatform) system;
+          # the resolved host already carries its canonical id. rebuilding one from
+          # the module's hostname and platform put the same string in two places and
+          # drifted the furnish namespace when a host was renamed.
+          namespace =
+            if context.host != null && context.host ? id then context.host.id else "${system}/${hostName}";
+        in
+        if !ownsFiles then
+          rawSlice
+        else
+          let
+            resolved = furnishResolve context;
+            selected = validateSelected (resolved.files or [ ]) (resolved.directoryEntries or [ ]
+            ) (resolved.directoryFileRules or [ ]) (resolved.themeEntries or [ ]) prewalkByIndex;
+            hostFiles = selected.files ++ selected.directoryFiles ++ themeFiles selected.themeEntries pkgs;
+            principals = filePrincipalsFor {
+              inherit system;
+              inherit (context) user;
+              host = hostName;
+            };
+            # matugen renderers only read one config.toml each, so every aspect's
+            # entries are tagged with this user context and merged once by the
+            # shared runtime before furnish publishes the renderer config.
+            matugenThemeEntries = builtins.filter (entry: entry.runtime == "matugen") selected.themeEntries;
+            taggedMatugenEntries = builtins.concatMap (
+              principal:
+              map (
+                entry:
+                entry
+                // {
+                  inherit principal;
+                  filesystemNamespace = namespace;
+                }
+              ) matugenThemeEntries
+            ) principals;
+          in
           {
-            assertions = lib.optional (hostFiles != [ ]) {
-              assertion = config.lexicon.furnish.declarations != [ ];
-              message = "furnish: file entries on ${hostName} reached no user principal (have: ${
-                lib.concatStringsSep ", " (hostUserNames {
-                  inherit system;
-                  host = hostName;
-                })
-              })";
-            };
-            # den reaches this slice once per selected user.
-            lexicon.furnish.declarations = furnishFiles.mkDeclarations {
-              filesystemNamespace = namespace;
-              inherit principals;
-              files = hostFiles;
-            };
-            lexicon.theme.matugen.entries = taggedMatugenEntries;
-          }
-        ]
-        ++ lib.optional (rawSlice != { }) rawSlice;
-      };
-}
+            imports = [
+              (import ./furnish/runtime.nix { inherit mkCoordinator krisis axiom; })
+              (import ./program/theme/matugen-runtime.nix { inherit krisis axiom; })
+              {
+                assertions = lib.optional (hostFiles != [ ]) {
+                  assertion = config.lexicon.furnish.declarations != [ ];
+                  message = "furnish: file entries on ${hostName} reached no user principal (have: ${
+                    lib.concatStringsSep ", " (hostUserNamesFor {
+                      inherit system;
+                      host = hostName;
+                    })
+                  })";
+                };
+                # den reaches this slice once per selected user.
+                lexicon.furnish.declarations = furnishFiles.mkDeclarations {
+                  filesystemNamespace = namespace;
+                  inherit principals;
+                  files = hostFiles;
+                };
+                lexicon.theme.matugen.entries = taggedMatugenEntries;
+              }
+            ]
+            ++ lib.optional (rawSlice != { }) rawSlice;
+          };
+    };
+in
+builtins.seq (if ownsFiles then fileTargetReady else true) result

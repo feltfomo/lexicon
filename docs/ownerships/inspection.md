@@ -1,161 +1,93 @@
-# Trace and matrix inspection
+# Inspect a selection
 
-Trace and matrix are read-only projections of the same resolver machinery. They
-are deliberately not alternate implementations of ownership semantics — both
-go through `selectPrepared`, the shared selection boundary, so a report cannot
-disagree with a real resolve.
+Start here when a setting is missing or you need to check where a unit applies. The existing [preferences example](../../examples/ownerships/preferences.nix) already exposes the reports used below.
 
-## Tracing one context
+## Why did this unit apply?
 
-```nix
-trace = ownerships.mkResolveTrace roster units ctx;
+Run from the repository root:
+
+```sh
+nix eval --impure --json --file examples/ownerships-eval.nix preferences.inspection
 ```
 
-System scope uses `mkResolveSystemTrace`.
-
-You get `value`, identical to ordinary resolution, plus one selection record
-per composed leaf, effective claims and per-axis decisions, rejecting axes,
-leaf-check and context-demand results, pre-merge contribution shape, stage
-reports, and lazy merge provenance.
-
-### Selection records
-
-A leaf record identifies its safe unit identity, its stable `key`, its
-effective claim, each axis's claim and decision, whether it selected, and which
-axes rejected it.
-
-A global claim reports decision `global` without ever reading a context entity.
-
-Records are available as a list and as `byKey`. Prefer `byKey` when you are
-correlating across stages — the lists are positional, and a stage that filters
-one of them shifts the others.
-
-### Pre-merge versus post-merge
-
-`preMergeContribution.offeredPaths` shows what a selected leaf *offered*. It
-does not tell you who owns the final value.
-
-For that, use `mergeProvenance`, which is path-aligned and post-merge. The two
-answer different questions and it is easy to reach for the wrong one.
-
-### Stage reports
-
-`stageReports` separates the leaf, tree, and survivor views. A failing leaf
-phase also exposes lazy `diagnosticText.leaf`, so tests and audit tooling can
-read the exact aggregate text without switching to a different checker.
-
-## Strict resolution
-
-```nix
-strict = ownerships.mkResolveStrict roster;
+<!-- value: preferences.inspection -->
+```json
+[
+  {"identity":"unit 'common tools'","rejectedBy":[],"selected":true},
+  {"identity":"unit 'alice's editor'","rejectedBy":[],"selected":true},
+  {"identity":"unit 'battery settings'","rejectedBy":["host"],"selected":false}
+]
 ```
 
-Ordinary resolution validates claims but only reads the context entities those
-claims demand. Strict resolution additionally represents the supplied context
-as a claim and validates it against the roster and its registered relations.
+The context is Alice on the workstation. The battery unit is valid but inactive there. If its host claim had no possible roster member, ordinary resolution would fail rather than merely mark it inactive.
 
-The check runs before the resolve body, not from inside the context. That
-distinction is load-bearing: a globally owned unit narrows on nothing and never
-forces the context, so a check hung off the context thunk would silently skip
-exactly the declarations with no other guardrail.
+The example constructs a trace with `resolvers.trace units context`, then projects the three fields above. Don't serialize an entire raw trace to JSON: claims can contain predicate functions, and `value` can contain data that isn't JSON-serializable.
 
-Use strict for external or audit contexts that must themselves be known. Do not
-use it to change selection — a successful strict resolve delegates to the same
-ordinary resolver.
+For a scalar conflict, use `label` on the contributing units and read the path named in the error. A trace's `diagnosticText.leaf` can expose claim-check errors without demanding its result; it isn't a catch-all for predicate failures or merge conflicts.
 
-## Prepared resolvers
+## Where does a unit apply?
 
-```nix
-resolveForHost = ownerships.mkResolveSystemPrepared roster units;
+A matrix evaluates selection over known roster memberships:
+
+```sh
+nix eval --impure --json --file examples/ownerships-eval.nix preferences.matrix.coverage.preMerge.paths
 ```
 
-Translation, composition, and the leaf and tree stages depend only on the
-units, so `prepared` runs them once when the units are handed in. What comes
-back is context demand, selection, survivor stages, and merge.
-
-Use it to resolve one unit list across many contexts, which is what a fleet
-report or a per-host projection does. `applyPrepared` rejoins the two halves on
-the leaf `key`, so the association survives any stage that filtered a list.
-
-## Fleet matrix
-
-```nix
-matrix = ownerships.mkResolveMatrix roster { inherit units; };
-```
-
-System scope uses `mkResolveSystemMatrix`.
-
-User rows come from known host membership. Users with unknown membership do not
-invent rows.
-
-The matrix runs compose, leaf-stage classification, tree stages over live
-leaves, then context demand, selection, and survivor stages per row. It does
-not merge payloads and does not build provenance.
-
-### Fields
-
-**`units`** maps stable snapshot keys such as `leaf-0` to safe identity and
-shallow shape. These describe position in this report, not durable source
-identity.
-
-**`byContext`** reports, per context, the canonical host and optional user
-name, survivor leaf keys, inactive keys with their rejecting axes, and unique
-top-level pre-merge paths.
-
-**`dead`** holds leaves proven impossible by leaf diagnostics, with reasons —
-impossible same-axis claims and incompatible registered relations.
-
-**`neverSelectedInModeledContexts`** holds valid live leaves that every
-generated row rejected, with per-context rejecting axes. A predicate that
-happens to be false everywhere belongs here, not in `dead`.
-
-**`indeterminate`** holds user claims that select nowhere in modeled rows but
-name users whose host membership is unknown. The report cannot tell dormant
-from potentially-active-on-an-unmodeled-host, and says so rather than guessing.
-
-**`coverage.units`** maps each leaf key to the contexts that select it.
-`coverage.preMerge.paths` maps top-level offered paths to contexts, preserving
-first-occurrence order.
-
-**`hostDiffs`** reports, for each ordered host pair, the left-only and
-right-only survivor keys and pre-merge paths. In user scope, a host's ownership
-is the union across that host's modeled user rows.
-
-`hostDiffs` and `coverage.units` are the two fields worth reaching for after a
-refactor. A structural change that was supposed to preserve behaviour should
-produce an identical projection.
-
-### Enriched contexts
-
-Predicates can read more than names, so supply `contextFor`:
-
-```nix
-ownerships.mkResolveMatrix roster {
-  inherit units;
-  contextFor =
-    { hostName, userName }:
-    {
-      host = {
-        id = hostName;
-        gpu = roster.dimensions.gpu.byHost.${hostName};
-      };
-      user.name = userName;
-    };
+<!-- value: preferences.matrix.coverage.preMerge.paths -->
+```json
+{
+  "lowPower":["x86_64-linux/laptop/alice"],
+  "tools":["x86_64-linux/workstation/alice","x86_64-linux/workstation/sam","x86_64-linux/laptop/alice"]
 }
 ```
 
-The callback must still supply the entity fields registered descriptors
-require.
+These are top-level paths offered by selected units, before merging. A matrix doesn't merge payloads, so it won't prove that overlapping scalar values agree. Evaluate the actual result as well.
 
-## Safety boundary
+`mkResolveMatrix roster { units = units; }` uses only IDs in its default contexts. If a predicate needs extra host or user properties, pass `contextFor`. The [team example](../../examples/ownerships-team/team.nix) supplies its `host.mobile` field in both normal and matrix contexts.
 
-Trace may expose opaque effective claims and lazy provenance, because it is
-tied to one real resolution the caller already asked for.
+## Report fields
 
-Matrix is stricter. Raw payloads never cross its report boundary. Safe reports
-may contain author-supplied labels and sources, shallow attrset keys,
-derivation names when safely available, canonical roster identities, claim
-data, stage and selection decisions, and path names.
+`mkResolveTrace roster units context` and `mkResolveSystemTrace roster units context` return the same record shape:
 
-They must never serialize packages, secret-backed values, function bodies, or
-arbitrary payload attrsets.
+| Field | Meaning |
+| --- | --- |
+| `value` | Merged configuration, with the ordinary resolver's errors when demanded. |
+| `trace` | List of records, one per configuration-bearing unit in traversal order. |
+| `mergeProvenance` | A tree of `{ path; contributors; children; }`. Root path is `""`; child paths are dot-joined. |
+| `stageReports` | `leaf`, `tree`, and `survivors` each hold a list of `{ view; diagnostics; }` reports. Each `diagnostics` value is a list of [diagnostic records](advanced-reference.md#resolver-base-override). |
+| `diagnosticText.leaf` | Rendered claim-check error text, or `null`. Other failures can still throw. |
+
+Each entry of `trace` has these fields:
+
+| Field | Shape |
+| --- | --- |
+| `key` | Structural position such as `"0/0"`. |
+| `identity` | Label-based, source-based, or shallow-shape description. |
+| `effectiveClaim` | Claims after nesting; set axes use `{ tag; set; }`, predicates remain functions. |
+| `selected`, `rejectedBy` | Boolean and list of rejecting axis names. |
+| `axisResults` | Axis name → `{ claim; selected; decision; details; }`. Decision is `"global"`, `"selected"`, or `"rejected"`. Set-axis details include `materializedMembers` and `satisfiable`; predicates have no member list. |
+| `ctxRequirements` | Axis name → `{ key; required; available; }`; predicate axes have a null key and availability. |
+| `checkResults` | Claim-check diagnostics for this unit. |
+| `preMergeContribution` | `null` when rejected; otherwise `{ stage = "pre-merge"; meaning; offeredPaths; shape; }`. Paths are top-level keys, not final attribution. |
+
+Provenance contributors contain `identity`, `owners` (effective claims), and optional `mergeProfile`. Lists are terminal nodes: provenance records contributing units, not an owner per element. A replacement can retain multiple contributors at its node while its child tree comes from the surviving right-hand value. Labels, source strings, claims, and path names are metadata you supplied; don't put secrets in them.
+
+A matrix (`mkResolveMatrix` or `mkResolveSystemMatrix`) returns:
+
+| Field | Shape and meaning |
+| --- | --- |
+| `units` | `leaf-N` → `{ key; identity; shape; }`, in the report's configuration-bearing traversal order. |
+| `byContext` | Context key → `{ hostName; survivors; inactive; preMergePaths; }`; user rows also have `userName`. Survivors are unit keys; inactive entries are `{ key; rejectedBy; }`. |
+| `coverage.units` | Unit key → list of context keys where it survives. |
+| `coverage.preMerge` | `{ meaning; paths; }`, where `paths` maps top-level offered paths to context keys. |
+| `hostDiffs` | `"left-id -> right-id"` → `{ units; preMergePaths; }`, each containing `leftOnly` and `rightOnly`. User contexts are combined per host for this comparison. |
+| `display` | Roster display-name maps. |
+| `dead` | Unit summaries with `reasons`: impossible claims, including incompatible known membership. |
+| `neverSelectedInModeledContexts` | Unit summaries with context-keyed `rejections`; not proof of impossibility outside those contexts. |
+| `indeterminate` | `{ unknownMembershipUsers; units; }` for unresolved membership and affected unselected units. |
+
+User matrix keys are `host-id/user-id`; system keys are `host-id`. User rows enumerate known memberships only, while system rows cover roster hosts. Each dead reason has `kind` and `reason`, plus `axis` or `axes` when applicable. Report keys describe this traversal, so adding or moving units can renumber `leaf-N` entries.
+
+Matrices classify impossible claims into `dead` rather than throwing those particular diagnostics. Other errors, including malformed units, ambiguous aliases, invalid scope, failing predicates, and custom checks, can still throw. They inspect identity, names, and shallow payload shape rather than merged values.
+
+For the resolver signatures and `contextFor` arguments, return to the [reference](reference.md#resolvers). For a complete configuration that uses these reports, read [the team example](worked-example.md).

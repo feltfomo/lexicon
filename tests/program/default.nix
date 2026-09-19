@@ -3,8 +3,18 @@
   pkgs,
   krisis,
   axiom,
+  lexicon,
 }:
 let
+  bindingTests = import ./bindings.nix {
+    inherit
+      lib
+      pkgs
+      krisis
+      axiom
+      lexicon
+      ;
+  };
   ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
   inherit (ownerships) claimKeys;
 
@@ -617,7 +627,8 @@ rec {
     invalid-conflict-policies-are-rejected = !invalidPolicyResult.success;
     overrides-beneath-excluded-subtrees-are-rejected = !excludedOverrideResult.success;
     theme-sources-beneath-excluded-subtrees-are-rejected = !excludedThemeResult.success;
-  };
+  }
+  // bindingTests;
 
   failing = builtins.attrNames (lib.filterAttrs (_: value: !value) tests);
   ok =

@@ -70,10 +70,14 @@
             );
         in
         {
+          registry = withDependencies ./src/registry.nix;
           ownerships = withDependencies ./src/ownerships;
           furnish = withDependencies ./src/furnish;
           furnishRuntime = withRuntimeDependencies ./src/furnish/runtime.nix;
           program = withCoordinator ./src/program.nix;
+          programDirect = withCoordinator ./src/program/direct.nix;
+          programOwnerships = withCoordinator ./src/program/ownerships.nix;
+          programDen = withCoordinator ./src/program/den.nix;
           praxis = withDependencies ./src/praxis.nix;
           praxisAdapters =
             {
@@ -207,20 +211,45 @@
           ownerships = import ./src/ownerships { inherit lib krisis axiom; };
           praxis = inputs.self.lib.praxis;
           praxisTests = import ./tests/praxis { inherit lib krisis axiom; };
+          praxisCompiler = args: import ./src/praxis/compile.nix ({ inherit lib axiom krisis; } // args);
+          genericPraxis = import ./src/praxis/generic.nix {
+            inherit pkgs;
+            lexiconSource = inputs.self;
+            axiomSource = inputs.axiom;
+            krisisSource = inputs.krisis;
+          };
           praxisCommands = praxis {
             inherit pkgs;
-            discoverRoot = "flake.nix";
+            name = "lexicon-praxis";
+            atRoot = true;
             commands = {
-              fmt = "nix run path:.#formatter.${pkgs.stdenv.hostPlatform.system}";
-              test = "nix flake check path:. -L";
-              gate = {
-                description = "Format and run the complete Lexicon flake check";
-                lock = "lexicon-gate";
-                steps = [
-                  { command = "fmt"; }
-                  { command = "test"; }
+              fmt = {
+                command = [
+                  "nix"
+                  "run"
+                  "path:.#formatter.${pkgs.stdenv.hostPlatform.system}"
+                  "--"
                 ];
+                description = "Format Lexicon";
               };
+              check = {
+                command = [
+                  "nix"
+                  "flake"
+                  "check"
+                  "path:."
+                  "-L"
+                ];
+                description = "Check Lexicon";
+              };
+            };
+            tasks.gate = {
+              description = "Format and run the complete Lexicon flake check";
+              lock = "lexicon-gate";
+              steps = [
+                "fmt"
+                "check"
+              ];
             };
           };
 
@@ -263,6 +292,9 @@
             }
           ];
 
+          registryTests = import ./tests/registry {
+            inherit lib krisis axiom;
+          };
           furnishTests = import ./tests/furnish {
             inherit
               lib
@@ -280,6 +312,7 @@
               krisis
               axiom
               ;
+            lexicon = inputs.self;
           };
           ownershipsTest =
             path:
@@ -300,20 +333,53 @@
         in
         {
           treefmt = import ./formatter.nix;
-          packages = praxisCommands.packages // {
-            praxis = praxisCommands.package;
+          packages = {
+            praxis = genericPraxis;
+            lexicon-praxis = praxisCommands.package;
           };
-          apps = praxisCommands.apps // {
-            praxis = {
-              type = "app";
-              program = "${praxisCommands.cli}/bin/praxis";
-            };
-          };
+          apps.lexicon-praxis = praxisCommands.apps.lexicon-praxis;
 
           checks = {
+            registry = gate "registry-tests" registryTests;
+            documentation = import ./tests/documentation.nix {
+              inherit pkgs;
+              inherit (inputs) nixpkgs;
+              lexicon = inputs.self;
+            };
+            consumers =
+              let
+                existing = import ./tests/consumers.nix {
+                  inherit pkgs;
+                  inherit (inputs) nixpkgs;
+                  lexicon = inputs.self;
+                };
+                installed = import ./tests/praxis/installed.nix {
+                  inherit pkgs genericPraxis;
+                };
+              in
+              pkgs.linkFarm "lexicon-consumer-checks" [
+                {
+                  name = "existing";
+                  path = existing;
+                }
+                {
+                  name = "installed-praxis";
+                  path = installed;
+                }
+              ];
             praxis-pure = gate "praxis-pure-tests" praxisTests;
-            praxis-integration = import ./tests/praxis/integration.nix { inherit pkgs praxis; };
-            praxis-runtime = import ./tests/praxis/runtime.nix { inherit pkgs praxis; };
+            praxis-public-surface = gate "praxis-public-surface" (
+              import ./tests/praxis/public-surface.nix { inherit lib axiom krisis; }
+            );
+            praxis-generated-cli = import ./tests/praxis/generated-cli.nix { inherit pkgs praxis; };
+            praxis-integration = import ./tests/praxis/integration.nix {
+              inherit pkgs;
+              praxis = praxisCompiler;
+            };
+            praxis-runtime = import ./tests/praxis/runtime.nix {
+              inherit pkgs;
+              praxis = praxisCompiler;
+            };
             praxis-runner = praxisCommands.runner;
             furnish-pure = gate "furnish-pure-tests" furnishTests;
             program-boundary = gate "program-boundary-tests" programTests;
@@ -332,6 +398,7 @@
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
               bashInteractive
+              praxisCommands.cli
               cargo
               rustc
               rustfmt
@@ -347,7 +414,6 @@
               marksman
               nixd
               nixfmt
-              python3
               shellcheck
               shfmt
               statix

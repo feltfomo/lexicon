@@ -119,6 +119,8 @@ pub enum Action {
     Script {
         script: String,
         interpreter: Option<String>,
+        #[serde(default, rename = "rootRelative")]
+        root_relative: bool,
     },
     Command {
         command: String,
@@ -146,10 +148,36 @@ pub struct Step {
     #[serde(default)]
     pub ui: Ui,
 }
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CommandScope {
+    #[default]
+    Project,
+    Global,
+}
+impl CommandScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Project => "project",
+            Self::Global => "global",
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CommandKind {
+    #[default]
+    Command,
+    Task,
+}
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Command {
     pub description: String,
+    #[serde(default)]
+    pub kind: CommandKind,
+    #[serde(default)]
+    pub scope: CommandScope,
     pub steps: Vec<Step>,
     pub parameters: Vec<Parameter>,
     pub cwd: Option<String>,
@@ -173,6 +201,11 @@ pub struct Command {
     #[serde(default)]
     pub ui: Ui,
 }
+impl Command {
+    pub fn forwarding(&self) -> bool {
+        self.steps.iter().any(|step| step.forward_args)
+    }
+}
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Project {
@@ -183,10 +216,15 @@ pub struct Project {
     #[serde(default)]
     pub ui: Ui,
 }
+fn dispatcher_name() -> String {
+    "praxis".into()
+}
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
     pub version: u32,
+    #[serde(default = "dispatcher_name")]
+    pub name: String,
     pub bash: String,
     pub project: Project,
     pub commands: BTreeMap<String, Command>,

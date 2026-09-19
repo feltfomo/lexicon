@@ -41,28 +41,7 @@ let
         name =
           required subject "parameter-name"
             "parameter name must start with a letter and use letters, digits or '-'"
-            (
-              value:
-              builtins.isString value
-              && builtins.match "[a-zA-Z][a-zA-Z0-9-]*" value != null
-              && !(builtins.elem value [
-                "help"
-                "yes"
-                "plain"
-                "non-interactive"
-                "output"
-                "concise"
-                "verbose"
-                "quiet"
-                "json"
-                "color"
-                "no-progress"
-                "notify"
-                "bell"
-                "all"
-                "complete"
-              ])
-            );
+            (value: builtins.isString value && builtins.match "[a-zA-Z][a-zA-Z0-9-]*" value != null);
         description =
           field subject "parameter-description" "description must be a string" builtins.isString
           // {
@@ -90,18 +69,8 @@ let
             default = null;
           };
         short =
-          field subject "parameter-short" "short must be one unreserved letter" (
-            fields.nullable (
-              v:
-              builtins.isString v
-              && builtins.match "[a-zA-Z]" v != null
-              && !(builtins.elem v [
-                "h"
-                "y"
-                "q"
-                "v"
-              ])
-            )
+          field subject "parameter-short" "short must be one letter" (
+            fields.nullable (v: builtins.isString v && builtins.match "[a-zA-Z]" v != null)
           )
           // {
             default = null;

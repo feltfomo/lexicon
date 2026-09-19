@@ -1,8 +1,17 @@
 use crate::interaction::Policy;
-use crate::model::{Notifications, Parameter, Result, Ui, clean, fail};
+use crate::model::{Notifications, Result, Ui, clean, fail};
 use serde::Serialize;
 use std::io::{self, IsTerminal, Write};
 
+pub const ACTIONS: &[&str] = &[
+    "list",
+    "show",
+    "plan",
+    "run",
+    "doctor",
+    "help",
+    "completions",
+];
 pub const OUTPUT_MODES: &[&str] = &["concise", "verbose", "quiet", "plain", "json"];
 pub const COLOR_MODES: &[&str] = &["auto", "always", "never"];
 pub const NOTIFY_MODES: &[&str] = &["never", "success", "failure", "always"];
@@ -35,7 +44,6 @@ pub struct Options {
     pub policy: Policy,
     pub help: bool,
     pub all: bool,
-    pub complete: bool,
     pub json_errors: bool,
 }
 impl Options {
@@ -77,7 +85,6 @@ impl Options {
             "--non-interactive" if inline.is_none() => self.policy.non_interactive = true,
             "--help" | "-h" if inline.is_none() => self.help = true,
             "--all" if inline.is_none() => self.all = true,
-            "--complete" if inline.is_none() => self.complete = true,
             "--no-progress" if inline.is_none() => self.ui.progress = Some(false),
             "--bell" if inline.is_none() => {
                 self.ui
@@ -105,32 +112,18 @@ impl Options {
         }
         Ok(true)
     }
-    pub fn split(&mut self, args: &[String], parameters: &[Parameter]) -> Result<Vec<String>> {
-        let parameters = crate::arguments::ParameterIndex::new(parameters);
-        let mut kept = Vec::with_capacity(args.len());
+    pub fn take_all(&mut self, args: &[String]) -> Result<()> {
         let mut index = 0;
         while index < args.len() {
-            if args[index] == "--" {
-                kept.extend_from_slice(&args[index..]);
-                break;
-            }
-            // a parameter value can have the same spelling as a runner option
-            if let Some((parameter, inline)) = parameters.flag(&args[index]) {
-                kept.push(args[index].clone());
-                if inline.is_none() && parameter.kind != "bool" {
-                    index += 1;
-                    kept.push(
-                        args.get(index)
-                            .ok_or_else(|| fail(64, "parameter needs a value"))?
-                            .clone(),
-                    );
-                }
-            } else if !self.take(args, &mut index)? {
-                kept.push(args[index].clone());
+            if !self.take(args, &mut index)? {
+                return Err(fail(
+                    64,
+                    format!("unexpected runner argument {}", clean(&args[index])),
+                ));
             }
             index += 1;
         }
-        Ok(kept)
+        Ok(())
     }
 }
 pub fn output(text: &str) -> Result<()> {

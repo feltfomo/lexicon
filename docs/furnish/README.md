@@ -1,55 +1,32 @@
 # Furnish
 
-Furnish manages declared files on a machine. Its Nix compiler produces a
-desired-state manifest; the Furnish coordinator reconciles that manifest with
-the filesystem and an applied-state ledger.
+Furnish declares files in a NixOS configuration, exposes the compiled desired state for review, and can reconcile that state during activation and boot. Use it when a file should be a store-backed symlink or a writable copy whose runtime edits need an explicit conflict policy.
 
-Use it directly in NixOS for managed files, or let Program translate application
-file entries into Furnish declarations. Program is an optional authoring layer,
-not a prerequisite.
+You can evaluate every example in this section without activating a machine. Evaluation may add source artifacts to the Nix store, but it doesn't write the declared destinations.
 
-## Pick a representation and policy
+## Choose a path
 
-| Representation | Result |
-| --- | --- |
-| `symlink` | A link to immutable source content |
-| `writable` | A real file the application can modify |
+1. [Getting started](getting-started.md) evaluates one complete managed-file declaration, makes a predictable edit, and moves the same files into an ordinary consumer flake.
+2. [Usage](usage.md) solves focused tasks: representations, conflict policy, authority, paths, state, inspection, and diagnostics.
+3. [Worked example](worked-example.md) combines several Furnish declarations for one fictional application without adding another Lexicon system.
+4. [Reference](reference.md) is the lookup page for declarations, compiler results, helper calls, and NixOS options.
+5. [Runtime and safety](runtime.md) explains activation, boot reconciliation, the applied-state ledger, retirement, and state loss.
+6. [Advanced reference](advanced-reference.md) records contract constants, executor/provider machinery, and exports whose support status is narrower or version-sensitive.
 
-For writable files, choose what should happen when runtime content differs
-from the recorded baseline:
+## Runnable examples
 
-- `error` stops reconciliation on a conflict.
-- `source-wins` restores the declared content.
-- `runtime-wins` preserves the current runtime content.
+| Scale | Directory | What it shows |
+| --- | --- | --- |
+| Minimal | [examples/furnish](../../examples/furnish/) | One user-owned symlink and a projected manifest result |
+| Focused | [examples/furnish-policies](../../examples/furnish-policies/) | Symlink and writable files with all three conflict-policy outcomes represented |
+| Larger | [examples/furnish-studio](../../examples/furnish-studio/) | User and system authority in one coherent Paperkite configuration |
 
-The ledger records applied state. It can detect divergence; it cannot tell
-whether a person or an application made a particular edit.
+Each example directory is a complete flake.
 
-## Guides
+## Before activation
 
-- [Usage](USAGE.md): standalone NixOS wiring, declarations, and pure compilation.
-- [Declaration contract](declaration-contract.md): authority, paths, sources, executors, and lifecycle fields.
-- [Runtime integration](runtime-integration.md): activation, services, durable state, and coordinator behavior.
-- [Architecture](architecture.md): validation, selection, collision checking, and manifest generation.
+Read [runtime and safety](runtime.md) before enabling Furnish on an existing host. A successful evaluation proves that declarations compile and that their manifest can be built. It doesn't prove that a destination is free, that a user account exists on the running machine, or that the ledger is durably stored.
 
-## What the compiler checks
+Furnish records what it has applied in `applied-state.json`. Keep that state persistent on hosts whose root is replaced, and don't delete it as a way to clear a conflict.
 
-Furnish validates declaration shapes, selects active ownership claims,
-normalizes destinations, checks host-wide collisions, chooses an executor,
-and emits the manifest. It does not mutate the filesystem during evaluation.
-Inactive ownership payloads and unused executors remain lazy.
-
-Two declarations cannot claim the same filesystem destination, even if their
-content is identical. Each destination must remain beneath its managed root.
-An enabled runtime still emits an empty manifest when all declarations are
-removed, so the coordinator can retire previously managed content.
-
-## Public API
-
-`inputs.lexicon.lib.furnish` takes `resolve` and `resolveSystem` along with
-optional dependency overrides. It exports `compile`, `contract`, `core`, and
-`files.mkDeclarations`. Use `inputs.lexicon.lib.furnishRuntime { }` to obtain
-the NixOS module with Lexicon's coordinator dependency wired in.
-
-The coordinator is a separate package. Its reconciliation, recovery, and
-ledger implementation are not duplicated in the Nix library.
+[Back to the Lexicon manual](../README.md) · [Examples](../../examples/README.md)

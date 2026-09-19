@@ -190,7 +190,7 @@ pkgs.runCommandLocal "praxis-integration"
     printf 'touch escaped\n' > ../outside.sh
     ln -s "$PWD/../outside.sh" ci/escape.sh
     expect_status 65 ${exe "escape"}
-    grep -F 'escapes the live project root' stderr
+    grep -F 'escapes its live source directory' stderr
     test ! -e escaped
     expect_status 64 ${exe "ordered"} unexpected
     grep -F 'unexpected argument' stderr

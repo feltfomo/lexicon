@@ -1,51 +1,17 @@
 # Ownerships
 
-Ownerships selects and merges Nix values according to host, user, and other
-ownership claims. It is a pure library: it does not install packages, manage
-files, or execute commands.
+Ownerships selects configuration for a user and host, then merges the matching pieces into one Nix value. A small list can describe shared settings, a person's additions, and machine-specific choices.
 
-## Resolve a small roster
+Start with plain data so you can see exactly what selection does. You can use the resulting values in your own configuration once you're happy with them.
 
-Inside a consumer flake where `inputs` and `lib` are available:
+## Reading order
 
-```nix
-let
-  ownerships = inputs.lexicon.lib.ownerships { inherit lib; };
-  roster = ownerships.toRoster [
-    (ownerships.define.host "workstation" { system = "x86_64-linux"; })
-    (ownerships.define.user "alice" { hosts = [ "workstation" ]; })
-  ];
-  doors = ownerships.mkResolvers roster;
-in
-doors.resolve [
-  { value.editor = "helix"; }
-  { users = [ "alice" ]; value.theme = "dark"; }
-] {
-  host.id = "x86_64-linux/workstation";
-  user.name = "alice";
-}
-```
+1. [Preparation](../preparation.md), if Nix is new to you.
+2. [Getting started](getting-started.md): select one editor preference and change it.
+3. [Usage](usage.md): add users and hosts, narrow nested claims, choose merge behavior, and reuse files.
+4. [A team's editing preferences](worked-example.md): work through a larger configuration built from those ideas.
+5. [Inspection](inspection.md): find out why a unit applies and where its values contribute.
 
-The result is `{ editor = "helix"; theme = "dark"; }`. Use it as ordinary data
-or feed it into a NixOS/Home Manager module. Unselected payloads stay lazy.
+Keep the [reference](reference.md) nearby for field defaults, membership rules, errors, and resolver signatures. Its [advanced companion](advanced-reference.md) covers policy configuration and exported support functions; you can leave that until you need it.
 
-## Guides
-
-- [Usage](USAGE.md): rosters, units, contexts, exclusions, and module integration.
-- [Resolver selection](doors.md): values, traces, prepared resolution, strict contexts, and matrices.
-- [Reference](reference.md): claim fields and public functions.
-- [Rosters and extension](rosters-and-extension.md): canonical identities, tags, and custom axes.
-- [Inspection](inspection.md): selection traces and roster-wide reports.
-- [Merge and provenance](merge-and-provenance.md): precedence, profiles, and explanation data.
-- [Architecture](architecture.md): the selection pipeline and lazy boundaries.
-
-## Integrations
-
-Program uses Ownerships to select application configuration. Furnish can use
-its resolvers to select file declarations. A Lexicon Den adapter can build a
-roster from Den's host/user configuration. None of these is required to use the
-resolver directly.
-
-Praxis's optional [roster adapter](../praxis/adapters.md) turns host/user IDs
-into parameter choices. It does not perform ownership resolution at runtime
-or authorize the selected operation.
+All runnable examples are indexed under [examples](../../examples/README.md#ownerships). They use fictional people and machines, and the evaluation commands don't change host configuration.

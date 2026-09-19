@@ -6,6 +6,15 @@
 }:
 rec {
   inherit (axiom) validation types sets;
+  inherit
+    (
+      (krisis.mkReporter {
+        formatHeader = count: "praxis: ${toString count} declaration error(s)";
+        formatDiagnostic = krisis.renderPlain;
+      })
+    )
+    finish
+    ;
   text = value: if builtins.isBool value then (if value then "true" else "false") else toString value;
   envKey = value: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] value);
   diagnostic =
@@ -37,8 +46,23 @@ rec {
     kind: subject: fields:
     axiom.schema.compile {
       inherit fields;
-      onRecord = _: diagnostic subject "${kind}-shape" "${kind} must be an attribute set";
-      onUnknown = name: _: diagnostic subject "${kind}-field" "unknown ${kind} field '${name}'";
+      onRecord =
+        value:
+        diagnostic subject "${kind}-shape"
+          "${kind} must be an attribute set, got ${krisis.safeShape value}";
+      onUnknown =
+        name: _:
+        let
+          suggestion = krisis.suggest name (builtins.attrNames fields);
+        in
+        problem (
+          {
+            code = "${kind}-field";
+            message = "unknown ${kind} field '${name}'";
+            primary.label = subject;
+          }
+          // lib.optionalAttrs (suggestion != null) { help = "use '${suggestion}'"; }
+        );
     };
   nonEmpty = value: builtins.isString value && value != "";
   nullable = check: value: value == null || check value;

@@ -410,9 +410,9 @@ let
     };
   };
 
-  # bind a roster once and take every door off one compiled base. skadi builds
-  # three doors per fleet; before this each one compiled its own registry,
-  # stages, and descriptor set from the same roster.
+  # bind a roster once and take every door off one compiled base. a fleet
+  # normally opens several doors over the same roster; before this each one
+  # compiled its own registry, stages, and descriptor set from that roster.
   mkResolvers =
     roster:
     let

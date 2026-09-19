@@ -38,7 +38,7 @@ fn entry() -> Result<()> {
     let bytes = std::fs::read(&path).map_err(|e| fail(66, format!("manifest {path}: {e}")))?;
     let manifest: Manifest =
         serde_json::from_slice(&bytes).map_err(|e| fail(65, format!("invalid manifest: {e}")))?;
-    if manifest.version != 1 {
+    if manifest.version != 2 {
         return Err(fail(
             65,
             format!("unsupported manifest version {}", manifest.version),

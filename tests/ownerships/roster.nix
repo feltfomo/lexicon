@@ -1,10 +1,4 @@
-# _lib/ownerships/tests/roster.nix
-#
-# pure gate for the roster interface and the den-free define.* backend. it
-# imports nothing den-related, so a green run here is the proof the standalone
-# path resolves with no den present. covers the cross-axis membership check, the
-# null-vs-[] host distinction (unknown degrades, known-none stays a failure),
-# and a host-only config on a user-less host staying clear of the check.
+# unknown membership and known-empty membership have different selection semantics
 {
   lib,
   krisis,
@@ -41,7 +35,38 @@ let
 
   r = ctx: unit: resolveWith { inherit roster ctx; } unit;
 
+  ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
+  strict =
+    scope:
+    ownerships.resolverFor {
+      inherit roster scope;
+      projection = "value";
+      strict = true;
+    };
+
   cases = [
+    {
+      name = "strict system resolution accepts a canonical host id without a display name";
+      pass = strict "system" [ { value.x = 1; } ] { host.id = "standalone/khion"; } == { x = 1; };
+    }
+    {
+      name = "strict user resolution accepts canonical ids with real membership";
+      pass =
+        strict "user" [ { value.x = 1; } ] {
+          host.id = "standalone/khion";
+          user.id = "feltfomo";
+        } == {
+          x = 1;
+        };
+    }
+    {
+      name = "canonical ids can label context diagnostics without display names";
+      pass =
+        axes.ctxLabelFor axes.descriptors {
+          host.id = "standalone/khion";
+          user.id = "feltfomo";
+        } == "host 'standalone/khion', user 'feltfomo'";
+    }
     {
       name = "define.* resolves a nested host+user unit with no den";
       pass =

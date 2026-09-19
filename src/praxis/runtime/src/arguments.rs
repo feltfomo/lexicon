@@ -8,8 +8,10 @@ pub struct Parsed<'a> {
     pub values: BTreeMap<&'a str, Cow<'a, str>>,
     pub supplied: BTreeSet<&'a str>,
     pub rest: &'a [String],
+    // index in rest where typed binding must stop across later references
+    pub literal_at: Option<usize>,
 }
-// parsing, runner-option separation and completion share one flag grammar
+// parsing and completion share the declared parameter grammar
 pub struct ParameterIndex<'a> {
     named: BTreeMap<&'a str, &'a Parameter>,
     shorts: BTreeMap<char, &'a Parameter>,
@@ -50,6 +52,16 @@ impl<'a> ParameterIndex<'a> {
             None
         }
     }
+    pub fn positional(&self, token: &str, index: usize) -> Option<&'a Parameter> {
+        if token.starts_with("--")
+            || (token.starts_with('-')
+                && token.as_bytes().get(1).is_some_and(u8::is_ascii_alphabetic))
+        {
+            None
+        } else {
+            self.positionals.get(index).copied()
+        }
+    }
 }
 pub fn env_key(name: &str) -> String {
     format!("PRAXIS_ARG_{}", name.replace('-', "_").to_ascii_uppercase())
@@ -83,7 +95,7 @@ fn normalize<'a>(parameter: &Parameter, value: Cow<'a, str>) -> Result<Cow<'a, s
                     .collect::<Vec<_>>()
                     .join(", "),
                 if parameter.choices.len() > 8 {
-                    " (see --help for all choices)"
+                    " (see command help for all choices)"
                 } else {
                     ""
                 }
@@ -97,16 +109,49 @@ pub fn parse<'a>(
     args: &'a [String],
     forwarding: bool,
 ) -> Result<Parsed<'a>> {
+    parse_with_boundary(parameters, args, forwarding, None)
+}
+pub fn parse_with_boundary<'a>(
+    parameters: &'a [Parameter],
+    args: &'a [String],
+    forwarding: bool,
+    boundary: Option<usize>,
+) -> Result<Parsed<'a>> {
+    if boundary.is_some_and(|at| at > args.len()) {
+        return Err(fail(70, "invalid forwarded argument boundary"));
+    }
+    // an untyped wrapper has no argument grammar, including no separator to strip
+    if parameters.is_empty() {
+        if !forwarding && !args.is_empty() {
+            return Err(fail(
+                64,
+                "unexpected argument; this command does not forward arguments",
+            ));
+        }
+        return Ok(Parsed {
+            values: BTreeMap::new(),
+            supplied: BTreeSet::new(),
+            rest: args,
+            literal_at: boundary,
+        });
+    }
     let mut values = BTreeMap::new();
     let mut supplied = BTreeSet::new();
     let parameters_by_flag = ParameterIndex::new(parameters);
     let mut rest = &[][..];
+    let mut literal_at = None;
     let mut positional = 0;
     let mut index = 0;
     while index < args.len() {
+        if boundary == Some(index) {
+            rest = &args[index..];
+            literal_at = Some(0);
+            break;
+        }
         let token = &args[index];
         if token == "--" {
             rest = &args[index + 1..];
+            literal_at = Some(0);
             break;
         }
         let (parameter, value) = if let Some((parameter, inline)) = parameters_by_flag.flag(token) {
@@ -126,30 +171,27 @@ pub fn parse<'a>(
             } else {
                 index += 1;
                 args.get(index)
+                    .filter(|_| boundary != Some(index))
                     .ok_or_else(|| fail(64, format!("{} needs a value", parameter.name)))?
                     .as_str()
             };
             (parameter, value)
-        } else if token.starts_with("--")
-            || (token.starts_with('-')
-                && token.as_bytes().get(1).is_some_and(u8::is_ascii_alphabetic))
-        {
+        } else if let Some(parameter) = parameters_by_flag.positional(token, positional) {
+            positional += 1;
+            (parameter, token.as_str())
+        } else if forwarding {
+            rest = &args[index..];
+            literal_at = boundary.map(|at| at - index);
+            break;
+        } else {
             return Err(fail(
                 64,
-                "unknown flag; use -- before pass-through arguments",
+                if token.starts_with('-') {
+                    "unknown flag; this command does not forward arguments"
+                } else {
+                    "unexpected argument; this command does not forward arguments"
+                },
             ));
-        } else {
-            let parameter = parameters_by_flag
-                .positionals
-                .get(positional)
-                .ok_or_else(|| {
-                    fail(
-                        64,
-                        "unexpected argument; use -- before pass-through arguments",
-                    )
-                })?;
-            positional += 1;
-            (*parameter, token.as_str())
         };
         let value = normalize(parameter, Cow::Borrowed(value))?;
         supplied.insert(parameter.name.as_str());
@@ -205,6 +247,7 @@ pub fn parse<'a>(
     Ok(Parsed {
         values,
         rest,
+        literal_at,
         supplied,
     })
 }
@@ -263,6 +306,77 @@ mod tests {
             short: None,
             sensitive: false,
         }
+    }
+    #[test]
+    fn forwarding_stops_binding_at_the_child_boundary() {
+        let parameters = [Parameter {
+            required: false,
+            default: Some("default".into()),
+            ..parameter()
+        }];
+        let args = [
+            "--host=outer".into(),
+            "build".into(),
+            "--host=child".into(),
+            "--quiet".into(),
+            "".into(),
+        ];
+        let parsed = parse(&parameters, &args, true).unwrap();
+        assert_eq!(parsed.values["host"], "outer");
+        assert_eq!(parsed.rest, &args[1..]);
+        assert!(parsed.literal_at.is_none());
+        assert!(parse(&parameters, &args, false).is_err());
+        let args = ["--".into(), "--host=child".into()];
+        let parsed = parse(&parameters, &args, true).unwrap();
+        assert_eq!(parsed.values["host"], "default");
+        assert_eq!(parsed.rest, ["--host=child"]);
+        assert_eq!(parsed.literal_at, Some(0));
+    }
+    #[test]
+    fn forwarded_boundaries_survive_untyped_references() {
+        let parameters = [Parameter {
+            required: false,
+            default: Some("default".into()),
+            ..parameter()
+        }];
+        let args = ["--host=bound".into(), "--host=literal".into(), "".into()];
+        let untyped = parse_with_boundary(&[], &args, true, Some(1)).unwrap();
+        assert_eq!(untyped.rest, args.as_slice());
+        assert_eq!(untyped.literal_at, Some(1));
+        let typed =
+            parse_with_boundary(&parameters, untyped.rest, true, untyped.literal_at).unwrap();
+        assert_eq!(typed.values["host"], "bound");
+        assert_eq!(typed.rest, &args[1..]);
+        assert_eq!(typed.literal_at, Some(0));
+        let args = ["child-command".into(), "--host=literal".into()];
+        let parsed = parse_with_boundary(&parameters, &args, true, Some(1)).unwrap();
+        assert_eq!(parsed.values["host"], "default");
+        assert_eq!(parsed.literal_at, Some(1));
+        assert_eq!(parsed.rest, args.as_slice());
+        let incomplete = ["--host".into(), "literal".into()];
+        assert!(parse_with_boundary(&parameters, &incomplete, true, Some(1)).is_err());
+        assert!(parse_with_boundary(&parameters, &[], true, Some(1)).is_err());
+    }
+    #[test]
+    fn untyped_tail_has_no_reserved_tokens() {
+        let args: Vec<String> = [
+            "--help",
+            "--quiet",
+            "--json",
+            "--complete",
+            "--",
+            "",
+            "a b",
+            "line\nbreak",
+        ]
+        .iter()
+        .map(|s| (*s).into())
+        .collect();
+        let parsed = parse(&[], &args, true).unwrap();
+        assert_eq!(parsed.rest, args.as_slice());
+        assert!(parsed.literal_at.is_none());
+        assert!(parsed.values.is_empty());
+        assert!(parse(&[], &args, false).is_err());
     }
     #[test]
     fn preserves_values() {
