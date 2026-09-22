@@ -1,4 +1,9 @@
-{ fx, lexicon }:
+{
+  lib,
+  fx,
+  lexicon,
+  mkLexicon,
+}:
 {
   testLexiconEntryPoint = {
     expr = lexicon.version;
@@ -18,4 +23,24 @@
 // import ./krisis.nix {
   inherit fx;
   inherit (lexicon) krisis;
+}
+// import ./koseki.nix {
+  inherit
+    lib
+    fx
+    lexicon
+    mkLexicon
+    ;
+}
+// import ./kata.nix {
+  inherit lib lexicon;
+}
+// import ./walk.nix {
+  inherit lib lexicon;
+}
+// import ./emit.nix {
+  inherit lib lexicon;
+}
+// import ./introspect.nix {
+  inherit lib lexicon;
 }

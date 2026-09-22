@@ -72,8 +72,9 @@
                   fx = import ${inputs.nix-effects} { inherit lib; };
                 in
                 import ${./tests} {
-                  inherit fx;
+                  inherit lib fx;
                   lexicon = import ${./src} { inherit lib fx; };
+                  mkLexicon = import ${./src};
                 }
               '';
             in
@@ -89,6 +90,19 @@
                 nix-unit --eval-store "$HOME" ${suite}
                 touch $out
               '';
+
+          # the internal directory name may appear in file paths and import
+          # lines, and nowhere a user can read
+          checks.source-hygiene = pkgs.runCommand "lexicon-source-hygiene" { } ''
+            cd ${./src}
+            offenders="$(grep -rn "koseki" . | grep -v 'import \./koseki' || true)"
+            if [ -n "$offenders" ]; then
+              echo "internal name leaked into readable source:" >&2
+              echo "$offenders" >&2
+              exit 1
+            fi
+            touch $out
+          '';
 
           devShells.default = pkgs.mkShell {
             packages = [
