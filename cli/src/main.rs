@@ -1,6 +1,3 @@
-// the entry point is thin so that everything it does can be read from a test
-// rather than from a process
-
 use std::process::ExitCode;
 
 fn main() -> ExitCode {

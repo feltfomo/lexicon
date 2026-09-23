@@ -1,75 +1,73 @@
-// the lexicon binary. formatting is what it does today and the argument
-// reader is shaped for a binary that will do more, so a later subcommand is
-// an arm here rather than a second program
-//
-// nix fmt runs this with the paths a person wrote and with nothing at all
-// when they wrote none, so no arguments has to mean the whole tree
-//
-// TODO further subcommands join the reader below and get their own module
-// beside these, and the shared halves are the selection and the tools
+// the binary resolves built-ins before flake-declared commands. fmt also
+// accepts the path form nix fmt uses when it invokes the formatter.
 
+pub mod backend;
+pub mod check;
+pub mod commands;
+pub mod diagnostics;
+pub mod fmt;
+pub mod json;
 pub mod run;
 pub mod select;
 pub mod tools;
 
-use std::path::PathBuf;
+use std::path::Path;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Mode {
-    Write,
-    Check,
+// TODO fmt stays here because its wrapper pins the bytes it runs. other
+// built-ins may read their configuration from the flake.
+pub const BUILTINS: [&str; 2] = ["fmt", "check"];
+
+pub const USAGE: &str =
+    "lexicon fmt [--check] [path ...]\nlexicon check [flake]\nlexicon <command> [argument ...]";
+
+pub fn is_builtin(name: &str) -> bool {
+    BUILTINS.contains(&name)
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Request {
-    pub mode: Mode,
-    pub paths: Vec<PathBuf>,
+pub enum Request {
+    Fmt(fmt::Request),
+    Check(check::Request),
+    Declared(commands::Request),
 }
-
-pub const USAGE: &str = "lexicon fmt [--check] [path ...]";
 
 pub fn parse(arguments: &[String]) -> Result<Request, String> {
-    let mut mode = Mode::Write;
-    let mut paths = Vec::new();
-    let mut seen_subcommand = false;
-
-    for argument in arguments {
-        match argument.as_str() {
-            "fmt" if !seen_subcommand && paths.is_empty() => seen_subcommand = true,
-            "--check" => mode = Mode::Check,
-            held if held.starts_with("--") => {
-                return Err(format!("{held} is not something lexicon reads, {USAGE}"))
-            }
-            held => paths.push(PathBuf::from(held)),
-        }
-    }
-
-    Ok(Request { mode, paths })
+    parse_with(arguments, |held| Path::new(held).exists())
 }
 
-// the check reports every file that would change, because a person fixing
-// one of them wants the rest in the same run
+// whether a first word is a path cannot be answered from the words alone, so
+// the caller answers it and the suite answers it without a tree
+pub fn parse_with<Reaches>(arguments: &[String], reaches: Reaches) -> Result<Request, String>
+where
+    Reaches: Fn(&str) -> bool,
+{
+    match arguments.first().map(String::as_str) {
+        Some("fmt") => fmt::parse(&arguments[1..]).map(Request::Fmt),
+        Some("check") => check::parse(&arguments[1..]).map(Request::Check),
+        Some(held) if !held.starts_with('-') && !reaches(held) => {
+            Ok(Request::Declared(commands::parse(held, &arguments[1..])))
+        }
+        _ => fmt::parse(arguments).map(Request::Fmt),
+    }
+}
+
+// the flake is read for the running system. rust calls darwin macos.
+pub fn system() -> String {
+    let kernel = match std::env::consts::OS {
+        "macos" => "darwin",
+        held => held,
+    };
+
+    format!("{}-{kernel}", std::env::consts::ARCH)
+}
+
 pub fn execute(request: &Request) -> Result<Option<String>, String> {
-    let files = select::select(&request.paths)
-        .map_err(|failure| format!("the files to format could not be read, {failure}"))?;
-
-    match request.mode {
-        Mode::Write => run::format(&files).map(|()| None),
-        Mode::Check => run::would_change(&files).map(|changed| {
-            if changed.is_empty() {
-                None
-            } else {
-                let named: Vec<String> = changed
-                    .iter()
-                    .map(|path| path.display().to_string())
-                    .collect();
-
-                Some(format!(
-                    "these files are not formatted\n{}",
-                    named.join("\n")
-                ))
-            }
-        }),
+    match request {
+        Request::Fmt(held) => fmt::execute(held),
+        Request::Check(held) => check::execute(&backend::Subprocess::new(), &system(), held),
+        Request::Declared(held) => {
+            commands::execute(&backend::Subprocess::new(), ".", &system(), held)
+        }
     }
 }
 
@@ -77,43 +75,68 @@ pub fn execute(request: &Request) -> Result<Option<String>, String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn no_arguments_formats_the_whole_tree() {
-        let request = parse(&[]).expect("the arguments were refused");
-
-        assert_eq!(request.mode, Mode::Write);
-        assert!(request.paths.is_empty());
+    fn nothing_reaches(_held: &str) -> bool {
+        false
     }
 
     #[test]
-    fn the_subcommand_is_optional_because_nix_fmt_does_not_write_it() {
-        let written =
-            parse(&["fmt".to_string(), "one.nix".to_string()]).expect("the arguments were refused");
-        let bare = parse(&["one.nix".to_string()]).expect("the arguments were refused");
-
-        assert_eq!(written, bare);
+    fn the_builtins_are_a_table_and_not_one_special_case() {
+        assert!(is_builtin("fmt"));
+        assert!(is_builtin("check"));
+        assert!(!is_builtin("greet"));
     }
 
     #[test]
-    fn check_formats_nothing() {
-        let request = parse(&["--check".to_string()]).expect("the arguments were refused");
+    fn no_arguments_is_formatting_because_nix_fmt_writes_none() {
+        let held = parse_with(&[], nothing_reaches).expect("the arguments were refused");
 
-        assert_eq!(request.mode, Mode::Check);
+        assert!(matches!(held, Request::Fmt(_)));
     }
 
     #[test]
-    fn paths_are_taken_in_the_order_they_were_written() {
-        let request = parse(&["one.nix".to_string(), "two.nix".to_string()])
-            .expect("the arguments were refused");
+    fn a_builtin_is_resolved_before_anything_the_flake_declares() {
+        let held =
+            parse_with(&["check".to_string()], |_| true).expect("the arguments were refused");
+
+        assert!(matches!(held, Request::Check(_)));
+    }
+
+    #[test]
+    fn a_word_that_is_no_path_and_no_builtin_is_a_declared_command() {
+        let held = parse_with(
+            &["greet".to_string(), "--loudly".to_string()],
+            nothing_reaches,
+        )
+        .expect("the arguments were refused");
 
         assert_eq!(
-            request.paths,
-            vec![PathBuf::from("one.nix"), PathBuf::from("two.nix")]
+            held,
+            Request::Declared(commands::Request {
+                name: "greet".to_string(),
+                arguments: vec!["--loudly".to_string()],
+            })
         );
     }
 
     #[test]
-    fn an_unread_flag_is_refused_rather_than_taken_as_a_path() {
-        assert!(parse(&["--write".to_string()]).is_err());
+    fn a_word_that_is_a_path_is_formatting_and_not_a_command() {
+        let held =
+            parse_with(&["one.nix".to_string()], |_| true).expect("the arguments were refused");
+
+        assert!(matches!(held, Request::Fmt(_)));
+    }
+
+    #[test]
+    fn a_flag_is_read_as_formatting_because_nix_fmt_writes_flags_too() {
+        let held = parse_with(&["--check".to_string()], nothing_reaches)
+            .expect("the arguments were refused");
+
+        assert_eq!(
+            held,
+            Request::Fmt(fmt::Request {
+                mode: fmt::Mode::Check,
+                paths: Vec::new(),
+            })
+        );
     }
 }

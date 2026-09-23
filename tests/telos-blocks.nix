@@ -66,6 +66,17 @@ let
       program = "nixfmt";
     };
   };
+
+  goodCommand = {
+    greet = {
+      steps = [
+        {
+          name = "write";
+          run = "mkdir -p $out/bin";
+        }
+      ];
+    };
+  };
 in
 {
   testAGoodCheckIsQuietAndDescribesItsSteps = {
@@ -189,6 +200,48 @@ in
         };
       };
     };
+  };
+
+  testAGoodCommandIsQuietAndDescribesItsSteps = {
+    expr = {
+      codes = codesOf "commands" goodCommand;
+      described = describe "commands" goodCommand;
+    };
+    expected = {
+      codes = [ ];
+      described = {
+        greet = {
+          steps = goodCommand.greet.steps;
+        };
+      };
+    };
+  };
+
+  testACommandsBlockThatIsNotAnAttrsetIsRefused = {
+    expr = codesOf "commands" "greet";
+    expected = [ "telos/commands-interior" ];
+  };
+
+  # a command and a package are both declared by their steps, and the two
+  # report under separate names so a command's refusal is never a package's
+  testACommandWithoutStepsIsRefusedAtItsOwnName = {
+    expr = {
+      codes = codesOf "commands" { greet = { }; };
+      places = placesOf "commands" { greet = { }; };
+    };
+    expected = {
+      codes = [ "telos/commands-steps-missing" ];
+      places = [ "$.fleet.commands.greet" ];
+    };
+  };
+
+  testACommandStepMissingItsRunIsRefused = {
+    expr = codesOf "commands" {
+      greet = {
+        steps = [ { name = "write"; } ];
+      };
+    };
+    expected = [ "telos/commands-step-malformed" ];
   };
 
   testAnFmtBlockThatIsNotAnAttrsetIsRefused = {

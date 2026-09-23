@@ -1,5 +1,4 @@
-# where this configuration meets lexicon. the fields nixos needs and the
-# identity model does not carry are contributed here
+# contribute the nixos fields that the identity model does not carry.
 {
   lib,
   fx,
@@ -33,16 +32,19 @@ let
       };
     };
 
-  # the attribute that evaluates a system is published on the flake output of
-  # the nixpkgs tree and is absent from the lib imported out of it, so it can
-  # only arrive as a capability. read 2026-09-21
+  # the output layer receives package sets so it does not instantiate nixpkgs
+  # while walking the declaration tree.
+  packageSetFor = system: import nixpkgs { inherit system; };
+
   capabilities = {
+    # eval-config is absent from nixpkgs lib, so pass it as a capability.
     systemEvaluator = arguments: import (nixpkgs + "/nixos/lib/eval-config.nix") arguments;
 
-    # instantiating a package set is a choice about this tree and about the
-    # systems it builds for, so the output layer is handed sets already made
-    # rather than the tree to make them from
-    packageSetFor = system: import nixpkgs { inherit system; };
+    inherit packageSetFor;
+
+    # the binary lexicon manages a host with, built with the package set this
+    # configuration already makes so no second nixpkgs enters the evaluation
+    lexiconPackage = system: (packageSetFor system).callPackage ../cli/package.nix { };
   };
 
   configure =

@@ -18,8 +18,12 @@ let
   # evaluator can only arrive as a capability. read 2026-09-21
   systemEvaluator = arguments: import (tree + "/nixos/lib/eval-config.nix") arguments;
 
+  # the binary a placement puts on a host it manages. the suite has no flake
+  # to build the crate from, so it hands over a package out of the same tree
+  lexiconPackage = system: (import tree { inherit system; }).hello;
+
   capabilities = {
-    inherit systemEvaluator;
+    inherit systemEvaluator lexiconPackage;
   };
 
   configured =
@@ -115,9 +119,9 @@ in
     expected = true;
   };
 
-  # each placement carries one module per interior. den contributes the
-  # binding as one more module for the whole host, and native binds through
-  # the evaluator and contributes none
+  # each placement carries one module per interior, and one more for the
+  # binary lexicon puts on a host it manages. den contributes the binding as
+  # one more module still, and native binds through the evaluator
   testEachPlacementCarriesOneModulePerInteriorAndDenItsBinder = {
     expr = {
       native = builtins.length whole.native.workstation.modules;
@@ -128,10 +132,10 @@ in
       wellTyped = emission.types.Target.check whole.native.workstation;
     };
     expected = {
-      native = 1;
-      den = 2;
-      nativeTwofold = 2;
-      denTwofold = 3;
+      native = 2;
+      den = 3;
+      nativeTwofold = 3;
+      denTwofold = 4;
       entries = [
         "base"
         "extra"
@@ -229,16 +233,22 @@ in
         reported = [
           "emit/missing-capability"
           "emit/missing-capability"
+          "emit/missing-capability"
+          "emit/missing-capability"
         ];
         halted = true;
       };
     };
 
+  # one key arrives as a value that is no capability and the other does not
+  # arrive at all, and each backend reports both under its own name
   testACapabilityThatIsNotAFunctionIsNamedAsOne = {
     expr = codes (emitted ./fixtures/emission { systemEvaluator = 7; });
     expected = [
       "emit/malformed-capability"
       "emit/malformed-capability"
+      "emit/missing-capability"
+      "emit/missing-capability"
     ];
   };
 

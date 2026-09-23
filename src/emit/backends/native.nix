@@ -1,16 +1,15 @@
-# the native placement. the entity reaches a module as an evaluator argument
-#
-# the attribute that evaluates a system is published on the flake output of
-# the tree that defines the module system and is absent from the lib a caller
-# imports out of that tree, so it arrives as a capability. read 2026-09-21
+# the native placement passes each host to the module evaluator.
 { lib }:
 {
   name = "native";
 
-  needs = [ "systemEvaluator" ];
+  needs = [
+    "lexiconPackage"
+    "systemEvaluator"
+  ];
 
-  # handed to the evaluator, so every module reads it the way it reads the
-  # module system's own arguments
+  # host is handed to the evaluator, so every module reads it the way it reads
+  # the module system's own arguments
   supplies = [ "host" ];
 
   binds = [ ];
@@ -47,7 +46,13 @@
         }
       ) entries;
 
-      modules = lib.concatMap (one: one.classes.nixos) projected;
+      # a host lexicon manages carries the binary that manages it, because
+      # lexicon placed the host and not because a module listed it
+      managed = {
+        environment.systemPackages = [ (handed.lexiconPackage host.system) ];
+      };
+
+      modules = lib.concatMap (one: one.classes.nixos) projected ++ [ managed ];
     in
     {
       inherit host modules;

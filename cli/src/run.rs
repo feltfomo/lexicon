@@ -1,9 +1,4 @@
-// formatting a set of files, and answering whether formatting would change
-// them without changing them
-//
-// the check runs the same tools over copies rather than a second reading of
-// what each tool would do, because a rule that only described the tools
-// would drift from them the first time one of them was bumped
+// writing and checking use the same tools so their byte output stays in step.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -14,8 +9,6 @@ pub fn format(files: &[PathBuf]) -> Result<(), String> {
     tools::run_all(files)
 }
 
-// the copies are flat and numbered because each tool reads one file at a
-// time and nothing it does depends on where the file sat
 pub fn would_change(files: &[PathBuf]) -> Result<Vec<PathBuf>, String> {
     if files.is_empty() {
         return Ok(Vec::new());
@@ -34,9 +27,8 @@ fn compared(files: &[PathBuf], held: &Path) -> Result<Vec<PathBuf>, String> {
     let mut copies = Vec::new();
 
     for file in files.iter() {
-        // the copies keep the shape the originals sat in, because a rust file
-        // names its neighbours and a tool reading one has to find them where
-        // the file says they are
+        // tools may read neighbouring files relative to the copy, so preserve
+        // each input's path inside the scratch tree.
         let copy = held.join(mirrored(file));
 
         if let Some(parent) = copy.parent() {
@@ -47,8 +39,7 @@ fn compared(files: &[PathBuf], held: &Path) -> Result<Vec<PathBuf>, String> {
         std::fs::copy(file, &copy)
             .map_err(|failure| format!("{} could not be read, {failure}", file.display()))?;
 
-        // a copy carries the mode it came from, and the tools rewrite the file
-        // they are handed, so a read only original has to become a writable copy
+        // formatters need writable copies even when the original is read-only.
         writable(&copy)
             .map_err(|failure| format!("{} could not be written, {failure}", copy.display()))?;
 
@@ -73,8 +64,7 @@ fn compared(files: &[PathBuf], held: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(changed)
 }
 
-// the path a file takes inside the scratch tree. the root markers are
-// dropped so an absolute path lands under the scratch rather than escaping it
+// mirror absolute inputs under scratch without letting them escape it.
 fn mirrored(path: &Path) -> PathBuf {
     use std::path::Component;
 

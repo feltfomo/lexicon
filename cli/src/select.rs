@@ -1,10 +1,5 @@
-// which files are formatted. a tree is what git tracks, because a formatter
-// that rewrote whatever happened to be lying in the working tree would edit
-// build output and vendored copies nobody asked it to touch
-//
-// a path written on the command line is formatted whether git knows it or
-// not, which is the escape hatch for a file that is not tracked yet. there
-// is no flag and no configuration key for the difference
+// default formatting follows git's tracked files, while named paths bypass
+// repository selection.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -12,8 +7,7 @@ use std::process::Command;
 
 use crate::tools;
 
-// the exclusions the tree's treefmt configuration carried, kept because the
-// output has to keep matching the files it used to format
+// keep these exclusions aligned with the former treefmt selection.
 pub const EXCLUDES: &[&str] = &[
     "docs/*",
     "LICENSE",
@@ -29,8 +23,7 @@ pub const EXCLUDES: &[&str] = &[
     ".svnignore",
 ];
 
-// a star stands for any run of characters inside one path segment, the way
-// the matcher treefmt reads its excludes with does
+// `*` and `?` stay within one path segment.
 pub fn glob_matches(pattern: &str, path: &str) -> bool {
     let pattern: Vec<char> = pattern.chars().collect();
     let path: Vec<char> = path.chars().collect();
@@ -68,15 +61,11 @@ pub fn excluded(relative: &str) -> bool {
         .any(|pattern| glob_matches(pattern, relative))
 }
 
-// a file is reached when some tool in the pipeline formats its kind, so the
-// question is asked of the tools rather than answered again here
 pub fn formattable(path: &Path) -> bool {
     tools::ORDER.iter().any(|tool| tools::reaches(tool, path))
 }
 
-// what git tracks under a directory, named relative to it. a tree with no
-// git at all still formats, because the walk is the answer when the question
-// cannot be asked
+// without git, walk the tree so formatting still has a deterministic input.
 pub fn tracked(root: &Path) -> io::Result<Vec<PathBuf>> {
     let asked = Command::new("git")
         .arg("-C")
@@ -115,8 +104,7 @@ fn walked(root: &Path, under: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(found)
 }
 
-// a directory is the files git tracks under it, a named file is itself. the
-// lister is handed in so the rule can be read without a repository
+// directory selection uses the lister's relative paths; named files bypass it.
 pub fn select_with<Lister>(requested: &[PathBuf], lister: Lister) -> io::Result<Vec<PathBuf>>
 where
     Lister: Fn(&Path) -> io::Result<Vec<PathBuf>>,
@@ -134,8 +122,7 @@ where
             for relative in lister(&path)? {
                 let named = path.join(&relative);
 
-                // git still names a file that has been deleted and not yet
-                // staged, and a formatter has nothing to say about one
+                // skip paths that git lists but the working tree no longer has.
                 if formattable(&named) && !excluded(&relative.to_string_lossy()) && named.is_file()
                 {
                     found.push(named);

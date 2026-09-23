@@ -1,10 +1,8 @@
-# the formatter the tree runs, built the way the repo already builds a rust
-# program it ships
+# the lexicon binary, which formats, checks, and runs declared commands
 #
-# the three tools are baked into the wrapper rather than looked up on a path,
-# because a formatter that read them from the caller's environment would
-# produce different bytes for different callers and the parity claim would
-# mean nothing
+# the tools are baked into the wrapper rather than looked up on a path,
+# because a formatter reading them from the caller's environment would
+# produce different bytes for different callers
 {
   lib,
   rustPlatform,
@@ -63,7 +61,7 @@ rustPlatform.buildRustPackage {
   '';
 
   meta = {
-    description = "Format a nix tree with one pass per tool";
+    description = "One binary for formatting, checks and declared commands";
     mainProgram = "lexicon";
     platforms = lib.platforms.linux;
   };

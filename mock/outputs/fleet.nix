@@ -1,12 +1,6 @@
-# the outputs this fleet declares, written in a file the walk reads. the
-# check named after each walked entry is what proves one knot spans both
-# trees, because the names come off the walked set itself and a file under
-# this tree only sees the ones from the other tree if that set is the union.
-# only the names are read, never what an entry built
-#
-# every step here is deliberately trivial. nix flake check builds the checks
-# of the system it runs on, so a declared check that reached for a toolchain
-# or a network would turn the strongest gate in the tree into one nobody runs
+# a check named after each walked entry proves one knot spans both trees,
+# since the names come off the walked set. steps stay trivial so the flake
+# gate pulls in no toolchain or network.
 { fleet, lexicon, ... }:
 let
   sealed = {
@@ -29,6 +23,36 @@ fleet {
     }) (builtins.attrNames lexicon)
   );
 
+  # greet reads its arguments and its exit status off what it was handed, and
+  # check is named after a built-in so the collision has something to report
+  commands = {
+    greet = {
+      steps = [
+        {
+          name = "write";
+          run = ''
+            mkdir -p $out/bin
+            printf '#!/bin/sh\nif [ "$1" = "--refuse" ]; then exit 3; fi\necho greetings "$@"\n' > $out/bin/greet
+            chmod +x $out/bin/greet
+          '';
+        }
+      ];
+    };
+
+    check = {
+      steps = [
+        {
+          name = "write";
+          run = ''
+            mkdir -p $out/bin
+            printf '#!/bin/sh\necho the declared check ran\n' > $out/bin/check
+            chmod +x $out/bin/check
+          '';
+        }
+      ];
+    };
+  };
+
   devShells = {
     default = {
       packages = [ "jq" ];
@@ -38,7 +62,7 @@ fleet {
   # the fleet declares one formatter and it reaches formatter.<system>, which
   # is the whole of what a configuration outside lexicon has to write for nix
   # fmt to find it. the program is a name in the package set because that is
-  # all a declaration can reach today
+  # all a declaration can reach
   fmt = {
     tree = {
       program = "nixfmt";

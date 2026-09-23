@@ -1,22 +1,20 @@
-# the aspect placement. the entity is applied to the module before the module
-# system sees it
+# the den placement applies each entity to its module before evaluation.
 #
-# the aspect system binds an entity by reading a module's advertised argument
-# names and stripping the ones it applies. den v0.18.0, rev 5df0987, read
-# 2026-09-21, nix/lib/aspects/fx/wrap-classes.nix
-#
-# den.config.classModuleCollisionPolicy is error by default and fires on a
-# name that is both a den entity argument and a module-system argument in a
-# flat-form class module, so the bound names are struck off the advertised
-# set. den v0.18.0, rev 5df0987, read 2026-09-21, modules/config.nix
+# den v0.18.0 rev 5df0987, read 2026-09-21, nix/lib/aspects/fx/wrap-classes.nix,
+# bound an entity by stripping the names it applied off a module's arguments.
 { lib }:
 {
   name = "den";
 
-  needs = [ "systemEvaluator" ];
+  needs = [
+    "lexiconPackage"
+    "systemEvaluator"
+  ];
 
   supplies = [ ];
 
+  # den v0.18.0 rev 5df0987, read 2026-09-21, modules/config.nix, defaulted
+  # classModuleCollisionPolicy to error on a flat-form argument den also binds.
   binds = [ "host" ];
 
   context = [
@@ -54,9 +52,15 @@
         }
       ) entries;
 
+      # a host lexicon manages carries the binary that manages it, because
+      # lexicon placed the host and not because a module listed it
+      managed = {
+        environment.systemPackages = [ (handed.lexiconPackage host.system) ];
+      };
+
       # the binding comes last, so the module list still opens with the
       # first interior of the first entry
-      modules = lib.concatMap (one: one.classes.nixos) projected ++ bindings bound;
+      modules = lib.concatMap (one: one.classes.nixos) projected ++ [ managed ] ++ bindings bound;
     in
     {
       inherit host modules;

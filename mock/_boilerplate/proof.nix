@@ -1,5 +1,5 @@
-# the whole tree compared against what it is supposed to produce, off the two
-# libraries and a nixpkgs tree with no flake in the evaluation
+# compare the whole tree against the two libraries and an evaluation-only
+# nixpkgs tree.
 {
   lib,
   fx,
@@ -19,8 +19,7 @@ let
 
   named = outcome: map (given: { inherit (given) code at; }) outcome.diagnostics;
 
-  # a tree that is meant to be refused is a configuration of its own and goes
-  # through the same door as the fleet
+  # each refusal uses the same configuration entry point.
   refused =
     root:
     let
@@ -33,11 +32,7 @@ let
     prepared = prepared.value;
   };
 
-  # the outputs this fleet declares, projected onto the surface a reader of
-  # this flake already knows. the declarations come off the same walk the
-  # entries did, and the hosts come off the prepared registry, so a
-  # declaration naming a host the fleet does not hold is refused here rather
-  # than landing under a name nothing answers to
+  # project outputs from the walked declarations and prepared registry.
   surface = mock.library.telos.outputs {
     entries = door.owned.telos;
     hosts = prepared.value.registry.hosts;
@@ -207,6 +202,33 @@ let
       actual = lib.isDerivation surface.formatter.x86_64-linux;
     }
     {
+      at = "the commands the fleet declares";
+      expected = [
+        "check"
+        "greet"
+      ];
+      actual = lib.sort (a: b: a < b) (builtins.attrNames surface.apps.x86_64-linux);
+    }
+    {
+      at = "the shape a declared command lands in";
+      expected = {
+        type = "app";
+        program = true;
+      };
+      actual = {
+        inherit (surface.apps.x86_64-linux.greet) type;
+        program = lib.hasSuffix "/bin/greet" surface.apps.x86_64-linux.greet.program;
+      };
+    }
+    # locate the binary by pname among the host packages.
+    {
+      at = "the binary on a host lexicon manages";
+      expected = true;
+      actual = builtins.any (
+        held: builtins.isAttrs held && (held.pname or "") == "lexicon"
+      ) (configOf "native" "tower").environment.systemPackages;
+    }
+    {
       at = "refusals/entries";
       expected = [
         {
@@ -269,9 +291,8 @@ in
 
   print = lib.concatStringsSep "\n" answer.lines;
 
-  # what the flake publishes, both as lexicon's own attribute and merged into
-  # the standard names beside it. the proof above compares values, and this
-  # is the half only a build can answer
+  # publish the lexicon surface beside standard flake names. the proof compares
+  # values; only a build can answer the merged output.
   lexicon = surface;
 
   inherit answer;

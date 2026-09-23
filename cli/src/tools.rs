@@ -1,14 +1,5 @@
-// the tools a file is formatted by, and the order they run in
-//
-// the nix order was read off a traced run of treefmt 2.6.0 over deadnix
-// 1.3.2, nixfmt 1.5.0 and statix through the fix wrapper it built, where
-// formatters of equal priority are applied in name order. statix leaves work
-// undone on a file nixfmt has not reached yet, so the order decides the bytes
-// and is pinned here rather than left to whatever a caller's path offers
-//
-// rust files were formatted by nothing before, because the tree held no rust.
-// rustfmt is new coverage rather than a tool the old configuration ran, so
-// nothing about it is part of what the nix files are held to
+// the nix order was read off a traced treefmt 2.6.0 run over deadnix 1.3.2,
+// nixfmt 1.5.0 and statix, where statix left work for nixfmt to finish.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -19,8 +10,8 @@ pub struct Tool {
     pub extension: &'static str,
     pub leading: &'static [&'static str],
     pub config_variable: Option<&'static str>,
-    // the wrapper treefmt built loops over its arguments and calls statix
-    // once per file, and a single call over many files is a different tool
+    // the wrapper treefmt built called statix once per file, and one call over
+    // many files is a different tool.
     pub per_file: bool,
 }
 

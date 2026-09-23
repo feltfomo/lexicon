@@ -1,13 +1,8 @@
-# the registry is data. a further output block is one entry in this list plus
-# its own file, and the assembly that reads the registry names none of them
+# the registry holds block declarations; assembly reads it without naming
+# individual blocks.
 #
-# TODO the registry is built through the factory the declaration layer
-# exposes, parameterised by this subsystem's kinds and its own diagnostic
-# namespace. a new output is one file beside these and one entry in the list
-# below, and nothing else changes. a second copy of the ordering, the
-# legality question, the classification or the malformed registration checks
-# is the thing this seam exists to prevent, so anything that looks like one
-# belongs here as an argument instead
+# TODO build the registry through the declaration factory so ordering,
+# legality, classification, and malformed-registration checks have one source.
 {
   lib,
   fx,
@@ -30,6 +25,7 @@ let
 
   declared = map (entry: import entry arguments) [
     ./checks.nix
+    ./commands.nix
     ./devShells.nix
     ./fmt.nix
     ./packages.nix
