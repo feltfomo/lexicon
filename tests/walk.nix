@@ -1,6 +1,6 @@
 { lib, lexicon }:
 let
-  inherit (lexicon) kata;
+  inherit (lexicon) kata telos;
 
   walked = root: lexicon.configure { inherit root; };
 
@@ -8,7 +8,7 @@ let
 
   places = outcome: map (given: given.at) outcome.diagnostics;
 
-  inherit (kata.internal) types;
+  inherit (lexicon.walk) types;
 
   cross = walked ./fixtures/cross;
   excluded = walked ./fixtures/excluded;
@@ -19,10 +19,83 @@ let
   miswritten = walked ./fixtures/miswritten;
   derived = walked ./fixtures/derived;
   nested = walked ./fixtures/nested;
+  spanning = walked ./fixtures/spanning;
+  shadowed = walked ./fixtures/shadowed;
+  dormant = walked ./fixtures/dormant;
 
   folded = outcome: kata.load outcome.value;
+
+  sorted = names: lib.sort (a: b: a < b) names;
+
+  ownedNames = outcome: lib.mapAttrs (_: held: sorted (builtins.attrNames held)) outcome.owned;
 in
 {
+  # the roots of every subsystem that named one are read under a single
+  # knot, and what fell under whose roots is handed back beside the union.
+  # the file under outputs names a check after each entry the walk read, and
+  # the one it could only have got from the other tree is the knot
+  testOneKnotSpansTheRootsOfEverySubsystem = {
+    expr = {
+      names = sorted (builtins.attrNames spanning.value);
+      owned = ownedNames spanning;
+      reached = sorted (
+        builtins.attrNames (telos.internal.construct.read spanning.value.fleet).spec.checks
+      );
+      reported = codes spanning;
+    };
+    expected = {
+      names = [
+        "base"
+        "fleet"
+      ];
+      owned = {
+        kata = [ "base" ];
+        telos = [ "fleet" ];
+      };
+      reached = [
+        "reached-base"
+        "reached-fleet"
+      ];
+      reported = [ ];
+    };
+  };
+
+  # the group a name is read off spans every root, so two trees landing on
+  # one name is refused once. the vocabulary is the one of the tree the
+  # first file came from, and the origins carry their roots, so both trees
+  # are named whichever subsystem spoke
+  testANameCollidingAcrossTwoRootsIsReportedOnceAndNamesBoth = {
+    expr = {
+      reported = codes shadowed;
+      notes = map (given: given.message) shadowed.diagnostics;
+    };
+    expected = {
+      reported = [ "kata/entry-name-collision" ];
+      notes = [
+        "\"dup\" is declared by more than one file, modules/dup.nix and outputs/dup.nix"
+      ];
+    };
+  };
+
+  # no settings file for the output layer at all, so its root list is the
+  # empty one it defaults to and the tree beside modules is left unread
+  # rather than reported missing
+  testASubsystemThatNamesNoRootWalksNothing = {
+    expr = {
+      names = builtins.attrNames dormant.value;
+      owned = ownedNames dormant;
+      reported = codes dormant;
+    };
+    expected = {
+      names = [ "kept" ];
+      owned = {
+        kata = [ "kept" ];
+        telos = [ ];
+      };
+      reported = [ ];
+    };
+  };
+
   testWalkReadsAConventionalTreeWhole = {
     expr = lib.sort (a: b: a < b) (builtins.attrNames cross.value);
     expected = [

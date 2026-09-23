@@ -1,10 +1,11 @@
-# the shape of a constructed value and of everything the walk carries. the
-# same description answers the fast boolean question and, on the effectful
-# path, blames the field that failed
+# the shape of a constructed value and of what leaves this layer. the shapes
+# a walked file carries belong to the walk and arrive as an argument, and the
+# two a declaration is written in terms of are handed on from here so a
+# caller reaching through kata still finds them
 {
-  lib,
   fx,
   t,
+  walk,
 }:
 let
   # the tag payload. the constructors write every key, so a failure here is
@@ -25,46 +26,6 @@ let
   Tagged = tag: t.refined "Tagged" t.Attrs (value: value ? ${tag});
 
   Construction = tag: t.refined "Construction" (Tagged tag) (value: Payload.check value.${tag});
-
-  # every path the walk carries is written from the configuration root
-  Relative = t.refined "RelativePath" t.String (value: value != "" && !lib.hasPrefix "/" value);
-
-  Name = t.refined "EntryName" t.String (fx.types.matching "[^./]+");
-
-  # a file the tree offered. it carries no name, because a name is what
-  # surviving the exclusion list earns it
-  Discovered = t.bless (
-    fx.types.Record {
-      root = Relative;
-      relative = Relative;
-      origin = Relative;
-    }
-  );
-
-  Screened = t.bless (
-    fx.types.Record {
-      root = Relative;
-      relative = Relative;
-      origin = Relative;
-      name = Name;
-    }
-  );
-
-  # the import path is rebuilt from the origin, so nothing downstream of here
-  # holds an absolute path
-  Resolved = t.bless (
-    fx.types.Record {
-      name = Name;
-      origin = Relative;
-    }
-  );
-
-  Clash = t.bless (
-    fx.types.Record {
-      name = Name;
-      origins = t.listOf Relative;
-    }
-  );
 
   # the one path segment a diagnostic about a whole declaration is written
   # at. the walk is the only thing that knows the file
@@ -98,15 +59,11 @@ in
     Payload
     Tagged
     Construction
-    Relative
-    Name
-    Discovered
-    Screened
-    Resolved
-    Clash
     Place
     Origins
     Indexed
     Prepared
     ;
+
+  inherit (walk) Relative Name;
 }

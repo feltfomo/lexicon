@@ -6,7 +6,7 @@
   krisis,
 }:
 let
-  locationEffect = "kata/location";
+  locationEffect = "lexicon/location";
 
   here = fx.send locationEffect null;
 
@@ -25,12 +25,15 @@ let
   ];
 
   # a block declares codes as data and is never handed the reporter, so the
-  # prefix reaches the path list before it is rendered
+  # prefix reaches the path list before it is rendered. the namespace arrives
+  # from the registry that holds the block, because more than one subsystem
+  # registers blocks through this contract and a block's code belongs to the
+  # subsystem it was declared in
   vocabularyFor =
-    block:
+    namespace: block:
     let
       declared = krisis.vocabulary {
-        namespace = "kata";
+        inherit namespace;
         source = block.name;
         inherit (block) codes;
       };

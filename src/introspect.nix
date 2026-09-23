@@ -371,6 +371,12 @@ let
       "fields filled by lexicon ${toString (builtins.length answer.origins - written)}"
     ];
 
+  # TODO outputs are answered here, once the output layer has a registry of
+  # them to read. this file already answers kinds, blocks, files, fleet and
+  # origins off the same registries the run reads, so outputs are one more
+  # entry in the answered record below and one more rendering beside the
+  # others. an output is not an entity, so neither the fleet walk nor the
+  # origins walk widens to reach one
   introspect =
     { walked, prepared }:
     let

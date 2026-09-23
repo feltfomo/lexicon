@@ -44,3 +44,13 @@
 // import ./introspect.nix {
   inherit lib lexicon;
 }
+// import ./telos.nix {
+  inherit fx;
+  inherit (lexicon) krisis telos;
+}
+// import ./telos-blocks.nix {
+  inherit (lexicon) krisis telos;
+}
+// import ./telos-assemble.nix {
+  inherit (lexicon) krisis telos;
+}

@@ -4,6 +4,7 @@
   lib,
   fx,
   nixpkgs,
+  systems,
 }:
 let
   mock = import ../lexicon.nix { inherit lib fx nixpkgs; };
@@ -30,6 +31,18 @@ let
   answer = mock.library.introspect {
     walked = door.value;
     prepared = prepared.value;
+  };
+
+  # the outputs this fleet declares, projected onto the surface a reader of
+  # this flake already knows. the declarations come off the same walk the
+  # entries did, and the hosts come off the prepared registry, so a
+  # declaration naming a host the fleet does not hold is refused here rather
+  # than landing under a name nothing answers to
+  surface = mock.library.telos.outputs {
+    entries = door.owned.telos;
+    hosts = prepared.value.registry.hosts;
+    packageSets = lib.genAttrs systems mock.packageSetFor;
+    inherit systems;
   };
 
   hosts = builtins.attrNames targets.native;
@@ -167,6 +180,28 @@ let
       actual = builtins.length answer.files;
     }
     {
+      at = "the checks one knot over both trees declares";
+      expected = [
+        "fleet-declares-hostless"
+        "host-declares-its-own"
+        "walk-reached-accounts"
+        "walk-reached-desk"
+        "walk-reached-fleet"
+        "walk-reached-folio"
+        "walk-reached-git"
+        "walk-reached-hardware"
+        "walk-reached-monitors"
+        "walk-reached-pattern"
+        "walk-reached-scribe"
+        "walk-reached-system"
+        "walk-reached-tower"
+        "walk-reached-tower-checks"
+        "walk-reached-vessel"
+        "walk-reached-warden"
+      ];
+      actual = lib.sort (a: b: a < b) (builtins.attrNames surface.checks.x86_64-linux);
+    }
+    {
       at = "refusals/entries";
       expected = [
         {
@@ -228,6 +263,11 @@ in
       throw (lib.concatStringsSep "\n\n" ([ "proof failed" ] ++ map mismatch failed));
 
   print = lib.concatStringsSep "\n" answer.lines;
+
+  # what the flake publishes, both as lexicon's own attribute and merged into
+  # the standard names beside it. the proof above compares values, and this
+  # is the half only a build can answer
+  lexicon = surface;
 
   inherit answer;
 }

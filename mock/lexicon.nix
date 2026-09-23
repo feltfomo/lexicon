@@ -38,6 +38,11 @@ let
   # only arrive as a capability. read 2026-09-21
   capabilities = {
     systemEvaluator = arguments: import (nixpkgs + "/nixos/lib/eval-config.nix") arguments;
+
+    # instantiating a package set is a choice about this tree and about the
+    # systems it builds for, so the output layer is handed sets already made
+    # rather than the tree to make them from
+    packageSetFor = system: import nixpkgs { inherit system; };
   };
 
   configure =
@@ -49,4 +54,6 @@ let
 in
 {
   inherit library configure;
+
+  inherit (capabilities) packageSetFor;
 }

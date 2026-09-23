@@ -24,11 +24,20 @@ let
     inherit (vocabulary.text) shown prose;
   };
 
-  kindNames = map (kind: kind.name) kinds;
-
   # the registry is built over the entries it is handed, so a registration the
-  # layer would never ship can still be read
-  of =
+  # layer would never ship can still be read. the kinds a block may reach and
+  # the namespace its codes are read under arrive here rather than being
+  # captured, because a second subsystem builds its own registry through this
+  # same function and its blocks declare neither this registry's kinds nor its
+  # codes
+  factory =
+    {
+      kinds,
+      namespace,
+    }:
+    let
+      kindNames = map (kind: kind.name) kinds;
+    in
     entries:
     let
       names = map (entry: entry.name) entries;
@@ -60,7 +69,7 @@ let
 
       problems = lib.concatMap (block.problemsOf kindNames names) entries ++ cycleProblems;
 
-      emitters = lib.mapAttrs (_: block.vocabularyFor) byName;
+      emitters = lib.mapAttrs (_: block.vocabularyFor namespace) byName;
     in
     {
       inherit
@@ -72,6 +81,12 @@ let
         emitters
         ;
 
+      # the sum classify speaks, handed back by the registry that speaks it.
+      # a caller answering a classification needs the constructors to answer
+      # it against, and a second registry built here has no other route to
+      # them
+      inherit Registration;
+
       has = name: byName ? ${name};
 
       classify =
@@ -81,6 +96,12 @@ let
       order = map (entry: entry.name) ordered;
     };
 
+  # this registry's own kinds and its own namespace, applied once
+  of = factory {
+    inherit kinds;
+    namespace = "kata";
+  };
+
   declared = map (entry: import entry arguments) [
     ./nixos.nix
     ./home-manager.nix
@@ -88,4 +109,7 @@ let
     ./theme.nix
   ];
 in
-of declared // { inherit of Registration; }
+of declared
+// {
+  inherit of factory;
+}

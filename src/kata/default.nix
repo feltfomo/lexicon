@@ -7,10 +7,14 @@
   krisis,
   engine,
   arrows,
+  walk,
 }:
 let
   kinds = import ./kinds.nix { };
-  vocabulary = import ./vocabulary.nix { inherit krisis; };
+  vocabulary = import ./vocabulary.nix {
+    inherit krisis;
+    inherit (walk) codes;
+  };
 
   claims = import ./claims.nix {
     inherit
@@ -40,25 +44,14 @@ let
   # the types are built off the instance's own t, so anything kata ever
   # hands the layer below carries that instance's stamp
   types = import ./types.nix {
-    inherit lib fx;
+    inherit fx;
     inherit (engine) t;
+    walk = walk.types;
   };
 
   construct = import ./construct.nix { inherit lib kinds types; };
 
   settings = import ./settings.nix { inherit (engine) t; };
-
-  walker = import ./walk.nix {
-    inherit
-      lib
-      fx
-      krisis
-      arrows
-      vocabulary
-      types
-      construct
-      ;
-  };
 
   # composition reads the kind registry to decide where an included value
   # lands, and the registry arrives here the way every other slice of it does
@@ -192,16 +185,15 @@ construct.from null
     settings
     ;
 
-  # a file the walker read stamps its constructors, so every value it
-  # builds says where it came from
+  # a file the walk read stamps its constructors, so every value it builds
+  # says where it came from
   inherit (construct) from;
-
-  inherit (walker) walk;
 
   internal = {
     inherit
       kinds
       blocks
+      block
       types
       vocabulary
       claims

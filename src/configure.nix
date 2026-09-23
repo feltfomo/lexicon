@@ -20,15 +20,28 @@ let
       capabilities ? { },
       contributions ? [ ],
     }:
-    krisis.run { inherit policy rendering; } (
-      fx.bind (settings.load {
-        inherit registrations library root;
-      }) (walk root)
-    )
+    let
+      walked = krisis.run { inherit policy rendering; } (
+        fx.bind (settings.load {
+          inherit registrations library root;
+        }) (walk root)
+      );
+    in
+    walked
     // {
+      # one knot spans every root, and what fell under whose roots is handed
+      # on beside it. the arrow below is given owned, so the door itself
+      # names no subsystem
+      value = walked.value.entries;
+
+      inherit (walked.value) owned;
+
       # a contribution and a capability are held for this call and reach no
       # library half, because a settings file is read before the walk
-      prepare = preparation { inherit policy rendering contributions; };
+      prepare = preparation {
+        inherit policy rendering contributions;
+        inherit (walked.value) owned;
+      };
 
       emit = emission { inherit policy rendering capabilities; };
     };

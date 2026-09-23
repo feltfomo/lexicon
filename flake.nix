@@ -116,6 +116,14 @@
               nixd
               nixfmt
               statix
+            ])
+            # poc/ toolchains. the poc cli is not listed here because it
+            # takes this flake as an input; run it with
+            #   nix run path:$PWD/poc#cli -- --help
+            ++ (with pkgs; [
+              odin
+              rustc
+              zig
             ]);
           };
         };

@@ -1,7 +1,11 @@
 # every code kata can report, declared once and up front. a problem the
 # layer below already reports keeps that layer's code, so a caller never
 # sees one problem twice under two names
-{ krisis }:
+#
+# the codes the walk reports arrive as an argument and are read under this
+# namespace, because the tree they are about is the one kata's settings file
+# named
+{ krisis, codes }:
 let
   shown = args: name: args.rendered.${name} or "?";
 
@@ -80,23 +84,6 @@ krisis.vocabulary {
       help = "drop one of the edges named in the cycle";
     };
 
-    unknown-walk-root = {
-      message = args: "there is no ${shown args "root"} under the configuration root";
-      help = "create the directory, or name the tree that holds the declarations";
-    };
-
-    excluded-path-missing = {
-      message = args: "nothing under any walk root is at ${shown args "path"}";
-      help = "drop the exclusion, or write it as a path relative to the root that holds it";
-    };
-
-    # two files landing on one name is read off the file list before anything
-    # is imported, so both files are named and neither quietly wins
-    entry-name-collision = {
-      message = args: "${shown args "name"} is declared by more than one file, ${prose args "files"}";
-      help = "rename one of the files; a name comes from the filename with its suffix dropped";
-    };
-
     include-cycle = {
       message = args: "the includes run in a cycle, ${prose args "cycle"}";
       help = "drop one of the includes named in the cycle";
@@ -128,7 +115,8 @@ krisis.vocabulary {
         "nothing includes the ${prose args "kind"} ${prose args "name"}, so it reaches no ${prose args "parent"}";
       help = "include it from the declaration it belongs to, or drop the file";
     };
-  };
+  }
+  // codes { inherit shown prose; };
 }
 // {
   # a block writes its own codes, and reading an argument the same way here
