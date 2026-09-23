@@ -202,6 +202,11 @@ let
       actual = lib.sort (a: b: a < b) (builtins.attrNames surface.checks.x86_64-linux);
     }
     {
+      at = "the formatter the fleet declares";
+      expected = true;
+      actual = lib.isDerivation surface.formatter.x86_64-linux;
+    }
+    {
       at = "refusals/entries";
       expected = [
         {

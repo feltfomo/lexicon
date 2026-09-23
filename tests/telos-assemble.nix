@@ -36,6 +36,46 @@ let
     ];
   };
 
+  # the fmt block's dependent half reads the package set, so a formatter test
+  # hands one in with the name it declares
+  assembledOver =
+    packages: declarations:
+    krisis.run { policy = krisis.policy.collect; } (
+      telos.assemble {
+        inherit declarations;
+        hosts = [
+          {
+            name = "tower";
+            system = "x86_64-linux";
+          }
+        ];
+        systems = [ "x86_64-linux" ];
+        packageSets = {
+          x86_64-linux = packages;
+        };
+      }
+    );
+
+  # the table telos publishes is one table, and a reader who wants to know
+  # what a table without a block does has to hand in that table
+  assembledWith =
+    table: declarations:
+    krisis.run { policy = krisis.policy.collect; } (
+      telos.internal.assembleWith table {
+        inherit declarations;
+        hosts = [
+          {
+            name = "tower";
+            system = "x86_64-linux";
+          }
+        ];
+        systems = [ "x86_64-linux" ];
+        packageSets = {
+          x86_64-linux = { };
+        };
+      }
+    );
+
   # one name, one system, one block, written in two places
   collided = assembled {
     hosts.tower.checks.shared = sealed;
@@ -87,6 +127,87 @@ in
       diagnostics = [ ];
       checks = [ "greeting" ];
       packages = [ "greeting" ];
+    };
+  };
+
+  # the attribute nix fmt reads holds one derivation and no names, so the one
+  # formatter declared lands under the system itself
+  testTheOneFormatterDeclaredLandsDirectlyUnderItsSystem = {
+    expr =
+      let
+        result = assembledOver { nixfmt = "the program"; } {
+          fleet.fmt = {
+            tree = {
+              program = "nixfmt";
+            };
+          };
+        };
+      in
+      {
+        diagnostics = reported result;
+        formatter = result.value.formatter;
+      };
+    expected = {
+      diagnostics = [ ];
+      formatter = {
+        x86_64-linux = "the program";
+      };
+    };
+  };
+
+  # two well formed formatters under different names clash nowhere a name is
+  # compared, so the refusal is the placement's and it names both
+  testTwoFormattersForOneSystemAreBothNamedAndNeitherLands = {
+    expr =
+      let
+        result = assembledOver { nixfmt = "the program"; } {
+          fleet.fmt = {
+            tree = {
+              program = "nixfmt";
+            };
+          };
+          hosts.tower.fmt = {
+            local = {
+              program = "nixfmt";
+            };
+          };
+        };
+      in
+      {
+        diagnostics = reported result;
+        surface = result.value;
+      };
+    expected = {
+      diagnostics = [
+        {
+          code = "telos/contended-output-attribute";
+          at = "$.fmt.x86_64-linux";
+          message = ''"fmt" may declare one output for "x86_64-linux", and local and tree were declared by fleet and tower'';
+        }
+      ];
+      surface = null;
+    };
+  };
+
+  # leaving a block out of the table is how an output stays lexicon's own,
+  # and the blocks still in the table are unaffected by the omission
+  testABlockLeftOutOfTheTableReachesNoStandardAttribute = {
+    expr =
+      let
+        result = assembledWith { checks = telos.placement.byName "checks"; } {
+          fleet.checks.sealed = sealed;
+          fleet.packages.greeting = sealed;
+        };
+      in
+      {
+        diagnostics = reported result;
+        attributes = builtins.attrNames result.value;
+        checks = builtins.attrNames result.value.checks.x86_64-linux;
+      };
+    expected = {
+      diagnostics = [ ];
+      attributes = [ "checks" ];
+      checks = [ "sealed" ];
     };
   };
 

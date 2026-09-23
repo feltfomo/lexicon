@@ -31,6 +31,17 @@ krisis.vocabulary {
       help = "rename one of them, or declare it once for the fleet instead of once per host";
     };
 
+    # an attribute holding one value has no name level to tell two well formed
+    # declarations apart, so they are refused where they meet rather than in
+    # either declaration, and both are dropped because neither has the better
+    # claim on the attribute
+    contended-output-attribute = {
+      message =
+        args:
+        "${shown args "block"} may declare one output for ${shown args "system"}, and ${prose args "outputs"} were declared by ${prose args "sources"}";
+      help = "declare one of them, or drop the rest";
+    };
+
     # two files declaring one output name for one host reduce to one
     # attribute when their declarations are merged, so the doubling is
     # refused where both files are still in hand

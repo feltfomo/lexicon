@@ -14,6 +14,8 @@
   block,
   blocks,
   vocabulary,
+  projection,
+  placement,
   projected,
   types,
 }:
@@ -295,6 +297,63 @@ let
     in
     blocks.byName.${blockName}.compile.dependent { pkgs = packageSets.${system}; } described;
 
+  # a placement can refuse, so the pieces of the surface are computations and
+  # are folded in the monad rather than merged as plain values
+  merged =
+    pieces:
+    lib.foldl' (
+      carried: piece:
+      pipeline.bind carried (
+        gathered: pipeline.bind piece (one: pipeline.pure (lib.recursiveUpdate gathered one))
+      )
+    ) (pipeline.pure { }) pieces;
+
+  # where a block's outputs sit under their attribute is a declared choice,
+  # so it is answered against the declaration rather than switched on a name
+  placedFor =
+    packageSets: system: blockName: held:
+    pipeline.bind (projection.caseOf {
+      datatype = placement.Placement;
+
+      arms = {
+        byName =
+          place:
+          pipeline.pure {
+            ${place.attribute}.${system} = builtFor packageSets system blockName held;
+          };
+
+        # an attribute holding one value has no name level to tell two well
+        # formed declarations apart, and neither has the better claim on it,
+        # so both are named and both are dropped
+        only =
+          place:
+          let
+            first = builtins.head held;
+
+            names = lib.sort (a: b: a < b) (map (one: one.output) held);
+
+            origins = lib.sort (a: b: a < b) (lib.unique (map (one: one.source) held));
+          in
+          if builtins.length held == 1 then
+            pipeline.pure {
+              ${place.attribute}.${system} = (builtFor packageSets system blockName held).${first.output};
+            }
+          else
+            pipeline.bind (emit.contended-output-attribute {
+              at = [
+                blockName
+                system
+              ];
+              context = {
+                block = blockName;
+                inherit system;
+                outputs = builtins.concatStringsSep " and " names;
+                sources = builtins.concatStringsSep " and " origins;
+              };
+            }) (_: pipeline.pure { });
+      };
+    } projected.${blockName}) (placed: placed);
+
   # what leaves here is the standard flake surface, whose shape belongs to nix
   # and not to lexicon, so there is nothing truthful to check it against
   projectStage = pipeline.mkStage {
@@ -320,31 +379,21 @@ let
             let
               byBlock = lib.groupBy (one: one.block) bySystem.${system};
             in
-            lib.foldl' (
-              gathered: blockName:
-              lib.recursiveUpdate gathered {
-                ${projected.${blockName}}.${system} = builtFor packageSets system blockName byBlock.${blockName};
-              }
-            ) { } (builtins.attrNames byBlock);
-        in
-        pipeline.bind
-          (fx.seq (
-            map (
-              system:
-              emit.missing-package-set {
-                at = [ system ];
-                context.system = system;
-              }
-            ) missing
-          ))
-          (
-            _:
-            pipeline.pure (
-              lib.foldl' (gathered: system: lib.recursiveUpdate gathered (surfaceFor system)) { } (
-                builtins.attrNames bySystem
+            merged (
+              map (blockName: placedFor packageSets system blockName byBlock.${blockName}) (
+                builtins.attrNames byBlock
               )
-            )
-          )
+            );
+        in
+        pipeline.bind (fx.seq (
+          map (
+            system:
+            emit.missing-package-set {
+              at = [ system ];
+              context.system = system;
+            }
+          ) missing
+        )) (_: merged (map surfaceFor (builtins.attrNames bySystem)))
       );
   };
 

@@ -60,6 +60,12 @@ let
       ];
     };
   };
+
+  goodFormatter = {
+    tree = {
+      program = "nixfmt";
+    };
+  };
 in
 {
   testAGoodCheckIsQuietAndDescribesItsSteps = {
@@ -168,5 +174,47 @@ in
       };
     };
     expected = [ "telos/packages-step-malformed" ];
+  };
+
+  testAGoodFormatterIsQuietAndDescribesItsProgram = {
+    expr = {
+      codes = codesOf "fmt" goodFormatter;
+      described = describe "fmt" goodFormatter;
+    };
+    expected = {
+      codes = [ ];
+      described = {
+        tree = {
+          program = "nixfmt";
+        };
+      };
+    };
+  };
+
+  testAnFmtBlockThatIsNotAnAttrsetIsRefused = {
+    expr = codesOf "fmt" "nixfmt";
+    expected = [ "telos/fmt-interior" ];
+  };
+
+  # whether the name is in the package set is the assembly's question, so
+  # what a formatter is held to here is whether it named a program at all
+  testAFormatterNamingNoProgramIsRefusedAtItsOwnName = {
+    expr = {
+      codes = codesOf "fmt" { tree = { }; };
+      places = placesOf "fmt" { tree = { }; };
+    };
+    expected = {
+      codes = [ "telos/fmt-program-unnamed" ];
+      places = [ "$.fleet.fmt.tree" ];
+    };
+  };
+
+  testAFormatterWhoseProgramIsEmptyIsRefused = {
+    expr = codesOf "fmt" {
+      tree = {
+        program = "";
+      };
+    };
+    expected = [ "telos/fmt-program-unnamed" ];
   };
 }

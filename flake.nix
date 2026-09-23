@@ -5,11 +5,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
-    treefmt-nix = {
-      url = "github:numtide/treefmt-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # shared with nix-effects so both suites run on one nix-unit
     nix-unit = {
       url = "github:nix-community/nix-unit";
@@ -28,8 +23,6 @@
   outputs =
     inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.treefmt-nix.flakeModule ];
-
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -60,7 +53,11 @@
           ...
         }:
         {
-          treefmt = import ./formatter.nix;
+          packages.lexicon = pkgs.callPackage ./cli/package.nix { };
+
+          # nix fmt reaches the same program the gate below runs, so there is
+          # one answer to what a formatted tree looks like
+          formatter = config.packages.lexicon;
 
           # the suite is a file with store paths baked in, not a flake output.
           # nix-unit carries its own cpp nix and --flake would re-lock under lix
@@ -91,6 +88,24 @@
                 touch $out
               '';
 
+          # a formatting regression is caught here rather than by whoever next
+          # runs the formatter, which is what the tree had before the
+          # multiplexer took the job over
+          #
+          # the source below is already filtered to what git tracks and the
+          # sandbox has no git, so the walk rather than the tracked list answers
+          # here and the two sets agree
+          checks.formatting =
+            pkgs.runCommand "lexicon-formatting"
+              {
+                nativeBuildInputs = [ config.packages.lexicon ];
+              }
+              ''
+                cd ${./.}
+                lexicon fmt --check .
+                touch $out
+              '';
+
           # the internal directory name may appear in file paths and import
           # lines, and nowhere a user can read
           checks.source-hygiene = pkgs.runCommand "lexicon-source-hygiene" { } ''
@@ -104,9 +119,11 @@
             touch $out
           '';
 
+          # the formatter is reached with nix fmt rather than carried here,
+          # because a shell holding the formatter would have to build the crate
+          # before anyone could enter the shell to work on the crate
           devShells.default = pkgs.mkShell {
             packages = [
-              config.treefmt.build.wrapper
               inputs.nix-unit.packages.${system}.default
             ]
             ++ (with pkgs; [
@@ -117,12 +134,16 @@
               nixfmt
               statix
             ])
-            # poc/ toolchains. the poc cli is not listed here because it
-            # takes this flake as an input; run it with
+            # the formatter is built from cli/, and rustc stays for poc/. the
+            # poc cli is not listed here because it takes this flake as an
+            # input; run it with
             #   nix run path:$PWD/poc#cli -- --help
             ++ (with pkgs; [
-              odin
+              cargo
+              clippy
               rustc
+              rustfmt
+              odin
               zig
             ]);
           };

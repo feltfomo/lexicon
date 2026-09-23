@@ -1,0 +1,14 @@
+[package]
+name = "lexicon"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "lexicon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lexicon"
+path = "src/main.rs"
+
+[dependencies]

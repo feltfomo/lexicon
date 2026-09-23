@@ -35,6 +35,16 @@ fleet {
     };
   };
 
+  # the fleet declares one formatter and it reaches formatter.<system>, which
+  # is the whole of what a configuration outside lexicon has to write for nix
+  # fmt to find it. the program is a name in the package set because that is
+  # all a declaration can reach today
+  fmt = {
+    tree = {
+      program = "nixfmt";
+    };
+  };
+
   packages = {
     greeting = {
       steps = [
