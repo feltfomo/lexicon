@@ -34,7 +34,7 @@
         file = fileSystem;
         directory = directorySystem;
       };
-      # these values exist for the documentation tests, not for a real configuration
+      # these values capture the module interface for this sample
       lib = {
         file = {
           outputs = builtins.attrNames fileOnly;

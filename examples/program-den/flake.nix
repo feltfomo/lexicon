@@ -35,7 +35,7 @@
     in
     {
       nixosConfigurations.demo = demo;
-      # these values exist for the documentation tests, not for a real configuration
+      # these values capture the module interface for this sample
       lib.result = {
         outputs = builtins.attrNames paperkite;
         entryCount = builtins.length manifest;

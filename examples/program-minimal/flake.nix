@@ -25,7 +25,7 @@
         assert demo.config.environment.variables.PAPERKITE_MODE == "focused";
         "touch $out"
       );
-      # these values exist for the documentation tests, not for a real configuration
+      # these values capture the module interface for this sample
       lib.result = {
         mode = demo.config.environment.variables.PAPERKITE_MODE;
         outputs = builtins.attrNames paperkite;

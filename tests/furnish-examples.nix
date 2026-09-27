@@ -16,8 +16,8 @@ let
   };
 
   furnish = lexicon.lib.furnish {
-    resolve = _: _: throw "unused Furnish documentation resolver";
-    resolveSystem = _: _: throw "unused Furnish documentation system resolver";
+    resolve = _: _: throw "unused Furnish example resolver";
+    resolveSystem = _: _: throw "unused Furnish example system resolver";
   };
   runtimeModule = lexicon.lib.furnishRuntime { };
   source = ../examples/furnish/settings.conf;

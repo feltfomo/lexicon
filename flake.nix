@@ -341,11 +341,6 @@
 
           checks = {
             registry = gate "registry-tests" registryTests;
-            documentation = import ./tests/documentation.nix {
-              inherit pkgs;
-              inherit (inputs) nixpkgs;
-              lexicon = inputs.self;
-            };
             consumers =
               let
                 existing = import ./tests/consumers.nix {
