@@ -32,6 +32,7 @@ let
     dms = import ./adapters/dms.nix { inherit lib; };
     end4-pc = import ./adapters/end4-pc.nix { inherit lib; };
     illogical-impulse = import ./adapters/illogical-impulse.nix { inherit lib; };
+    lucid = import ./adapters/lucid.nix { inherit lib; };
     noctalia = import ./adapters/noctalia.nix { inherit lib; };
   };
   themeBackends = builtins.attrNames adapters;

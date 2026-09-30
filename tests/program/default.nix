@@ -628,7 +628,8 @@ rec {
     overrides-beneath-excluded-subtrees-are-rejected = !excludedOverrideResult.success;
     theme-sources-beneath-excluded-subtrees-are-rejected = !excludedThemeResult.success;
   }
-  // bindingTests;
+  // bindingTests
+  // (import ./lucid.nix { inherit lib pkgs lexicon; });
 
   failing = builtins.attrNames (lib.filterAttrs (_: value: !value) tests);
   ok =

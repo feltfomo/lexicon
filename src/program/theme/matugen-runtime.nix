@@ -29,6 +29,7 @@ let
         dms = ./adapters/dms.nix;
         end4-pc = ./adapters/end4-pc.nix;
         illogical-impulse = ./adapters/illogical-impulse.nix;
+        lucid = ./adapters/lucid.nix;
         noctalia = ./adapters/noctalia.nix;
       };
 

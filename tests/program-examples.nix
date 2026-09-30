@@ -238,6 +238,7 @@ in
       "dms"
       "end4-pc"
       "illogical-impulse"
+      "lucid"
       "noctalia"
     ];
     outputs = [
