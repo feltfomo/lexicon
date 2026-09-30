@@ -18,20 +18,9 @@ let
   capability = import ./capabilities.nix;
   inherit (import ../report.nix { inherit lib krisis axiom; }) problem finish;
 
-  candidates =
-    lib.mapAttrsToList
-      (name: path: {
-        inherit name;
-        adapter = import path { inherit lib; };
-      })
-      {
-        caelestia = ./adapters/caelestia.nix;
-        dms = ./adapters/dms.nix;
-        end4-pc = ./adapters/end4-pc.nix;
-        illogical-impulse = ./adapters/illogical-impulse.nix;
-        lucid = ./adapters/lucid.nix;
-        noctalia = ./adapters/noctalia.nix;
-      };
+  candidates = lib.mapAttrsToList (name: adapter: { inherit name adapter; }) (
+    import ./adapters { inherit lib; }
+  );
 
   # the matugen-backed renderers are the ones whose adapter says it needs the
   # runtime, not a second hand-kept list that drifts from the adapters

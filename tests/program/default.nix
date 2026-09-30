@@ -629,7 +629,8 @@ rec {
     theme-sources-beneath-excluded-subtrees-are-rejected = !excludedThemeResult.success;
   }
   // bindingTests
-  // (import ./lucid.nix { inherit lib pkgs lexicon; });
+  // (import ./lucid.nix { inherit lib pkgs lexicon; })
+  // (import ./serpantinum.nix { inherit lib pkgs lexicon; });
 
   failing = builtins.attrNames (lib.filterAttrs (_: value: !value) tests);
   ok =

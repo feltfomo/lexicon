@@ -240,6 +240,7 @@ in
       "illogical-impulse"
       "lucid"
       "noctalia"
+      "serpantinum"
     ];
     outputs = [
       "homeManager"
