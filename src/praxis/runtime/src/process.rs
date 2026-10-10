@@ -2,7 +2,7 @@ use crate::model::{Result, fail};
 use std::{
     fs::{File, OpenOptions},
     os::{
-        fd::{AsRawFd, FromRawFd, OwnedFd},
+        fd::{AsRawFd, FromRawFd, OwnedFd, RawFd},
         unix::process::{CommandExt, ExitStatusExt},
     },
     process::{Command, ExitStatus},
@@ -37,11 +37,10 @@ pub fn cancelled() -> Result<()> {
         Err(fail(128 + signal, format!("cancelled by signal {signal}")))
     }
 }
-fn foreground(tty: &File, group: i32) -> std::io::Result<()> {
-    // terminal ownership changes happen in the parent, outside signal handlers.
+fn foreground(tty: RawFd, group: i32) -> std::io::Result<()> {
     unsafe {
         let previous = libc::signal(libc::SIGTTOU, libc::SIG_IGN);
-        let result = libc::tcsetpgrp(tty.as_raw_fd(), group);
+        let result = libc::tcsetpgrp(tty, group);
         let error = std::io::Error::last_os_error();
         libc::signal(libc::SIGTTOU, previous);
         if result == -1 { Err(error) } else { Ok(()) }
@@ -50,10 +49,18 @@ fn foreground(tty: &File, group: i32) -> std::io::Result<()> {
 struct Terminal {
     tty: File,
     group: i32,
+    settings: libc::termios,
 }
 impl Drop for Terminal {
     fn drop(&mut self) {
-        let _ = foreground(&self.tty, self.group);
+        let _ = foreground(self.tty.as_raw_fd(), self.group);
+        // discard unfinished password input before restoring terminal echo.
+        while unsafe { libc::tcsetattr(self.tty.as_raw_fd(), libc::TCSAFLUSH, &self.settings) } != 0
+        {
+            if std::io::Error::last_os_error().kind() != std::io::ErrorKind::Interrupted {
+                break;
+            }
+        }
     }
 }
 fn group_signal(group: i32, signal: i32) {
@@ -101,10 +108,14 @@ fn wait_for_exit(notification: Option<&OwnedFd>) -> Result<()> {
     }
     Ok(())
 }
-pub fn execute(command: &mut Command, interactive: bool, deadline: Option<Instant>) -> Result<i32> {
+pub fn execute(
+    command: &mut Command,
+    use_terminal: bool,
+    deadline: Option<Instant>,
+) -> Result<i32> {
     use std::io::IsTerminal;
     crate::interaction::deadline(deadline)?;
-    let terminal = if interactive && std::io::stdin().is_terminal() {
+    let terminal = if use_terminal && std::io::stdin().is_terminal() {
         let tty = OpenOptions::new()
             .read(true)
             .write(true)
@@ -114,12 +125,28 @@ pub fn execute(command: &mut Command, interactive: bool, deadline: Option<Instan
         if group < 0 {
             return Err(fail(74, std::io::Error::last_os_error().to_string()));
         }
-        Some(Terminal { tty, group })
+        let mut settings = std::mem::MaybeUninit::uninit();
+        if unsafe { libc::tcgetattr(tty.as_raw_fd(), settings.as_mut_ptr()) } != 0 {
+            return Err(fail(74, std::io::Error::last_os_error().to_string()));
+        }
+        Some(Terminal {
+            tty,
+            group,
+            settings: unsafe { settings.assume_init() },
+        })
     } else {
         None
     };
     // the child leads a fresh group so cancellation includes its descendants
     command.process_group(0);
+    if let Some(terminal) = &terminal {
+        let tty = terminal.tty.as_raw_fd();
+        // hand off before exec so terminal access cannot race the parent.
+        // the hook only calls async-signal-safe functions and does not allocate.
+        unsafe {
+            command.pre_exec(move || foreground(tty, libc::getpgrp()));
+        }
+    }
     let mut child = command.spawn().map_err(|e| {
         fail(
             if e.kind() == std::io::ErrorKind::NotFound {
@@ -131,14 +158,6 @@ pub fn execute(command: &mut Command, interactive: bool, deadline: Option<Instan
         )
     })?;
     let group = child.id() as i32;
-    if let Some(terminal) = &terminal {
-        if let Err(error) = foreground(&terminal.tty, group) {
-            group_signal(group, libc::SIGKILL);
-            let _ = child.wait();
-            return Err(fail(74, error.to_string()));
-        }
-        group_signal(group, libc::SIGCONT);
-    }
     let result = (|| {
         let notification = exit_notification(group)?;
         let mut cancelled_at = None;

@@ -284,6 +284,54 @@ let
           interactive = true;
         }
       ];
+      terminal-password.steps = [
+        {
+          exec = [
+            "${pkgs.python3}/bin/python3"
+            "${./terminal.py}"
+            "child"
+            "password"
+          ];
+          timeout = 2;
+          confirm = "Start terminal child?";
+        }
+        { prompt.message = "Terminal returned?"; }
+      ];
+      terminal-failure.steps = [
+        {
+          exec = [
+            "${pkgs.python3}/bin/python3"
+            "${./terminal.py}"
+            "child"
+            "failure"
+          ];
+          timeout = 2;
+        }
+      ];
+      terminal-timeout.steps = [
+        {
+          exec = [
+            "${pkgs.python3}/bin/python3"
+            "${./terminal.py}"
+            "child"
+            "wait"
+          ];
+          timeout = 1;
+        }
+      ];
+      terminal-cancel.steps = [
+        {
+          exec = [
+            "${pkgs.python3}/bin/python3"
+            "${./terminal.py}"
+            "child"
+            "wait"
+          ];
+        }
+      ];
+      terminal-spawn-failure.steps = [
+        { exec = [ "/praxis-missing-executable" ]; }
+      ];
       cancel = {
         runtimeInputs = [ pkgs.coreutils ];
         lock = "praxis-runtime-test";
@@ -335,6 +383,7 @@ pkgs.runCommandLocal "praxis-runtime-tests"
       pkgs.fish
       pkgs.gnugrep
       pkgs.jq
+      pkgs.python3
       pkgs.zsh
     ];
   }
@@ -516,6 +565,7 @@ pkgs.runCommandLocal "praxis-runtime-tests"
     rm -- ready descendant cancel.stdout cancel.stderr
 
     export RUNNER="$runner" MANIFEST="$manifest" WORK="$work"
+    python3 ${./terminal.py} "$runner" "$manifest"
     expect -c 'set timeout 10; spawn -noecho $env(RUNNER) --manifest $env(MANIFEST) run interactive; expect "running"; send "terminal\r"; expect "received:terminal"; expect eof; catch wait result; exit [lindex $result 3]'
     expect -c 'set timeout 10; spawn -noecho $env(RUNNER) --manifest $env(MANIFEST) --yes run acknowledgement; expect "type DELETE"; send "DELETE\r"; expect eof; catch wait result; exit [lindex $result 3]'
     test -e approved

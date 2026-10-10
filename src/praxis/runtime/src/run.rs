@@ -340,7 +340,7 @@ pub fn execute(plan: &Plan, options: &crate::ui::Options) -> Result<()> {
                         }
                     );
                 }
-                let code = process::execute(&mut child, step.interactive, deadline)?;
+                let code = process::execute(&mut child, !policy.unattended(), deadline)?;
                 if code == 0 {
                     Ok(())
                 } else {
