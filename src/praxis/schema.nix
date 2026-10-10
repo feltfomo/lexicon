@@ -169,7 +169,7 @@ let
         checks = {
           run = nonEmptyString;
           script = relativePath;
-          command = commandName;
+          command = fields.routeName;
         };
         execution =
           if kind == "prompt" then
@@ -338,7 +338,7 @@ let
         };
       } raw;
     in
-    if !commandName name then
+    if !fields.routeName name then
       validation.failure [
         (diagnostic subject "command-name" "command names must match [a-zA-Z0-9][a-zA-Z0-9_-]*")
       ]

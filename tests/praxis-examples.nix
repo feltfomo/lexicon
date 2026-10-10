@@ -30,8 +30,8 @@ let
       ];
       types = [
         "int"
-        "bool"
         "path"
+        "bool"
       ];
     };
     outputs = {
@@ -110,6 +110,7 @@ in
       "name"
       "commands"
       "tasks"
+      "scope"
       "check"
       "atRoot"
       "wrappers"
@@ -143,10 +144,8 @@ in
       "localFlake"
     ];
     parameterFields = [
-      "name"
       "description"
       "type"
-      "positional"
       "required"
       "env"
       "short"

@@ -43,17 +43,17 @@ let
       ;
   };
   inspect = import ./graph.nix { inherit lib fields results; };
+  tree = import ./tree.nix { inherit lib fields; };
   selections = lib.mapAttrs (name: _: inspect [ name ]) results;
   inherit (project) pkgs;
   runner = import ./package.nix { inherit pkgs; };
   # selected manifests must not normalize sibling commands
-  normalized = builtins.mapAttrs (
-    _: result:
+  normalized =
+    name:
     let
-      command = finish result;
+      command = finish (tree.lookup results name);
     in
-    removeAttrs command [ "runtimeInputs" ] // { path = lib.makeBinPath command.runtimeInputs; }
-  ) results;
+    removeAttrs command [ "runtimeInputs" ] // { path = lib.makeBinPath command.runtimeInputs; };
   makeManifest = names: {
     version = 2;
     inherit (project) name;
@@ -68,7 +68,7 @@ let
       expectedFlake =
         if project.requireRoot then builtins.readFile (project.root + "/flake.nix") else null;
     };
-    commands = lib.genAttrs names (name: normalized.${name});
+    commands = lib.genAttrs names normalized;
   };
   manifests = lib.mapAttrs (_: selection: makeManifest (finish selection)) selections;
   manifest = makeManifest (finish (inspect (builtins.attrNames results)));

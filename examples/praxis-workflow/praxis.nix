@@ -7,14 +7,13 @@
   commands.authenticate = {
     description = "Check a runtime credential without printing it";
     # the credential stays in runtime input instead of entering the Nix store
-    parameters = [
-      {
-        name = "token";
+    parameters = {
+      token = {
         sensitive = true;
         required = true;
         env = "DEMO_TOKEN";
-      }
-    ];
+      };
+    };
     shell = ''test -n "$PRAXIS_ARG_TOKEN"'';
     forwardArgs = false;
   };

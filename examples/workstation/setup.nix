@@ -23,15 +23,10 @@ let
     commands.target = {
       hosts = [ "workstation" ];
       description = "Print a known host identifier";
-      parameters = [
-        (
-          choices.host
-          // {
-            required = true;
-            short = "H";
-          }
-        )
-      ];
+      parameters.host = choices.host // {
+        required = true;
+        short = "H";
+      };
       command = [
         "${pkgs.coreutils}/bin/printf"
         "%s\n"

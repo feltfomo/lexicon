@@ -40,6 +40,17 @@ let
           };
           commands = attrs "commands";
           tasks = attrs "tasks";
+          scope =
+            field "praxis" "scope" "scope must be project or global" (
+              value:
+              builtins.elem value [
+                "project"
+                "global"
+              ]
+            )
+            // {
+              default = "project";
+            };
           check = boolean "check" false;
           atRoot = boolean "atRoot" false;
           wrappers = boolean "wrappers" false;

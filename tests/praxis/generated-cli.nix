@@ -9,13 +9,24 @@ let
   specs = {
     commands = {
       echo = echoArgs;
+      ops.inspect = {
+        command = echoArgs;
+        positional = [ "target" ];
+        parameters.target.choices = [
+          "khion"
+          "lumi"
+        ];
+        args = [ { param = "target"; } ];
+        aliases = [ "oi" ];
+        forwardArgs = false;
+      };
+      ops.deep.echo = echoArgs;
       praxis-word = echoArgs;
       typed = {
         command = echoArgs;
         args = [ { param = "mode"; } ];
-        parameters = [
-          {
-            name = "mode";
+        parameters = {
+          mode = {
             short = "m";
             choices = [
               "debug"
@@ -23,19 +34,18 @@ let
               "two words"
             ];
             default = "debug";
-          }
-        ];
+          };
+        };
       };
       collision = {
         command = echoArgs;
         args = [ { param = "help"; } ];
-        parameters = [
-          {
-            name = "help";
+        parameters = {
+          help = {
             short = "h";
             default = "child";
-          }
-        ];
+          };
+        };
       };
       local = {
         command = echoArgs;
@@ -67,22 +77,26 @@ let
       };
     };
     tasks = {
+      nested = [
+        {
+          command = "ops.inspect";
+          args = [ "khion" ];
+        }
+      ];
       typed-raw = {
-        parameters = [
-          {
-            name = "outer";
+        parameters = {
+          outer = {
             default = "default";
-          }
-        ];
+          };
+        };
         steps = [ "again" ];
       };
       typed-chain = {
-        parameters = [
-          {
-            name = "outer";
+        parameters = {
+          outer = {
             default = "default";
-          }
-        ];
+          };
+        };
         steps = [
           {
             command = "typed-proxy";
@@ -193,6 +207,7 @@ pkgs.runCommand "praxis-generated-cli"
     test "$(find "$plain/bin" -maxdepth 1 -mindepth 1 -printf '%f\n')" = praxis
     test -f "$wrapped/bin/echo"
     test -f "$wrapped/bin/again"
+    test -f "$wrapped/bin/ops"
     test -f "$generated_check"
     cd "$work"
     expect_status 0 "$custom" --version
@@ -213,6 +228,32 @@ pkgs.runCommand "praxis-generated-cli"
       cmp expected stdout
     done
     test ! -e injected
+    for command in "$dispatcher ops inspect" "$dispatcher run ops inspect" "$wrapped/bin/ops inspect" "$dispatcher oi"; do
+      read -r -a argv <<< "$command"
+      expect_status 0 "''${argv[@]}" khion
+      jq -e '. == ["khion"]' stdout
+    done
+    expect_status 0 "$dispatcher" nested
+    jq -e '. == ["khion"]' stdout
+    expect_status 64 "$dispatcher" ops missing
+    expect_status 64 "$dispatcher" ops inspect nowhere
+    expect_status 64 "$dispatcher" ops
+    expect_status 0 "$dispatcher" help ops
+    grep -Fx inspect stdout
+    expect_status 0 "$dispatcher" --json help ops
+    jq -e '.command == "ops" and .subcommands == ["deep","inspect"]' stdout
+    expect_status 0 "$dispatcher" help ops inspect
+    grep -F 'Usage: praxis ops inspect <target>' stdout
+    expect_status 0 "$dispatcher" ops deep echo --help "" 'two words'
+    jq -e '. == ["--help","","two words"]' stdout
+    expect_status 0 "$dispatcher" complete -- ops ""
+    printf 'deep\ninspect\n' > expected
+    cmp expected stdout
+    expect_status 0 "$dispatcher" complete -- run ops inspect k
+    test "$(cat stdout)" = khion
+    expect_status 0 "$dispatcher" --json plan ops inspect lumi
+    jq -e '.command == "ops.inspect" and .steps[0].args == ["lumi"]' stdout
+    expect_status 0 "$dispatcher" doctor ops inspect khion
 
     expect_status 0 "$dispatcher" shell 'a b' "" --
     test "$(cat stdout)" = '<a b><><-->'

@@ -39,6 +39,7 @@ let
       ;
   };
   normalize = import ./praxis/normalize.nix {
+    inherit (spec) scope;
     inherit
       lib
       axiom

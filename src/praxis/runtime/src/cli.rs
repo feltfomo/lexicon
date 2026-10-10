@@ -1,4 +1,5 @@
 use crate::{
+    commands::{self, Selection},
     completion, inspect,
     model::{Manifest, Result, fail},
     plan, run,
@@ -106,16 +107,34 @@ fn dispatch_inner(manifest: &Manifest, args: &[String], options: &mut Options) -
                     Ok(())
                 };
             }
-            let requested = args
-                .first()
-                .ok_or_else(|| fail(64, format!("{action} needs a command name")))?;
-            let name = aliases.get(requested).unwrap_or(requested);
-            let command = manifest
-                .commands
-                .get(name)
-                .ok_or_else(|| fail(64, format!("unknown command {requested}")))?;
+            if args.is_empty() {
+                return Err(fail(64, format!("{action} needs a command name")));
+            }
+            let (name, command, consumed) = match commands::select(manifest, &aliases, args) {
+                Selection::Command {
+                    name,
+                    command,
+                    consumed,
+                } => (name, command, consumed),
+                Selection::Group(group) if action == "help" || action == "show" || options.help => {
+                    return inspect::group_help(
+                        manifest,
+                        &group,
+                        &manifest.project.ui.overlay(&options.ui),
+                    );
+                }
+                Selection::Group(group) => {
+                    return Err(fail(
+                        64,
+                        format!("{} needs a subcommand", group.replace('.', " ")),
+                    ));
+                }
+                Selection::Unknown(name) => {
+                    return Err(fail(64, format!("unknown command {name}")));
+                }
+            };
             // inspection and execution bind exactly the same command arguments
-            let command_args = args[1..].to_vec();
+            let command_args = args[consumed..].to_vec();
             let config = manifest
                 .project
                 .ui

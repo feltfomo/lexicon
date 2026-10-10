@@ -81,15 +81,7 @@ pub fn candidates(
         }
         cursor += 1;
     }
-    let names = || {
-        manifest
-            .commands
-            .iter()
-            .filter(|(_, c)| !c.hidden)
-            .flat_map(|(name, c)| {
-                std::iter::once(name.as_str()).chain(c.aliases.iter().map(String::as_str))
-            })
-    };
+    let names = || crate::commands::children(manifest, "");
     let Some(action) = previous.get(cursor) else {
         return runner_inline(prefix).unwrap_or_else(|| {
             if prefix.starts_with('-') {
@@ -99,9 +91,9 @@ pub fn candidates(
                     ui::ACTIONS
                         .iter()
                         .copied()
+                        .map(str::to_owned)
                         .chain(names())
                         .filter(|name| name.starts_with(prefix))
-                        .map(str::to_owned)
                         .collect(),
                     prefix,
                 )
@@ -118,26 +110,20 @@ pub fn candidates(
             prefix,
         );
     }
-    let name = if matches!(action.as_str(), "show" | "plan" | "run" | "doctor" | "help") {
+    if matches!(action.as_str(), "show" | "plan" | "run" | "doctor" | "help") {
         cursor += 1;
-        let Some(name) = previous.get(cursor) else {
-            return matching(
-                names()
-                    .filter(|name| name.starts_with(prefix))
-                    .map(str::to_owned)
-                    .collect(),
-                prefix,
-            );
-        };
-        name
     } else if ui::ACTIONS.contains(&action.as_str()) {
         return runner_inline(prefix).unwrap_or_else(|| literals(ui::RUNNER_FLAGS, prefix));
-    } else {
-        action
-    };
-    let canonical = aliases.get(name).unwrap_or(name);
-    let Some(command) = manifest.commands.get(canonical) else {
-        return vec![];
+    }
+    let (command, consumed) = match crate::commands::select(manifest, aliases, &previous[cursor..])
+    {
+        crate::commands::Selection::Command {
+            command, consumed, ..
+        } => (command, consumed),
+        crate::commands::Selection::Group(group) => {
+            return matching(crate::commands::children(manifest, &group), prefix);
+        }
+        crate::commands::Selection::Unknown(_) => return vec![],
     };
     if command.hidden || matches!(action.as_str(), "show" | "help") {
         return vec![];
@@ -145,7 +131,7 @@ pub fn candidates(
     let parameters = ParameterIndex::new(&command.parameters);
     let forwarding = command.forwarding();
     let mut positional = 0;
-    cursor += 1;
+    cursor += consumed;
     while let Some(word) = previous.get(cursor) {
         if word == "--" {
             return vec![];
@@ -205,8 +191,10 @@ pub fn generate(manifest: &Manifest, shell: &str, wrappers: bool) -> Result<()> 
     let names = manifest
         .commands
         .iter()
-        .filter(|(_, c)| wrappers && !c.hidden)
-        .map(|(n, _)| n.as_str())
+        .filter(|(_, command)| wrappers && !command.hidden)
+        .map(|(name, _)| name.split('.').next().unwrap_or(name))
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
         .collect::<Vec<_>>()
         .join(" ");
     let text = match shell {

@@ -42,7 +42,10 @@ pub fn aliases(manifest: &Manifest) -> Result<BTreeMap<String, String>> {
         return Err(fail(65, "invalid dispatcher name"));
     }
     for (name, command) in &manifest.commands {
-        if !valid_name(name)
+        if crate::commands::is_group(manifest, name) {
+            return Err(fail(65, "an executable command cannot also be a namespace"));
+        }
+        if !name.split('.').all(valid_name)
             || name == &manifest.name
             || command
                 .aliases
@@ -80,6 +83,7 @@ pub fn aliases(manifest: &Manifest) -> Result<BTreeMap<String, String>> {
         }
         for alias in &command.aliases {
             if manifest.commands.contains_key(alias)
+                || crate::commands::is_group(manifest, alias)
                 || aliases.insert(alias.clone(), name.clone()).is_some()
             {
                 return Err(fail(
@@ -198,10 +202,25 @@ pub fn aliases(manifest: &Manifest) -> Result<BTreeMap<String, String>> {
     }
     Ok(aliases)
 }
+pub fn group_help(manifest: &Manifest, name: &str, config: &Ui) -> Result<()> {
+    let subcommands = crate::commands::children(manifest, name);
+    if config.mode() == "json" {
+        return ui::json(&serde_json::json!({"command":name,"subcommands":subcommands}));
+    }
+    ui::output(&format!(
+        "Usage: {} {} <command>\n\n{}\n",
+        manifest.name,
+        name.replace('.', " "),
+        subcommands.join("\n")
+    ))
+}
+
 pub fn help(prefix: &str, name: &str, command: &Command, config: &Ui) -> Result<()> {
     if config.mode() == "json" {
         return ui::json(&serde_json::json!({"command": name, "declaration": command}));
     }
+    let display_name = name.replace('.', " ");
+    let name = display_name.as_str();
     let mut text = format!(
         "{}\n\nUsage: {} {}",
         clean(if command.description.is_empty() {
@@ -335,7 +354,7 @@ pub fn list(manifest: &Manifest, all: bool, config: &Ui) -> Result<()> {
     for (name, c) in commands {
         text.push_str(&format!(
             "{}\t{}{}{}{}\n",
-            clean(name),
+            clean(&name.replace('.', " ")),
             if c.kind == crate::model::CommandKind::Task {
                 "[task] "
             } else {

@@ -5,6 +5,7 @@
   problem,
   fields,
   spec,
+  scope ? "project",
   schema ? import ./schema.nix {
     inherit
       lib
@@ -17,6 +18,8 @@
 let
   inherit (fields) validation diagnostic closed;
   literal = import ./literal.nix { inherit fields; };
+  tree = import ./tree.nix { inherit lib fields; };
+  parameters = import ./declaration-parameters.nix { inherit lib fields; };
   metadata = [
     "description"
     "category"
@@ -31,6 +34,7 @@ let
     "timeout"
     "ui"
     "parameters"
+    "positional"
     "parameterGroups"
   ];
   actionKeys = [
@@ -170,7 +174,31 @@ let
       && builtins.isList entry.declaration
       && builtins.all builtins.isString entry.declaration
     then
-      literal name entry.declaration
+      validation.map (value: value // { inherit scope; }) (literal name entry.declaration)
+    else if
+      entry.kind == "command"
+      && builtins.isAttrs entry.declaration
+      && entry.declaration != { }
+      && !(builtins.any (key: builtins.hasAttr key entry.declaration) (
+        metadata
+        ++ actionKeys
+        ++ [
+          "packages"
+          "steps"
+          "exec"
+          "run"
+          "runtimeInputs"
+          "when"
+        ]
+      ))
+    then
+      tree.group name entry.declaration (
+        child: declaration:
+        lower child {
+          kind = "command";
+          inherit declaration;
+        }
+      )
     else
       elaborate name entry;
   elaborate =
@@ -247,6 +275,7 @@ let
               );
           confirmed =
             if kind == "task" then confirmation subject (s.confirm or null) else validation.success null;
+          params = parameters subject (s.parameters or { }) (s.positional or [ ]);
         in
         validation.andThen
           (
@@ -259,15 +288,19 @@ let
             ) ((if kind == "task" then schema.task else schema.command) name value)
           )
           (
-            validation.map2 (
-              steps: confirm:
-              builtins.intersectAttrs (descriptors metadata) s
-              // {
-                inherit kind;
-                runtimeInputs = s.packages or [ ];
-                steps = lib.optional (confirm != null) { prompt.message = confirm; } ++ steps;
-              }
-            ) steps confirmed
+            validation.andThen (
+              parameters:
+              validation.map2 (
+                steps: confirm:
+                builtins.intersectAttrs (descriptors (builtins.filter (key: key != "positional") metadata)) s
+                // {
+                  inherit kind parameters;
+                  scope = s.scope or scope;
+                  runtimeInputs = s.packages or [ ];
+                  steps = lib.optional (confirm != null) { prompt.message = confirm; } ++ steps;
+                }
+              ) steps confirmed
+            ) params
           )
       ) (validation.fromDiagnostics structural null)
     ) shape;

@@ -134,9 +134,113 @@ let
       };
     }).availability;
   tests = {
+    project-scope-is-inherited =
+      let
+        result = compile {
+          scope = "global";
+          commands.tool = literal;
+          commands.local = {
+            command = literal;
+            scope = "project";
+          };
+          tasks.once = [ "tool" ];
+        };
+      in
+      result.manifest.commands.tool.scope == "global"
+      && result.manifest.commands.once.scope == "global"
+      && result.manifest.commands.local.scope == "project";
+    positional-order-and-defaults =
+      let
+        inherit
+          (
+            (manifest (one {
+              command = literal;
+              positional = [
+                "z"
+                "a"
+              ];
+              parameters = {
+                a.default = "fallback";
+                z = { };
+                flag.type = "bool";
+              };
+            }))
+          )
+          parameters
+          ;
+      in
+      map (p: p.name) parameters == [
+        "z"
+        "a"
+        "flag"
+      ]
+      &&
+        map (p: p.required) parameters == [
+          true
+          false
+          false
+        ];
+    parameter-lists-are-not-public = builtins.elem "praxis/parameters" (codes {
+      command = literal;
+      parameters = [ poison ];
+    });
+    positional-typos-are-rejected = builtins.elem "praxis/positional" (codes {
+      command = literal;
+      positional = [ "hosst" ];
+      parameters.host = { };
+    });
+    parameter-fields-stay-lazy-on-error = builtins.elem "praxis/parameter-field" (codes {
+      command = literal;
+      parameters.host = {
+        typo = poison;
+        choices = poison;
+      };
+    });
+    nested-selection-keeps-siblings-lazy =
+      let
+        result = compile {
+          commands.tools.good = literal;
+          commands.tools.unused = poison;
+          commands.unrelated = poison;
+          tasks.once = [ "tools.good" ];
+        };
+      in
+      builtins.attrNames result.manifests.once.commands == [
+        "once"
+        "tools.good"
+      ];
+    namespace-manifest-has-leaves =
+      let
+        result = compile {
+          commands.update.input = literal;
+          commands.update.all = literal;
+        };
+      in
+      builtins.attrNames result.manifests.update.commands == [
+        "update.all"
+        "update.input"
+      ]
+      && result.availability.names == [ "update" ];
+    invalid-namespace-name-keeps-body-lazy =
+      let
+        result = compile { commands.update."bad name" = poison; };
+      in
+      builtins.elem "praxis/command-name" (map (d: d.code) result.diagnostics.update);
+    namespace-task-reference-is-rejected =
+      let
+        result = compile {
+          commands.update.input = literal;
+          tasks.once = [ "update" ];
+        };
+      in
+      builtins.elem "praxis/command-reference" (map (d: d.code) result.diagnostics.once);
     literal-argv = (builtins.head (manifest (one literal)).steps).exec == literal;
     typo-help-without-payload-evaluation = lib.hasInfix "use 'command'" (
-      builtins.toJSON (one { commnad = poison; }).diagnostics.tool
+      builtins.toJSON
+        (one {
+          command = poison;
+          commnad = poison;
+        }).diagnostics.tool
     );
     manifest-order-is-deterministic =
       builtins.toJSON
@@ -397,12 +501,11 @@ let
       rejected
         (guarded {
           command = [ "true" ];
-          parameters = [
-            {
-              name = "value";
+          parameters = {
+            value = {
               required = true;
-            }
-          ];
+            };
+          };
         }).checks.tool;
     check-fixed-directory-rejected =
       rejected
@@ -506,11 +609,8 @@ let
         names = builtins.genList (index: "arg${toString index}") 256;
         large = compile {
           commands.large = {
-            parameters = map (name: {
-              inherit name;
-              positional = true;
-              required = true;
-            }) names;
+            positional = names;
+            parameters = lib.genAttrs names (_: { });
             command = [ "true" ] ++ map (param: { inherit param; }) names;
           };
         };

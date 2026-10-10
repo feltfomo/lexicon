@@ -12,6 +12,7 @@ use `command`, `shell`, `packages` and `condition`. Internal execution fields
 | `name` | Command-style name | `"praxis"`; dispatcher executable and output name |
 | `commands` | Attribute set keyed by command name | `{}` |
 | `tasks` | Attribute set keyed by task name | `{}` |
+| `scope` | `"project"` or `"global"` | `"project"`; inherited by commands and tasks unless overridden |
 | `check` | Boolean | false; adds `check` running `nix flake check` |
 | `atRoot` | Boolean | false; discovers enclosing `flake.nix` |
 | `root` | Nix path containing regular `flake.nix`, or null | null; source for scripts, source guards and checks |
@@ -45,6 +46,28 @@ another command/task. A list step is argv; a Nix path step is a script.
 Command/task names match `[a-zA-Z0-9][a-zA-Z0-9_-]*`, must be unique across both
 collections and cannot equal the dispatcher name. References cannot form cycles.
 
+Commands can be grouped with nested attributes:
+
+```nix
+commands.update.input = {
+  positional = [ "input" ];
+  parameters.input.choices = builtins.attrNames inputs;
+  command = [ "nix" "flake" "update" { param = "input"; } ];
+  forwardArgs = false;
+};
+```
+
+This declares `praxis update input <input>`. A non-empty command attribute set
+without declaration fields is a namespace; its child names must not be action
+or metadata field names. Help and completion list the available subcommands.
+Task references use the attribute path, such as `"update.input"`; a namespace
+itself is not an executable task step.
+
+Selection keeps unrelated namespace children lazy. Individual manifests,
+packages, apps and availability entries are keyed by top-level names. A namespace
+wrapper accepts its subcommand as the first argument. Manifest command keys use
+dotted paths, such as `"update.input"`; human-readable help lists command words.
+
 | Shared field | Type | Default / meaning |
 | --- | --- | --- |
 | `description` | String | `""` |
@@ -53,14 +76,15 @@ collections and cannot equal the dispatcher name. References cannot form cycles.
 | `examples` | String list | `[]` |
 | `hidden` | Boolean | false; omitted from ordinary listing |
 | `deprecated` | Non-empty notice string or null | null |
-| `scope` | `"project"` or `"global"` | `"project"` |
+| `scope` | `"project"` or `"global"` | Inherits project scope |
 | `packages` | List of package derivations | `[]`; runtime PATH inputs |
 | `env` | Attribute set of strings keyed by POSIX environment names | `{}` |
 | `cwd` | Absolute or normalized relative directory string, or null | null |
 | `lock` | Command-style name or null | null; runtime lock |
 | `timeout` | Integer seconds, 1 through 604800, or null | null |
 | `ui` | UI attribute set | `{}` |
-| `parameters` | Parameter declaration list | `[]` |
+| `parameters` | Attribute set keyed by parameter name | `{}` |
+| `positional` | List of declared parameter names | `[]`; determines positional argument order |
 | `parameterGroups` | Group declaration list | `[]` |
 | `confirm` | Boolean, non-empty prompt string or null | null; true generates a prompt; task confirmation precedes its steps |
 
@@ -94,13 +118,34 @@ output names without leading `-` or `#`; it converts them to `.#<name>`.
 
 ## Parameters
 
+Declare each parameter under its name and list positional arguments in their
+runtime order:
+
+```nix
+positional = [ "host" ];
+parameters = {
+  host.choices = [ "khion" "lumi" ];
+  mode = {
+    short = "m";
+    default = "debug";
+    choices = [ "debug" "release" ];
+  };
+};
+```
+
+Positional arguments without a default are required unless explicitly overridden
+with `required = false`. Named arguments remain optional unless `required = true`.
+Positionals must name declared parameters and cannot repeat. Named parameters
+follow positionals in sorted name order. Parameter lists and per-parameter `name`
+or `positional` fields are rejected; the compiler owns the ordered runtime list.
+
+Parameter attribute names match `[a-zA-Z][a-zA-Z0-9-]*`.
+
 | Field | Type | Default / meaning |
 | --- | --- | --- |
-| `name` | `[a-zA-Z][a-zA-Z0-9-]*` | Required |
 | `description` | String | `""` |
 | `type` | `"string"`, `"int"`, `"bool"`, `"path"` | `"string"`; path means non-empty runtime string |
-| `positional` | Boolean | false |
-| `required` | Boolean | false |
+| `required` | Boolean | Positional without default: true; otherwise false |
 | `env` | POSIX environment name or null | null; fallback source |
 | `short` | One ASCII letter or null | null |
 | `sensitive` | Boolean | false |
@@ -180,8 +225,8 @@ parameter sources and required parameters without defaults. They also reject
 fixed runtime directories. Script/root-dependent checks require `root`.
 
 `inputs.lexicon.lib.praxisAdapters {}` exposes `fromRoster roster` returning
-`{ host = { name = "host"; choices = sortedHosts; };
-user = { name = "user"; choices = sortedUsers; }; }`.
+`{ host.choices = sortedHosts; user.choices = sortedUsers; }`. Assign these
+descriptors to `parameters.host` or `parameters.user`.
 `fromDen denAdapter` applies `fromRoster` to `denAdapter.roster`.
 
 ## Generated CLI

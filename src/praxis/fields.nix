@@ -72,4 +72,5 @@ rec {
     && !lib.hasPrefix "/" value
     && builtins.all (part: part != "" && part != "." && part != "..") (lib.splitString "/" value);
   name = value: builtins.isString value && builtins.match "[a-zA-Z0-9][a-zA-Z0-9_-]*" value != null;
+  routeName = value: builtins.isString value && builtins.all name (lib.splitString "." value);
 }

@@ -5,8 +5,9 @@
 }:
 let
   inherit (fields) diagnostic;
+  tree = import ./tree.nix { inherit lib fields; };
   # selections share adjacency, but only a reached command forces its steps.
-  references = builtins.mapAttrs (_: result: builtins.catAttrs "command" result.value.steps) results;
+  references = result: builtins.catAttrs "command" result.value.steps;
   visit =
     stack: state: name:
     if builtins.elem name stack then
@@ -20,7 +21,7 @@ let
       }
     else if builtins.hasAttr name state.seen then
       state
-    else if !(builtins.hasAttr name results) then
+    else if tree.lookup results name == null then
       state
       // {
         seen = state.seen // {
@@ -32,7 +33,7 @@ let
       }
     else
       let
-        result = results.${name};
+        result = tree.lookup results name;
         current = state // {
           seen = state.seen // {
             ${name} = true;
@@ -42,14 +43,27 @@ let
             ++ result.diagnostics
             ++ fields.validation.optional (
               result.diagnostics == [ ]
+              && !(result.value ? children)
               && builtins.any (alias: builtins.hasAttr alias results) result.value.aliases
             ) (diagnostic "commands.${name}" "aliases" "aliases cannot shadow command names");
         };
       in
       if result.diagnostics != [ ] then
         current
+      else if result.value ? children then
+        if stack != [ ] then
+          current
+          // {
+            diagnostics = current.diagnostics ++ [
+              (diagnostic "commands.${name}" "command-reference" "task steps must name an executable subcommand")
+            ];
+          }
+        else
+          lib.foldl' (visit [ ]) current (
+            map (child: "${name}.${child}") (builtins.attrNames result.value.children)
+          )
       else
-        lib.foldl' (visit (stack ++ [ name ])) current references.${name};
+        lib.foldl' (visit (stack ++ [ name ])) current (references result);
 in
 names:
 let
@@ -57,10 +71,16 @@ let
     seen = { };
     diagnostics = [ ];
   } names;
-  selected = builtins.attrNames result.seen;
+  selected = builtins.filter (
+    name:
+    let
+      node = tree.lookup results name;
+    in
+    node == null || node.diagnostics != [ ] || !(node.value ? children)
+  ) (builtins.attrNames result.seen);
   commands = map (name: {
     inherit name;
-    value = results.${name}.value;
+    inherit ((tree.lookup results name)) value;
   }) selected;
   aliasOwners = builtins.groupBy (entry: entry.alias) (
     lib.concatMap (

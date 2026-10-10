@@ -1,5 +1,6 @@
 mod arguments;
 mod cli;
+mod commands;
 mod completion;
 mod inspect;
 mod interaction;

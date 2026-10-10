@@ -2,11 +2,9 @@
 let
   fromRoster = roster: {
     host = {
-      name = "host";
       choices = lib.sort builtins.lessThan roster.hosts;
     };
     user = {
-      name = "user";
       choices = lib.sort builtins.lessThan roster.users;
     };
   };
