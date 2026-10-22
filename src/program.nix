@@ -253,50 +253,62 @@ let
                 (resolved.directoryFileRules or [ ])
                 (resolved.themeEntries or [ ])
                 prewalkByIndex;
-            hostFiles = selected.files ++ selected.directoryFiles ++ themeFiles selected.themeEntries pkgs;
-            principals = filePrincipalsFor {
+            composition = import ./program/theme/composition.nix { inherit lib; };
+            hostFiles = selected.files ++ selected.directoryFiles;
+            principals = builtins.filter (principal: principal.authority.scope == "user") (filePrincipalsFor {
               inherit system;
               inherit (context) user;
               host = hostName;
-            };
-            # matugen renderers only read one config.toml each, so every aspect's
-            # entries are tagged with this user context and merged once by the
-            # shared runtime before furnish publishes the renderer config.
-            matugenThemeEntries = builtins.filter (entry: entry.runtime == "matugen") selected.themeEntries;
-            taggedMatugenEntries = builtins.concatMap (
+            });
+            entriesFor =
               principal:
               map (
                 entry:
-                entry
-                // {
-                  inherit principal;
-                  filesystemNamespace = namespace;
-                }
-              ) matugenThemeEntries
-            ) principals;
+                composition.lower pkgs (
+                  entry
+                  // {
+                    inherit principal;
+                    filesystemNamespace = namespace;
+                  }
+                )
+              ) selected.themeEntries;
+            principalGroups = map (principal: {
+              inherit principal;
+              entries = entriesFor principal;
+            }) principals;
+            taggedEntries = builtins.concatMap (group: group.entries) principalGroups;
+            taggedMatugenEntries = builtins.filter (entry: entry.runtime == "matugen") taggedEntries;
           in
           {
             imports = [
               (import ./furnish/runtime.nix { inherit mkCoordinator krisis axiom; })
               (import ./program/theme/matugen-runtime.nix { inherit krisis axiom; })
+              (import ./program/theme/composition-runtime.nix { inherit krisis axiom; })
               {
-                assertions = lib.optional (hostFiles != [ ] || selected.links != [ ]) {
-                  assertion = config.lexicon.furnish.declarations != [ ];
-                  message = "furnish: file entries on ${hostName} reached no user principal (have: ${
-                    lib.concatStringsSep ", " (hostUserNamesFor {
-                      inherit system;
-                      host = hostName;
-                    })
-                  })";
-                };
+                assertions =
+                  lib.optional (hostFiles != [ ] || selected.links != [ ] || selected.themeEntries != [ ])
+                    {
+                      assertion = config.lexicon.furnish.declarations != [ ];
+                      message = "furnish: file entries on ${hostName} reached no user principal (have: ${
+                        lib.concatStringsSep ", " (hostUserNamesFor {
+                          inherit system;
+                          host = hostName;
+                        })
+                      })";
+                    };
                 # den reaches this slice once per selected user.
-                lexicon.furnish.declarations = furnishFiles.mkDeclarations {
-                  filesystemNamespace = namespace;
-                  inherit principals;
-                  files = hostFiles;
-                  inherit (selected) links;
-                };
+                lexicon.furnish.declarations = builtins.concatMap (
+                  group:
+                  furnishFiles.mkDeclarations {
+                    filesystemNamespace = namespace;
+                    principals = [ group.principal ];
+                    files = hostFiles ++ themeFiles group.entries pkgs;
+                    inherit (selected) links;
+                  }
+                ) principalGroups;
                 lexicon.theme.matugen.entries = taggedMatugenEntries;
+                lexicon.theme.composition.ordinary = builtins.filter (entry: entry.merge == null) taggedEntries;
+                lexicon.theme.composition.entries = builtins.filter (entry: entry.merge != null) taggedEntries;
               }
             ]
             ++ lib.optional (rawSlice != { }) rawSlice;

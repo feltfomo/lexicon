@@ -6,6 +6,7 @@ set. Curried arguments are applied from left to right.
 
 | API | Arguments | Result | Reference file |
 | --- | --- | --- | --- |
+| `toml` | `{ pkgs, lib ? pkgs.lib }` | TOML generation, typed values, document merge and publisher package | `src/toml/reference.md` |
 | `ownerships` | `{ descriptors ? null, relations ? null, ... }` | Ownership API | `src/ownerships/reference.md` |
 | `registry` | Fleet declaration | Fleet records and lookups | `src/registry/reference.md` |
 | `den` | `{ den, ... }` | Den adapter | `src/den/reference.md` |
@@ -22,7 +23,7 @@ set. Curried arguments are applied from left to right.
 
 Program theme fields are specified in `src/program/theme/reference.md`.
 
-Except for `mkCoordinator`, constructors accept dependency overrides. `lib`
+Except for `mkCoordinator` and `toml`, constructors accept dependency overrides. `lib`
 defaults to the flake's nixpkgs library; `axiom` and `krisis` default to the
 flake's inputs instantiated with that library. Program constructors and
 `furnishRuntime` also accept `mkCoordinator` as an override.

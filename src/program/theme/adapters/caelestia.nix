@@ -18,10 +18,16 @@ in
         left: right: builtins.lessThan left.registrationId right.registrationId
       ) entries;
       reloadEntries = builtins.filter (entry: entry.reload != null) orderedEntries;
+      homePath =
+        entry: path:
+        if entry ? compositionHome then
+          lib.escapeShellArg "${entry.compositionHome}/${path}"
+        else
+          ''"$HOME"/${lib.escapeShellArg path}'';
       installCommands = lib.concatMapStringsSep "\n" (entry: ''
-        ${pkgs.coreutils}/bin/install -Dm644 \\
-          "$HOME/.local/state/caelestia/theme/${templateNameOf entry}" \\
-          "$HOME/${entry.output}"
+        ${pkgs.coreutils}/bin/install -Dm644 \
+          ${homePath entry ".local/state/caelestia/theme/${templateNameOf entry}"} \
+          ${homePath entry entry.output}
       '') orderedEntries;
       reloadCommands = lib.concatMapStringsSep "\n" (entry: entry.reload) reloadEntries;
     in

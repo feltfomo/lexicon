@@ -241,10 +241,10 @@ let
   );
   caelestiaMultiHookScript = builtins.readFile caelestiaMultiHook.source.value;
   caelestiaPublishFragments = [
-    "$HOME/.local/state/caelestia/theme/caelestia-multi-alpha-program.nix"
-    "$HOME/.config/example/alpha.conf"
-    "$HOME/.local/state/caelestia/theme/caelestia-multi-zeta-program.nix"
-    "$HOME/.config/example/zeta.conf"
+    ".local/state/caelestia/theme/caelestia-multi-alpha-program.nix"
+    ".config/example/alpha.conf"
+    ".local/state/caelestia/theme/caelestia-multi-zeta-program.nix"
+    ".config/example/zeta.conf"
     "printf alpha"
     "printf zeta"
   ];

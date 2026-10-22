@@ -70,6 +70,7 @@
             );
         in
         {
+          toml = args: import ./src/toml args;
           registry = withDependencies ./src/registry.nix;
           ownerships = withDependencies ./src/ownerships;
           furnish = withDependencies ./src/furnish;
@@ -340,6 +341,11 @@
           apps.lexicon-praxis = praxisCommands.apps.lexicon-praxis;
 
           checks = {
+            toml-composition = import ./tests/toml {
+              inherit pkgs;
+              lexicon = inputs.self;
+              inherit (inputs) nixpkgs;
+            };
             registry = gate "registry-tests" registryTests;
             consumers =
               let

@@ -22,6 +22,7 @@ attribute-set merge. Renderer names are `caelestia`, `dms`, `end4-pc`,
 | `placedAs` | Normalized basename | Basename of `source`; installed template filename |
 | `subId` | Normalized basename or null | null; suffix for a distinct registration |
 | `reload` | String or null | null; renderer hook after output changes |
+| `merge` | Attribute set | Optional explicit TOML composition, described below |
 | `native` | Attribute set | `{}`; additional native registration fields |
 | `hosts`, `users`, `exceptHosts`, `exceptUsers`, `when` | Ownership claims | Select this template entry |
 | `sharedWith` | List of renderer names | `[]`; only valid inside a renderer override |
@@ -61,3 +62,80 @@ overrides native `post_hook`. Noctalia registrations use `~/` paths. Matugen
 registrations use absolute home paths and combine templates into one config per
 renderer and principal. These APIs register templates; they do not install,
 enable or invoke the desktop shell or renderer.
+
+## Composed TOML outputs
+
+A template or renderer can opt into explicit composition:
+
+```nix
+theme = {
+  id = "app";
+  output = ".config/app/config.toml";
+  merge = {
+    format = "toml";
+    base = {
+      onboarding = false;
+      keys.command = [ { key = "prefix+f"; command = "find-pane"; } ];
+    };
+    conflict = "error";
+    arrays = "replace";
+  };
+  renderers.noctalia.source = ./palette.toml;
+};
+```
+
+The template contains only theme values. `merge.base` accepts Nix attributes,
+a `toml.document`, or an explicit generated TOML file. The standalone builder
+and merge policies are documented in `src/toml/reference.md`. `merge` accepts
+only `format`, `base`, `conflict` and `arrays`. Unsupported formats and policies
+fail at evaluation. Ownership selection, template defaults and `sharedWith`
+apply before composition.
+
+Lexicon redirects each renderer into a private staging file. Its post hook
+calls the common publisher, which reads the currently installed descriptor,
+merges its base with the rendered palette and atomically replaces `output`.
+Caelestia copies into staging before that same publication call. Equivalent
+variants across different renderers share one final-file owner and one accepted
+palette. Each renderer may provide only one template for that destination;
+same-renderer fragments must be combined in their template source. Conflicting
+bases, policies, reload commands or principals are errors. Ordinary Furnish
+files, links and theme outputs cannot own the same path or an overlapping path.
+
+An explicit `reload` takes precedence over `native.post_hook`. When `reload` is
+absent, composition retains the native hook as the application's reload command.
+With Furnish disabled, descriptors remain inspectable declarations and no
+publisher services are installed.
+
+With Furnish enabled, a system oneshot service publishes each composed output
+under its user's identity after Furnish and destination mounts. Descriptor
+changes restart that service on configuration switches. Boot also runs it.
+The first publication has only the base if no palette has been accepted yet;
+the application can use its default colors until the next theme event. Later
+rebuilds reuse the last accepted palette across renderer variants. They don't
+read the old final application config, so removed base settings stay removed.
+No daemon, watcher, Home Manager activation or wallpaper event is required.
+
+For each participating home, `.local/state/lexicon/toml` is reserved for the
+publisher's locks, staging files, accepted palettes and reload markers. Composed
+outputs, ordinary theme outputs and Furnish file/link claims cannot overlap that
+directory or own an ancestor of it.
+
+The final file belongs to the publisher, not Furnish. Furnish installs the
+immutable current descriptor and renderer templates. Its existing retirement
+rules still apply to those inputs. Removing a composed declaration leaves the
+runtime output and accepted palette in place; Lexicon doesn't delete user files
+when retiring a publisher. A later declaration at that path reuses its palette.
+
+Publication locks each output and validates the complete merge before writing.
+It retains an existing regular file's mode, or creates a new file with mode
+0600. Symlink and nonregular destinations are rejected. Unchanged bytes skip
+both writes and reloads. A valid theme is durably cached before replacing the
+final file; after an interruption, the next call regenerates the final file
+from the current base and accepted palette. A failed reload leaves a pending
+marker and the next call retries it even if the output bytes already match.
+Invalid themes, malformed caches and I/O errors fail visibly. A new valid theme
+can replace a malformed cache. Failed validation leaves the final file intact.
+Reload commands run as the selected user with a normal runtime-directory and
+session-bus fallback derived from that process's UID. Use closure-resolved
+binaries and guard only application-specific absence conditions if a cold boot
+has no running application to reload.

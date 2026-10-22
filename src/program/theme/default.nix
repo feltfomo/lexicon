@@ -37,6 +37,7 @@ let
     "subId"
     "reload"
     "native"
+    "merge"
   ];
   themeSharedFields = claimKeys ++ themeValueFields;
   themeRendererFields = themeSharedFields ++ [ "sharedWith" ];
@@ -352,6 +353,32 @@ let
           validate = value: value == null || builtins.isString value;
           onInvalid = _entry: _value: entryProblem subject "theme-reload" "reload must be null or a string";
         };
+        merge = {
+          validate =
+            value:
+            builtins.isAttrs value
+            && (value.format or null) == "toml"
+            && value ? base
+            && builtins.all (
+              key:
+              builtins.elem key [
+                "format"
+                "base"
+                "conflict"
+                "arrays"
+              ]
+            ) (builtins.attrNames value)
+            && builtins.elem (value.conflict or "error") [
+              "error"
+              "first"
+              "last"
+            ]
+            && (value.arrays or "replace") == "replace";
+          onInvalid =
+            _entry: _value:
+            entryProblem subject "theme-merge"
+              "merge requires format=toml, base, conflict=error|first|last and arrays=replace";
+        };
         native = {
           validate = builtins.isAttrs;
           onInvalid = _entry: _value: entryProblem subject "theme-native" "native must be an attribute set";
@@ -398,6 +425,7 @@ let
         blockId
         renderer
         ;
+      merge = entry.merge or null;
       reload = entry.reload or null;
       native = entry.native or { };
       registrationId =
