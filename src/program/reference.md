@@ -39,6 +39,7 @@ The declaration is closed: unknown fields are errors.
 | `imports` | List of Home Manager modules | Home Manager imports; default `[]` |
 | `nixos` | Unit, list of units, or function returning either | System configuration slices |
 | `files` | List of file entries | Home-relative managed files; default `[]` |
+| `links` | List of external link entries | Live links without retaining target contents; default `[]` |
 | `directories` | List of directory entries | Expanded managed file trees; default `[]` |
 | `theme` | Theme declaration | Renderer template registrations |
 | `hosts`, `users`, `exceptHosts`, `exceptUsers`, `when` | Ownership claims | Narrow the declaration |
@@ -50,7 +51,7 @@ The declaration's host claim wraps its system slices. User claims select home
 payloads and files but are projected out of the system wrapper.
 
 `homeManager` is emitted only for `pkg` or non-empty `imports`. `nixos` is emitted
-for `nixos` or file-producing declarations. Managed files are reconciled through
+for `nixos` or file- or link-producing declarations. Managed files are reconciled through
 the NixOS Furnish runtime. Destinations belong to the selected user principal;
 a file declaration reaching no user principal fails an assertion.
 
@@ -69,6 +70,25 @@ a file declaration reaching no user principal fails an assertion.
 `symlink` publishes a link to the retained source. `writable` publishes a writable
 copy. `onConflict` governs divergence from managed state, not duplicate
 declarations: two declarations for the same filesystem identity always fail.
+
+## External links
+
+`links` declares links to mutable paths outside the Nix store:
+
+```nix
+links = [
+  {
+    target = "/home/alice/Projects/skills/subphase-orchestrator";
+    dest = ".claude/skills/subphase-orchestrator";
+  }
+];
+```
+
+An entry accepts `target`, `dest`, optional `label` and `provenance`, and the usual ownership claims. `target` must be a normalized absolute string without store context. Nix path values are rejected so evaluation cannot import a checkout accidentally. Targets may be absent and may name files or directories. Furnish manages the link text and never reads or copies the target. Source edits are visible immediately without activation.
+
+External links use the same user selection, destination collision checks, ownership ledger, publication and retirement as files. Direct bindings reject ownership claims on links just as they do on files. A declaration cannot link a destination to itself. Writable copies and directory expansion belong to `files` and `directories`.
+
+Matching pre-existing links remain unowned. During migration, verify and remove only the exact old links before activation so Furnish can publish and record them from absence. Never remove their source checkout. Removing an owned declaration retires only its unchanged destination link.
 
 ## Directories
 

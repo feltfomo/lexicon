@@ -628,6 +628,15 @@ rec {
     overrides-beneath-excluded-subtrees-are-rejected = !excludedOverrideResult.success;
     theme-sources-beneath-excluded-subtrees-are-rejected = !excludedThemeResult.success;
   }
+  // (import ./links.nix {
+    inherit
+      lib
+      pkgs
+      krisis
+      axiom
+      lexicon
+      ;
+  })
   // bindingTests
   // (import ./lucid.nix { inherit lib pkgs lexicon; })
   // (import ./serpantinum.nix { inherit lib pkgs lexicon; });

@@ -105,6 +105,7 @@ let
   inherit (specLib)
     validateSpec
     fileErrors
+    linkErrors
     directoryShapeErrors
     directoryRuleErrors
     ;
@@ -125,16 +126,16 @@ let
   inherit (unitsLib) furnishUnit specUnit;
 
   validateSelected =
-    files: directories: directoryFileRules: themeEntries: prewalked:
+    files: links: directories: directoryFileRules: themeEntries: prewalked:
     let
       themeErrors = themeEntryErrors themeEntries;
       normalizedThemeEntries =
         if themeErrors == [ ] then map themeCompiler.normalizeEntry themeEntries else [ ];
       expanded = expandDirectories directories directoryFileRules normalizedThemeEntries prewalked;
-      errors = fileErrors files ++ themeErrors ++ expanded.errors;
+      errors = fileErrors files ++ linkErrors links ++ themeErrors ++ expanded.errors;
     in
     checked errors {
-      inherit files;
+      inherit files links;
       directoryFiles = expanded.files;
       themeEntries = normalizedThemeEntries;
     };
@@ -158,6 +159,7 @@ let
   spec = validateSpec boundSpec;
   ownsFiles =
     (spec.files or [ ]) != [ ]
+    || (spec.links or [ ]) != [ ]
     || (spec.directories or [ ]) != [ ]
     || builtins.any (backend: (spec.theme.${backend} or null) != null) themeBackends;
   needsHomeManager = (spec.pkg or null) != null || (spec.imports or [ ]) != [ ];
@@ -246,8 +248,11 @@ let
         else
           let
             resolved = furnishResolve context;
-            selected = validateSelected (resolved.files or [ ]) (resolved.directoryEntries or [ ]
-            ) (resolved.directoryFileRules or [ ]) (resolved.themeEntries or [ ]) prewalkByIndex;
+            selected =
+              validateSelected (resolved.files or [ ]) (resolved.links or [ ]) (resolved.directoryEntries or [ ])
+                (resolved.directoryFileRules or [ ])
+                (resolved.themeEntries or [ ])
+                prewalkByIndex;
             hostFiles = selected.files ++ selected.directoryFiles ++ themeFiles selected.themeEntries pkgs;
             principals = filePrincipalsFor {
               inherit system;
@@ -275,7 +280,7 @@ let
               (import ./furnish/runtime.nix { inherit mkCoordinator krisis axiom; })
               (import ./program/theme/matugen-runtime.nix { inherit krisis axiom; })
               {
-                assertions = lib.optional (hostFiles != [ ]) {
+                assertions = lib.optional (hostFiles != [ ] || selected.links != [ ]) {
                   assertion = config.lexicon.furnish.declarations != [ ];
                   message = "furnish: file entries on ${hostName} reached no user principal (have: ${
                     lib.concatStringsSep ", " (hostUserNamesFor {
@@ -289,6 +294,7 @@ let
                   filesystemNamespace = namespace;
                   inherit principals;
                   files = hostFiles;
+                  inherit (selected) links;
                 };
                 lexicon.theme.matugen.entries = taggedMatugenEntries;
               }

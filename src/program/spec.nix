@@ -30,6 +30,7 @@ let
     nonEmptyString
     ;
 
+  targets = import ../furnish/target.nix { inherit lib; };
   conflictPolicies = builtins.attrValues contract.conflictPolicies;
   declaredPolicy = value: builtins.isString value && builtins.elem value conflictPolicies;
 
@@ -38,6 +39,7 @@ let
     "nixos"
     "imports"
     "files"
+    "links"
     "directories"
     "theme"
   ];
@@ -49,6 +51,12 @@ let
       "label"
     ]
     ++ lifecycleKeys;
+  linkFields = claimKeys ++ [
+    "provenance"
+    "target"
+    "label"
+    "dest"
+  ];
   directoryFields =
     claimKeys
     ++ [
@@ -114,6 +122,15 @@ let
             message = "files must be a list";
           };
       };
+      links = {
+        validate = builtins.isList;
+        onInvalid =
+          _spec: _value:
+          problem {
+            code = "links-shape";
+            message = "links must be a list";
+          };
+      };
       directories = {
         validate = builtins.isList;
         onInvalid =
@@ -158,6 +175,27 @@ let
             declaredPolicy;
         provenance =
           optionalLabeled subject "file-provenance" "provenance must be a string"
+            builtins.isString;
+      };
+    };
+
+  linkSchema =
+    subject:
+    axiom.schema.compile {
+      onRecord = _value: labeled subject "link-entry-shape" "must be an attribute set";
+      onUnknown =
+        name: _value:
+        labeled subject "link-fields" "has unknown field ${name}${suggestionFor linkFields name}";
+      order = linkFields;
+      fields = lib.genAttrs claimKeys (_: { }) // {
+        target =
+          requiredLabeled subject "link-target"
+            "target must be a normalized absolute path string without store context"
+            targets.externalPath;
+        dest = requiredLabeled subject "link-destination" "dest must be a non-empty string" nonEmptyString;
+        label = optionalLabeled subject "link-label" "label must be a string" builtins.isString;
+        provenance =
+          optionalLabeled subject "link-provenance" "provenance must be a string"
             builtins.isString;
       };
     };
@@ -311,6 +349,12 @@ let
       indexed: (fileSchema ("files[" + toString indexed.index + "]") indexed.entry).diagnostics
     ) (lib.imap0 (index: entry: { inherit index entry; }) files);
 
+  linkErrors =
+    links:
+    builtins.concatMap (
+      indexed: (linkSchema ("links[" + toString indexed.index + "]") indexed.entry).diagnostics
+    ) (lib.imap0 (index: entry: { inherit index entry; }) links);
+
   # the subject string is concatenated rather than interpolated so the closing
   # bracket stays out of the interpolation.
   subjectAt = index: "directories[" + toString index + "]";
@@ -329,6 +373,7 @@ in
     directoryRuleFields
     validateSpec
     fileErrors
+    linkErrors
     directoryShapeErrors
     directoryRuleErrors
     ;

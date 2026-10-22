@@ -205,6 +205,14 @@ let
     spec:
     claimProblems "declaration" spec
     ++ fileProblems spec
+    ++ (
+      if builtins.isAttrs spec && builtins.isList (spec.links or null) then
+        builtins.concatMap (indexed: claimProblems "links[${toString indexed.index}]" indexed.entry) (
+          lib.imap0 (index: entry: { inherit index entry; }) spec.links
+        )
+      else
+        [ ]
+    )
     ++ directoryProblems spec
     ++ themeProblems spec;
 
@@ -241,7 +249,7 @@ let
       checked [
         (problem {
           code = "direct-file-user";
-          message = "programDirect needs target.user for files, directories, or file-producing themes";
+          message = "programDirect needs target.user for files, links, directories, or file-producing themes";
           primary.label = "target.user";
           help = "add target.user with a name and optional home path";
         })

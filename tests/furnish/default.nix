@@ -62,9 +62,12 @@ let
         contract.capabilities.symlink
       ];
       materialize = declaration: {
-        retainedArtifactTarget = builtins.path {
-          path = declaration.source.value;
-          name = "furnish-${declaration.label}";
+        target = {
+          kind = "retained";
+          path = builtins.path {
+            path = declaration.source.value;
+            name = "furnish-${declaration.label}";
+          };
         };
         cleanupStrategy = contract.strategies.exactSymlinkTarget;
         selfHealStrategy = contract.strategies.exactSymlinkTarget;
@@ -216,7 +219,7 @@ let
   invalidArtifactExecutor = preferredExecutor // {
     identity = "executor/invalid-artifact";
     materialize = _: {
-      retainedArtifactTarget = { };
+      target = { };
       cleanupStrategy = "unknown";
       selfHealStrategy = "unknown";
     };
@@ -509,9 +512,12 @@ let
     })
     // {
       materialize = declaration: {
-        retainedArtifactTarget = builtins.path {
-          path = declaration.source.value;
-          name = "furnish-${baseNameOf declaration.filesystemIdentity.destination}";
+        target = {
+          kind = "retained";
+          path = builtins.path {
+            path = declaration.source.value;
+            name = "furnish-${baseNameOf declaration.filesystemIdentity.destination}";
+          };
         };
         cleanupStrategy = contract.strategies.exactSymlinkTarget;
         selfHealStrategy = contract.strategies.exactSymlinkTarget;
@@ -526,7 +532,7 @@ let
     };
 
   manifestKeys = builtins.attrNames sampleEntry;
-  artifactTarget = sampleEntry.retainedArtifactTarget;
+  artifactTarget = sampleEntry.target.path;
   manifestContext = builtins.getContext sampleResult.manifestJson;
   inherit (sampleResult) manifestDocument;
 
@@ -609,9 +615,9 @@ let
             "onConflict"
             "provenance"
             "representation"
-            "retainedArtifactTarget"
             "schemaVersion"
             "selfHealStrategy"
+            "target"
           ]
         && sampleEntry.cleanupStrategy == "exact-symlink-target"
         && sampleEntry.selfHealStrategy == "exact-symlink-target"

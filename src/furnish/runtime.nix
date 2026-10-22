@@ -19,6 +19,7 @@ let
     resolveSystem = throw "furnish runtime forced the system ownership resolver";
   };
   cfg = config.lexicon.furnish;
+  targets = import ./target.nix { inherit lib; };
 
   # generated file sources are build-time inputs to retained artifacts. keeping
   # them in the system closure makes fresh evaluation substitutable.
@@ -45,10 +46,7 @@ let
         representation
       ];
       materialize = declaration: {
-        retainedArtifactTarget = builtins.path {
-          path = declaration.source.value;
-          name = "furnish-${baseNameOf declaration.filesystemIdentity.destination}";
-        };
+        target = targets.materialize declaration;
         cleanupStrategy = strategy;
         selfHealStrategy = strategy;
       };
@@ -100,7 +98,8 @@ let
       --manifest ${manifestPath} \
       --lock-name furnish-${lockName}.lock \
       --state-dir ${cfg.state.path} \
-      --setpriv ${pkgs.util-linux}/bin/setpriv
+      --setpriv ${pkgs.util-linux}/bin/setpriv \
+      --diagnostic-format plain
   '';
 
   # nixos marks the initrd invocation before it enters the target root. every

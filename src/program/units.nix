@@ -71,6 +71,7 @@ let
     // {
       children =
         map (entryUnit "files") (spec.files or [ ])
+        ++ map (entryUnit "links") (spec.links or [ ])
         ++ lib.imap0 directoryUnit (spec.directories or [ ])
         ++ themeUnits spec;
     };

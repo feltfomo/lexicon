@@ -8,6 +8,7 @@
   resolveSystem,
 }:
 let
+  targets = import ./target.nix { inherit lib; };
   claimAttrs = lib.genAttrs claimKeys (_: null);
 
   reporter = krisis.mkReporter {
@@ -635,22 +636,20 @@ let
       onRecord =
         _value: artifactDiagnostic "artifact-type" name "${selected.identity} must return an attribute set";
       order = [
-        "retainedArtifactTarget"
+        "target"
         "cleanupStrategy"
         "selfHealStrategy"
       ];
       fields = {
-        retainedArtifactTarget = {
+        target = {
           required = true;
-          validate = value: builtins.isString value || builtins.isPath value || lib.isDerivation value;
+          validate = targets.valid;
           onMissing =
-            _artifact:
-            artifactDiagnostic "retained-target-missing" name
-              "${selected.identity} must return retainedArtifactTarget";
+            _artifact: artifactDiagnostic "target-missing" name "${selected.identity} must return target";
           onInvalid =
             _artifact: _value:
-            artifactDiagnostic "retained-target-type" name
-              "${selected.identity} must return a path-like retainedArtifactTarget";
+            artifactDiagnostic "target-type" name
+              "${selected.identity} must return a retained or external target";
         };
         cleanupStrategy =
           strategyField selected name "cleanup-strategy" "cleanupStrategy"
@@ -682,27 +681,39 @@ let
           implementation declaration
         )
       );
-      retainedArtifactTarget = toString artifact.retainedArtifactTarget;
+      target = targets.normalize artifact.target;
+      validExternal =
+        target.kind != "external"
+        || (
+          declaration.representation == contract.capabilities.symlink
+          && target.path != declaration.filesystemIdentity.destination
+        );
     in
-    contract.mkEntry {
-      inherit (declaration)
-        filesystemIdentity
-        authority
-        managedRoot
-        representation
-        ;
-      # a declaration that names no policy still lands one in the manifest, so
-      # nothing reading the entry has to know what an absent field would mean.
-      onConflict = declaration.onConflict or contract.conflictPolicies.error;
-      inherit retainedArtifactTarget;
-      executor = {
-        inherit (selected) identity;
-        inherit (selected) protocolVersion;
+    if !validExternal then
+      fail (
+        artifactDiagnostic "external-target" (entryName declaration)
+          "external targets require a symlink distinct from its destination"
+      )
+    else
+      contract.mkEntry {
+        inherit (declaration)
+          filesystemIdentity
+          authority
+          managedRoot
+          representation
+          ;
+        # a declaration that names no policy still lands one in the manifest, so
+        # nothing reading the entry has to know what an absent field would mean.
+        onConflict = declaration.onConflict or contract.conflictPolicies.error;
+        inherit target;
+        executor = {
+          inherit (selected) identity;
+          inherit (selected) protocolVersion;
+        };
+        inherit (artifact) cleanupStrategy;
+        inherit (artifact) selfHealStrategy;
+        provenance = provenanceOf declaration declaration.label;
       };
-      inherit (artifact) cleanupStrategy;
-      inherit (artifact) selfHealStrategy;
-      provenance = provenanceOf declaration declaration.label;
-    };
 
   defaultProvider = mkEnabledProvider {
     inherit resolve resolveSystem;

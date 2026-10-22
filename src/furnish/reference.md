@@ -47,8 +47,7 @@ is `"${namespace}:${absoluteDestination}"`. Duplicate keys fail regardless of
 authority, equal content or conflict policy.
 
 Compiled entries contain `schemaVersion`, `filesystemIdentity`, `authority`,
-normalized `managedRoot`, `onConflict`, `representation`, string
-`retainedArtifactTarget`, `executor = { identity, protocolVersion }`,
+normalized `managedRoot`, `onConflict`, `representation`, `target = { kind, path }`, `executor = { identity, protocolVersion }`,
 `cleanupStrategy`, `selfHealStrategy`, and
 `provenance = { declaration, source }`.
 
@@ -61,7 +60,8 @@ Selection requires both `"lifecycle-baseline"` and the declaration's
 `representation`. Lower priority wins; identity sorts ties.
 
 The selected `materialize` must be `declaration: artifact`, returning
-`retainedArtifactTarget` (path, string or derivation), `cleanupStrategy` and
+`target = { kind = "retained"; path = source; }` or
+`target = { kind = "external"; path = absoluteString; }`, `cleanupStrategy` and
 `selfHealStrategy`. Strategies are `"exact-symlink-target"` or
 `"exact-source-content"`.
 
@@ -73,12 +73,14 @@ rejects any ownership claim.
 
 ## File adapter
 
-`files.mkDeclarations { filesystemNamespace, principals, files ? [] }` converts
+`files.mkDeclarations { filesystemNamespace, principals, files ? [], links ? [] }` converts
 program-style `{ src, dest, label?, representation?, onConflict?, provenance? }`
 entries to declarations for each supplied user principal. System principals
 are ignored. A principal requires `authority`; optional `managedRoot` defaults
 to `"/home/${authority.identity}"`. Representation defaults to `"symlink"`;
-source becomes `{ kind = "path"; value = src; }`. This adapter does not select
+file sources become `{ kind = "path"; value = src; }`.
+The optional `links` list accepts `{ target, dest, label?, provenance? }` and
+emits `{ kind = "external"; value = target; }` with the symlink representation. This adapter does not select
 file ownership claims; callers select files first.
 
 ## NixOS options
@@ -98,7 +100,8 @@ These options live under `lexicon.furnish`.
 
 Bundled executors provide `symlink` and `writable`, both with priority 0 and
 protocol version 1. `symlink` uses exact symlink target checks; `writable` uses
-exact source content checks. Sources are retained using `builtins.path`.
+exact source content checks. Path sources are retained using `builtins.path`. External sources remain literal
+strings, need not exist and are valid only for symlinks.
 
 Enabled reconciliation runs after users during ordinary activation and at boot
 through `furnish.service`, after local filesystems and required destination/state
@@ -114,7 +117,7 @@ survive. Durable storage and its mount ordering belong to the consuming host.
 
 ## Contract and core helpers
 
-`contract` exposes `schemaVersion = 2`, `diagnosticSchemaVersion = 1`,
+`contract` exposes `schemaVersion = 3`, `diagnosticSchemaVersion = 1`,
 `ledger = { schemaVersion = 2; fileName = "applied-state.json";
 rollbackFileName = "applied-state.v1.json"; }`, `capabilities`, `strategies`,
 `conflictPolicies`, `executors`, `runtimeDiagnostics`.
@@ -141,3 +144,15 @@ Executor contracts are `nativeSymlink` and `nativeWritable`, with identities
 | `core.selectExecutor` | `executors: declaration: selectedExecutor` |
 | `core.diagnostic` | `stage: code: entryLabel: reason: diagnostic` |
 | `core.renderDiagnostic`, `core.renderDiagnostics` | One diagnostic or list: rendered string |
+
+## Runtime compatibility and output
+
+Manifest schema 3 replaces `retainedArtifactTarget` with a tagged `target`.
+Both target kinds use the existing symlink executor; writable entries require
+a retained target. The coordinator also accepts schema 2 as retained sources.
+The ledger is unchanged by source retention semantics.
+
+Activation and `furnish.service` select `--diagnostic-format plain`, so warnings
+and refusals render readable severity, code, destination and explanation.
+Direct coordinator invocations retain JSON output by default. Runtime
+presentation belongs to the coordinator; Krisis renders evaluation diagnostics.

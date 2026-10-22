@@ -10,9 +10,9 @@ let
     principals: builtins.filter (principal: principal.authority.scope == "user") principals;
 
   declarationFor =
-    filesystemNamespace: principal: entry:
+    filesystemNamespace: principal: source: entry:
     {
-      label = entry.label or "files[${entry.dest}]";
+      label = entry.label or "${if source.kind == "external" then "links" else "files"}[${entry.dest}]";
       inherit filesystemNamespace;
       inherit (principal) authority;
       # an explicit root supports nonstandard homes without changing current principals
@@ -20,10 +20,7 @@ let
       destination = entry.dest;
       # an absent representation retains the original symlink behavior
       representation = entry.representation or contract.capabilities.symlink;
-      source = {
-        kind = "path";
-        value = entry.src;
-      };
+      inherit source;
     }
     # core supplies the default conflict policy after selection
     // lib.optionalAttrs (entry ? onConflict) { inherit (entry) onConflict; }
@@ -36,8 +33,23 @@ in
       filesystemNamespace,
       principals,
       files ? [ ],
+      links ? [ ],
     }:
-    builtins.concatMap (principal: map (declarationFor filesystemNamespace principal) files) (
-      homePrincipals principals
-    );
+    builtins.concatMap (
+      principal:
+      map (
+        entry:
+        declarationFor filesystemNamespace principal {
+          kind = "path";
+          value = entry.src;
+        } entry
+      ) files
+      ++ map (
+        entry:
+        declarationFor filesystemNamespace principal {
+          kind = "external";
+          value = entry.target;
+        } entry
+      ) links
+    ) (homePrincipals principals);
 }

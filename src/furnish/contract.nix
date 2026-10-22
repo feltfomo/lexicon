@@ -2,7 +2,7 @@
 let
   inherit (axiom) canonical;
 
-  schemaVersion = 2;
+  schemaVersion = 3;
   diagnosticSchemaVersion = 1;
 
   capabilities = {
@@ -100,7 +100,7 @@ let
       managedRoot,
       onConflict,
       representation,
-      retainedArtifactTarget,
+      target,
       executor,
       cleanupStrategy,
       selfHealStrategy,
@@ -114,7 +114,7 @@ let
         managedRoot
         onConflict
         representation
-        retainedArtifactTarget
+        target
         executor
         cleanupStrategy
         selfHealStrategy
