@@ -65,7 +65,6 @@ let
 
   resolve = units: ctx: lib.foldl' merge { } (map (collect ctx) units);
   resolveSystem = resolve;
-  # the resolver fixture has no preparation state
   resolvePrepared = resolve;
   program = import ../../src/program.nix {
     inherit
@@ -635,6 +634,15 @@ rec {
       krisis
       axiom
       lexicon
+      ;
+  })
+  // (import ./context.nix {
+    inherit
+      lib
+      pkgs
+      lexicon
+      axiom
+      krisis
       ;
   })
   // bindingTests

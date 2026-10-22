@@ -1,4 +1,8 @@
-{ lib }:
+{
+  lib,
+  axiom,
+  krisis,
+}:
 let
   idOf = output: builtins.substring 0 32 (builtins.hashString "sha256" output);
   descriptorOf = output: ".config/lexicon/toml/${idOf output}.json";
@@ -11,7 +15,14 @@ let
       entry
     else
       let
-        toml = import ../../toml { inherit pkgs lib; };
+        toml = import ../../toml {
+          inherit
+            pkgs
+            lib
+            axiom
+            krisis
+            ;
+        };
         home = homeOf entry.principal;
         effectiveReload = if entry.reload != null then entry.reload else entry.native.post_hook or null;
         staging = ".local/state/lexicon/toml/${idOf entry.output}/${entry.renderer}-${entry.registrationId}.toml";

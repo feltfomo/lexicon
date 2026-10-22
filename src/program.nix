@@ -1,8 +1,3 @@
-# the program surface an aspect declares against. this composition root wires
-# the pieces together and emits the home-manager and nixos modules. the
-# vocabularies live in program/spec.nix, the filesystem walk in
-# program/directories.nix, the ownership units in program/units.nix, and the
-# diagnostics policy in program/report.nix.
 {
   lib,
   krisis,
@@ -145,12 +140,10 @@ let
     let
       pkg = resolved.pkg or null;
     in
-    lib.mkIf (pkg != null) {
+    lib.optionalAttrs (pkg != null) {
       home.packages = [ (pkg pkgs) ];
     };
 
-  # a nixos block that needs nothing from the build is a plain list, and a
-  # single slice is just that slice. only the function form is applied.
   sliceList = value: if builtins.isList value then value else [ value ];
 in
 rawSpec:
@@ -162,24 +155,53 @@ let
     || (spec.links or [ ]) != [ ]
     || (spec.directories or [ ]) != [ ]
     || builtins.any (backend: (spec.theme.${backend} or null) != null) themeBackends;
-  needsHomeManager = (spec.pkg or null) != null || (spec.imports or [ ]) != [ ];
-  # the prepared resolves translate and compose the unit set once per aspect,
-  # then only re-run ctx demand/select/survivors/merge per (host, user) slice.
-  homeResolve = resolvePreparedFor [ (specUnit spec) ];
+  hasHomePayload = (spec.pkg or null) != null || (spec.imports or [ ]) != [ ];
+  needsHomeManager = hasHomePayload || spec ? homeManager;
+  contextFields = [
+    "files"
+    "links"
+    "directories"
+  ];
+  dynamicFields = builtins.filter (name: builtins.isFunction (spec.${name} or null)) contextFields;
+  # select the declaration before evaluating callbacks that may read user or host data
+  declarationResolve = resolvePreparedFor [ (claimsOf spec // { programSelected = true; }) ];
+  selectedFor = context: (declarationResolve context).programSelected or false;
+  materialize =
+    args:
+    let
+      values = lib.genAttrs dynamicFields (
+        name:
+        let
+          value = krisis.withErrorContext "program: while evaluating ${name} context function" (
+            spec.${name} args
+          );
+        in
+        checked (lib.optional (!builtins.isList value) (problem {
+          code = "${name}-result";
+          message = "${name} context function must return a list; got ${builtins.typeOf value}";
+          primary.label = name;
+        })) value
+      );
+      concrete = spec // values;
+    in
+    if binding == null then concrete else binding.validateSpec concrete;
+  filesFor =
+    args: context:
+    if dynamicFields == [ ] then
+      furnishResolve context
+    else if selectedFor context then
+      (resolvePreparedFor [ (furnishUnit (materialize args)) ]) context
+    else
+      { };
+  homeResolve = resolvePreparedFor (lib.optional hasHomePayload (specUnit spec));
   furnishResolve = resolvePreparedFor [ (furnishUnit spec) ];
-  # one read-only directory walk per declared directory, shared by every user
-  # slice; shape/source errors stay once-per-aspect too.
+  # static sources share their directory inventory across user slices
   prewalkByIndex = builtins.listToAttrs (
     lib.imap0 (index: entry: {
       name = builtins.toString index;
       value = prewalkDirectory { inherit index entry; };
-    }) (spec.directories or [ ])
+    }) (if builtins.isFunction (spec.directories or null) then [ ] else spec.directories or [ ])
   );
-  # the declaration's own claim, narrowed to what a system-scope resolve can
-  # bind. the author's slices hang under it, so `hosts` on the declaration owns
-  # the whole aspect. the slices used to resolve unclaimed, which made them
-  # globally owned and forced every aspect to restate its host list inside
-  # every slice.
   systemClaim = projectClaims "system" (claimsOf spec);
   authorSlices =
     args: sliceList (if builtins.isFunction spec.nixos then spec.nixos args else spec.nixos);
@@ -200,7 +222,19 @@ let
           resolved = homeResolve context;
         in
         {
-          imports = resolved.imports or [ ];
+          imports =
+            (resolved.imports or [ ])
+            ++ lib.optional (spec ? homeManager && selectedFor context) (
+              if builtins.isFunction spec.homeManager then
+                lib.setFunctionArgs (args: spec.homeManager (args // context)) (
+                  removeAttrs (builtins.functionArgs spec.homeManager) [
+                    "host"
+                    "user"
+                  ]
+                )
+              else
+                spec.homeManager
+            );
           config = hmConfig lib resolved pkgs;
         };
     }
@@ -215,8 +249,6 @@ let
         }:
         let
           context = if binding == null then { inherit host user; } else binding.context;
-          # the build is handed to the author's nixos block, so a slice reads
-          # `host.system` instead of re-deriving it from pkgs.
           slices =
             if spec ? nixos then
               authorSlices {
@@ -237,9 +269,7 @@ let
               binding.nixos slices;
           hostName = config.networking.hostName;
           inherit (pkgs.stdenv.hostPlatform) system;
-          # the resolved host already carries its canonical id. rebuilding one from
-          # the module's hostname and platform put the same string in two places and
-          # drifted the furnish namespace when a host was renamed.
+          # canonical host identity also owns the furnish namespace
           namespace =
             if context.host != null && context.host ? id then context.host.id else "${system}/${hostName}";
         in
@@ -247,13 +277,23 @@ let
           rawSlice
         else
           let
-            resolved = furnishResolve context;
+            resolved = filesFor ({ inherit pkgs config; } // context) context;
+            prewalked =
+              if builtins.isFunction (spec.directories or null) then
+                builtins.listToAttrs (
+                  map (wrapped: {
+                    name = toString wrapped.index;
+                    value = prewalkDirectory wrapped;
+                  }) (resolved.directoryEntries or [ ])
+                )
+              else
+                prewalkByIndex;
             selected =
               validateSelected (resolved.files or [ ]) (resolved.links or [ ]) (resolved.directoryEntries or [ ])
                 (resolved.directoryFileRules or [ ])
                 (resolved.themeEntries or [ ])
-                prewalkByIndex;
-            composition = import ./program/theme/composition.nix { inherit lib; };
+                prewalked;
+            composition = import ./program/theme/composition.nix { inherit lib krisis axiom; };
             hostFiles = selected.files ++ selected.directoryFiles;
             principals = builtins.filter (principal: principal.authority.scope == "user") (filePrincipalsFor {
               inherit system;

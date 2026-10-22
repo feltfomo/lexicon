@@ -24,9 +24,10 @@ roster fields are `hosts`, `users`, `membership`, `usersWithUnknownMembership`.
 | `user.name` | Non-empty string | Required when user is supplied |
 | `user.home` | Absolute path string | `"/home/${user.name}"` |
 
-Direct targets reject unknown fields. Files, directories and themes require
-`target.user`. Direct declarations reject ownership claims, including nested
-file, directory-rule and theme claims. Direct NixOS slices concatenate lists,
+Direct targets reject unknown fields. Files, links, directories and file-producing
+themes require `target.user`, including callbacks that return empty lists.
+Direct declarations reject ownership claims, including nested file,
+directory-rule and theme claims. Direct NixOS slices concatenate lists,
 recursively merge attribute sets and take the last other value.
 
 ## Declaration
@@ -36,11 +37,12 @@ The declaration is closed: unknown fields are errors.
 | Field | Type | Meaning when present |
 | --- | --- | --- |
 | `pkg` | `pkgs: package` | Package added to `home.packages` |
-| `imports` | List of Home Manager modules | Home Manager imports; default `[]` |
+| `imports` | List of Home Manager modules | Home Manager imports, including module files; default `[]` |
+| `homeManager` | Module attribute set or function | Inline Home Manager module |
 | `nixos` | Unit, list of units, or function returning either | System configuration slices |
-| `files` | List of file entries | Home-relative managed files; default `[]` |
-| `links` | List of external link entries | Live links without retaining target contents; default `[]` |
-| `directories` | List of directory entries | Expanded managed file trees; default `[]` |
+| `files` | List or context function returning a list | Home-relative managed files; default `[]` |
+| `links` | List or context function returning a list | Live links without retaining target contents; default `[]` |
+| `directories` | List or context function returning a list | Expanded managed file trees; default `[]` |
 | `theme` | Theme declaration | Renderer template registrations |
 | `hosts`, `users`, `exceptHosts`, `exceptUsers`, `when` | Ownership claims | Narrow the declaration |
 
@@ -50,10 +52,47 @@ use the ownership unit vocabulary. System slices reject `users` and
 The declaration's host claim wraps its system slices. User claims select home
 payloads and files but are projected out of the system wrapper.
 
-`homeManager` is emitted only for `pkg` or non-empty `imports`. `nixos` is emitted
+`homeManager` is emitted for `pkg`, non-empty `imports`, or a `homeManager` module. `nixos` is emitted
 for `nixos` or file- or link-producing declarations. Managed files are reconciled through
 the NixOS Furnish runtime. Destinations belong to the selected user principal;
 a file declaration reaching no user principal fails an assertion.
+
+## Context and Home Manager modules
+
+File callbacks receive `{ pkgs, config, host, user }` from the NixOS slice.
+The declaration's ownership claims select the slice before callbacks run.
+Entries returned by callbacks support the same nested claims and validation as
+static lists. Direct bindings reject claims in callback results too. Static
+directory lists share their directory inventory across user slices; a directory
+callback walks its selected sources within each slice.
+
+`homeManager` uses the native module system. Module functions can request `pkgs`,
+`config`, `lib`, or arguments supplied through `specialArgs` and `_module.args`.
+Module attributes such as `imports`, `options`, `config`, and `_module` retain
+their normal meaning. Its declaration claims select the entire module.
+`programDirect` binds `host` and `user` to its target for the `homeManager`
+function itself, overriding runtime arguments for these two names. Nested
+imported modules receive their normal module arguments. Ownership and Den
+bindings use the selected module context.
+
+```nix
+program {
+  links = { user, ... }: [
+    {
+      target = "/home/${user.name}/Projects/skills/subphase-orchestrator";
+      dest = ".codex/skills/subphase-orchestrator";
+    }
+  ];
+  homeManager = { pkgs, ... }: {
+    home.packages = [ pkgs.git ];
+  };
+}
+```
+
+[`examples/program-skills/skills.nix`](../../examples/program-skills/skills.nix)
+combines a system-indexed source tree, editable skill links, and a Home Manager
+bootstrap service in one declaration. The caller supplies `program` and `sources`,
+an attribute set keyed by Nix system whose values are skill directories.
 
 ## Files
 

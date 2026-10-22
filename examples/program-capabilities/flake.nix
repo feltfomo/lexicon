@@ -35,11 +35,10 @@
       ) nixosModule.imports;
     in
     {
-      # these values capture the module interface for this sample
       lib.results = {
         package = {
           outputs = builtins.attrNames packageOnly;
-          package = (builtins.head packageModule.config.content.home.packages).pname;
+          package = (builtins.head packageModule.config.home.packages).pname;
         };
         imports = {
           outputs = builtins.attrNames importsOnly;

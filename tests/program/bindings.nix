@@ -211,7 +211,7 @@ let
     let
       evaluated = (lazyDirect { pkg = packages: packages.hello; }).homeManager homeArgs;
     in
-    evaluated.imports == [ ] && builtins.length evaluated.config.content.home.packages == 1
+    evaluated.imports == [ ] && builtins.length evaluated.config.home.packages == 1
   );
 
   topClaimFails = fails (direct {
@@ -402,7 +402,7 @@ in
 
   direct-package-only-is-sparse =
     builtins.attrNames packageOnly == [ "homeManager" ]
-    && packageModule.config.content.home.packages == [ pkgs.hello ];
+    && packageModule.config.home.packages == [ pkgs.hello ];
   direct-imports-only-is-sparse =
     builtins.attrNames importsOnly == [ "homeManager" ] && importsModule.imports == [ importedModule ];
   direct-nixos-only-is-sparse-and-ordinary =

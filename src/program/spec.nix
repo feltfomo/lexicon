@@ -1,8 +1,3 @@
-# every closed key vocabulary a declaration is checked against, and the single
-# entry point that turns a raw declaration into a validated, theme-elaborated
-# one. the vocabularies are closed, so an unknown key is a typo: each is named
-# on its own with the nearest legal key rather than collapsed into one joined
-# message.
 {
   lib,
   axiom,
@@ -38,6 +33,7 @@ let
     "pkg"
     "nixos"
     "imports"
+    "homeManager"
     "files"
     "links"
     "directories"
@@ -92,9 +88,6 @@ let
             message = "pkg must be a function";
           };
       };
-      # a slice list that needs nothing from the build is just a list, and a
-      # single slice is just that slice. forcing every declaration through a
-      # function meant writing `_: [ ... ]` to say nothing.
       nixos = {
         validate = value: builtins.isFunction value || builtins.isList value || builtins.isAttrs value;
         onInvalid =
@@ -102,6 +95,15 @@ let
           problem {
             code = "nixos-shape";
             message = "nixos must be a function, a list of units, or a single unit; got ${builtins.typeOf value}";
+          };
+      };
+      homeManager = {
+        validate = value: builtins.isFunction value || builtins.isAttrs value;
+        onInvalid =
+          _spec: _value:
+          problem {
+            code = "home-manager-shape";
+            message = "homeManager must be a module attribute set or function";
           };
       };
       imports = {
@@ -114,30 +116,30 @@ let
           };
       };
       files = {
-        validate = builtins.isList;
+        validate = value: builtins.isList value || builtins.isFunction value;
         onInvalid =
           _spec: _value:
           problem {
             code = "files-shape";
-            message = "files must be a list";
+            message = "files must be a list or a context function returning a list";
           };
       };
       links = {
-        validate = builtins.isList;
+        validate = value: builtins.isList value || builtins.isFunction value;
         onInvalid =
           _spec: _value:
           problem {
             code = "links-shape";
-            message = "links must be a list";
+            message = "links must be a list or a context function returning a list";
           };
       };
       directories = {
-        validate = builtins.isList;
+        validate = value: builtins.isList value || builtins.isFunction value;
         onInvalid =
           _spec: _value:
           problem {
             code = "directories-shape";
-            message = "directories must be a list";
+            message = "directories must be a list or a context function returning a list";
           };
       };
       theme = {
@@ -274,9 +276,7 @@ let
       };
     };
 
-  # the theme block accepts either one inline template or a templates list, and
-  # the two spellings cannot be mixed. the single-template form is normalized
-  # into a one-element list here so the compiler only sees one shape.
+  # inline templates and template lists share one compiler representation
   themeErrorsFor =
     spec:
     let
@@ -355,8 +355,6 @@ let
       indexed: (linkSchema ("links[" + toString indexed.index + "]") indexed.entry).diagnostics
     ) (lib.imap0 (index: entry: { inherit index entry; }) links);
 
-  # the subject string is concatenated rather than interpolated so the closing
-  # bracket stays out of the interpolation.
   subjectAt = index: "directories[" + toString index + "]";
 
   directoryShapeErrors =

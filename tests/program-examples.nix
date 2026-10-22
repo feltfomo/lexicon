@@ -55,7 +55,9 @@ let
     "pkg"
     "nixos"
     "imports"
+    "homeManager"
     "files"
+    "links"
     "directories"
     "theme"
   ];

@@ -23,10 +23,10 @@ set. Curried arguments are applied from left to right.
 
 Program theme fields are specified in `src/program/theme/reference.md`.
 
-Except for `mkCoordinator` and `toml`, constructors accept dependency overrides. `lib`
-defaults to the flake's nixpkgs library; `axiom` and `krisis` default to the
-flake's inputs instantiated with that library. Program constructors and
-`furnishRuntime` also accept `mkCoordinator` as an override.
+Except for `mkCoordinator`, constructors accept dependency overrides. `lib`
+defaults to the flake's nixpkgs library, or `pkgs.lib` for `toml`. `axiom` and
+`krisis` default to the flake's inputs instantiated with that library. Program
+constructors and `furnishRuntime` also accept `mkCoordinator` as an override.
 
 `program` has an optional internal `binding` argument. Consumer declarations
 use `programDirect`, `programOwnerships`, or `programDen` for bound APIs.

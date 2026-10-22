@@ -26,7 +26,9 @@ empty arrays. Nested and heterogeneous arrays are supported. Empty and quoted
 keys, empty tables, and arbitrarily nested tables are supported. Strings,
 booleans, signed 64-bit integers and finite Nix floats retain their types.
 Paths and derivations become strings and retain their Nix store context.
-Null, functions and unsupported values fail with the offending key path.
+Null, functions and unsupported values fail with the offending key path. Nix
+validation accumulates independent errors through Axiom and renders them through
+Krisis before creating the builder input.
 Generated attribute keys follow Nix's sorted attribute order.
 
 `inline attrs` forces an inline table. Nested `tables` constructors inside an
@@ -39,6 +41,11 @@ datetimes, dates, times, `inf`, `-inf`, `nan`, `-0.0`, multiline or literal
 strings, and a chosen numeric spelling. Additional assignments are rejected.
 Nix normalizes its own `-0.0` to positive zero, so use `literal "-0.0"` when the
 sign matters. Constructors are validated and don't reserve application keys.
+Their function-valued `__lexiconToml` marker distinguishes them from ordinary
+attribute sets. A string or other data at that key remains application data.
+Constructor records reject unknown fields, missing or unknown kinds, and invalid
+payloads. `inline` and `tables` require plain attribute sets for their tables;
+derivations and other constructors aren't tables.
 
 `document text` supplies a parsed whole document. It is rejected inside a value;
 use attributes or an inline table for nested content. `source name value` converts

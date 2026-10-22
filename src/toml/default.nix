@@ -1,6 +1,8 @@
 {
   pkgs,
   lib ? pkgs.lib,
+  axiom,
+  krisis,
 }:
 let
   python =
@@ -15,74 +17,20 @@ let
     __lexiconToml = x: x;
     inherit kind value;
   };
-  isTagged = value: builtins.isAttrs value && builtins.isFunction (value.__lexiconToml or null);
-  encode =
-    path: value:
-    if isTagged value then
-      if
-        builtins.attrNames value != [
-          "__lexiconToml"
-          "kind"
-          "value"
-        ]
-      then
-        throw "toml: invalid constructor at ${path}"
-      else if
-        builtins.elem value.kind [
-          "literal"
-          "document"
-        ]
-        && builtins.isString value.value
-      then
-        { inherit (value) kind value; }
-      else if
-        builtins.elem value.kind [
-          "inline"
-          "tables"
-        ]
-      then
-        {
-          inherit (value) kind;
-          value = encode path value.value;
-        }
-      else
-        throw "toml: invalid constructor at ${path}"
-    else if builtins.isAttrs value && !lib.isDerivation value then
-      {
-        kind = "table";
-        value = lib.mapAttrs (key: encode "${path}.${key}") value;
-      }
-    else if builtins.isList value then
-      {
-        kind = "array";
-        value = lib.imap0 (i: encode "${path}[${toString i}]") value;
-      }
-    else if builtins.isFloat value then
-      {
-        kind = "float";
-        value = builtins.toJSON value;
-      }
-    else if builtins.isString value || builtins.isBool value || builtins.isInt value then
-      {
-        kind = "scalar";
-        inherit value;
-      }
-    else if builtins.isPath value || lib.isDerivation value then
-      {
-        kind = "scalar";
-        value = toString value;
-      }
-    else
-      throw "toml: unsupported ${builtins.typeOf value} at ${path}";
+  encoder = import ./encode.nix { inherit lib axiom krisis; };
+  reporter = krisis.mkReporter {
+    formatHeader = count: "toml: ${toString count} validation error(s)";
+    formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
+  };
   generate =
     name: attrs:
     let
-      input = pkgs.writeText "${name}.json" (builtins.toJSON (encode "$" attrs));
+      input = pkgs.writeText "${name}.json" (builtins.toJSON (reporter.finish (encoder.document attrs)));
     in
     pkgs.runCommand name { } ''${package}/bin/lexicon-toml generate ${input} "$out"'';
   source =
     name: value:
-    if isTagged value && value.kind == "document" then
+    if encoder.isTagged value then
       generate name value
     else if builtins.isAttrs value && !lib.isDerivation value then
       generate name value

@@ -8,8 +8,15 @@
 }:
 let
   cfg = config.lexicon.theme.composition;
-  composition = import ./composition.nix { inherit lib; };
-  toml = import ../../toml { inherit pkgs lib; };
+  composition = import ./composition.nix { inherit lib axiom krisis; };
+  toml = import ../../toml {
+    inherit
+      pkgs
+      lib
+      axiom
+      krisis
+      ;
+  };
   contract = import ../../furnish/contract.nix { inherit lib axiom; };
   furnishFiles = import ../../furnish/files.nix { inherit lib contract; };
   inherit (composition) homeOf;
@@ -68,8 +75,7 @@ let
       );
       firstSignature = signature first;
       conflicts = builtins.filter (entry: signature entry != firstSignature) entries;
-      # The runtime's destination is deliberately absent from Furnish's ledger.
-      # Reject aliases and parent ownership as well as exact destination matches.
+      # the publisher owns its destination outside furnish's ledger
       overlapsOutput =
         other: other == output || lib.hasPrefix "${other}/" output || lib.hasPrefix "${output}/" other;
       themeOverlaps = builtins.filter (

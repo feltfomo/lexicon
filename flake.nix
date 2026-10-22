@@ -70,7 +70,7 @@
             );
         in
         {
-          toml = args: import ./src/toml args;
+          toml = args: withDependencies ./src/toml ({ lib = args.pkgs.lib; } // args);
           registry = withDependencies ./src/registry.nix;
           ownerships = withDependencies ./src/ownerships;
           furnish = withDependencies ./src/furnish;
@@ -384,7 +384,6 @@
             praxis-runner = praxisCommands.runner;
             furnish-pure = gate "furnish-pure-tests" furnishTests;
             program-boundary = gate "program-boundary-tests" programTests;
-            # the engine suite includes import-unit boundary tests
             ownerships-engine = gate "ownerships-engine-tests" (ownershipsTest ./tests/ownerships/engine.nix);
             ownerships-roster = gate "ownerships-roster-tests" (ownershipsTest ./tests/ownerships/roster.nix);
             ownerships-surface = gate "ownerships-surface-tests" (
