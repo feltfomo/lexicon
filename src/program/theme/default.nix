@@ -2,9 +2,6 @@
   lib,
   axiom,
   contract,
-  claimKeys,
-  claimsOf,
-  withoutClaims,
   unknownFields,
   validRelativePath,
   validBaseName,
@@ -16,8 +13,6 @@
 let
   capability = import ./capabilities.nix;
 
-  # a capability the adapter declares, rather than a per-feature boolean every
-  # adapter has to remember to set
   declares = name: adapter: (axiom.requirements.evaluate [ name ] adapter.capabilities).satisfied;
 
   entryProblem =
@@ -39,16 +34,14 @@ let
     "native"
     "merge"
   ];
-  themeSharedFields = claimKeys ++ themeValueFields;
+  themeSharedFields = themeValueFields;
   themeRendererFields = themeSharedFields ++ [ "sharedWith" ];
-  themeFields =
-    claimKeys
-    ++ [
-      "id"
-      "renderers"
-      "templates"
-    ]
-    ++ themeValueFields;
+  themeFields = [
+    "id"
+    "renderers"
+    "templates"
+  ]
+  ++ themeValueFields;
   themeEntryFields = themeSharedFields;
 
   knownShellsNote = "known shells: ${lib.concatStringsSep ", " themeBackends}";
@@ -198,8 +191,6 @@ let
           renderer:
           map (shell: { inherit renderer shell; }) (targetsForRenderer renderer renderers.${renderer})
         ) rendererNames;
-        # a shell may be assigned by exactly one renderer declaration, which is
-        # duplicate keying on the shell name
         overlapErrors =
           (axiom.registry.compile {
             registrations = builtins.filter (
@@ -245,113 +236,56 @@ let
       ++ rendererErrors
       ++ overlapErrors;
 
-  elaborateTheme =
-    theme:
-    let
-      rawTemplates =
-        theme.templates or [
-          (removeAttrs theme [
-            "id"
-            "templates"
-          ])
-        ];
-      entriesFor =
-        renderer:
-        builtins.concatMap (
-          template:
-          if builtins.isAttrs template && builtins.isAttrs (template.renderers or null) then
-            builtins.concatMap (
-              declaredRenderer:
-              let
-                override = template.renderers.${declaredRenderer};
-                matches = builtins.elem renderer (targetsForRenderer declaredRenderer override);
-              in
-              lib.optional matches (
-                (removeAttrs template [ "renderers" ]) // (removeAttrs override [ "sharedWith" ])
-              )
-            ) (builtins.attrNames template.renderers)
-          else
-            [ ]
-        ) rawTemplates;
-    in
-    lib.filterAttrs (_: block: block.templates != [ ]) (
-      lib.genAttrs themeBackends (renderer: {
-        inherit (theme) id;
-        templates = entriesFor renderer;
-      })
-    );
-
-  # theme entries stay descriptive until ownership has selected them.
-  themeUnitsFor =
-    spec: renderer:
-    let
-      block = spec.theme.${renderer} or null;
-    in
-    if block == null then
-      [ ]
-    else
-      let
-        inherit (block) id;
-        rawEntries = block.templates or [ (removeAttrs block [ "id" ]) ];
-      in
-      map (
-        raw:
-        claimsOf raw
-        // {
-          themeEntries = [
-            {
-              inherit renderer;
-              blockId = id;
-              entry = withoutClaims raw;
-            }
-          ];
-        }
-      ) rawEntries;
-
-  themeUnits = spec: builtins.concatMap (themeUnitsFor spec) themeBackends;
-  # closed, because a theme entry's vocabulary is the claim keys plus the value
-  # fields and nothing else -- an unknown key here is a typo
   themeEntrySchema =
-    subject:
+    subject: fieldOrigins:
+    let
+      fieldAt = name: fieldOrigins.${name} or "${subject}.${name}";
+    in
     axiom.schema.compile {
       onRecord = _value: entryProblem subject "theme-entry-shape" "must be an attribute set";
       onUnknown = name: _value: entryProblem subject "theme-entry-fields" "has unknown field ${name}";
       order = themeEntryFields;
-      fields = lib.genAttrs claimKeys (_: { }) // {
+      fields = {
         source = {
           required = true;
           validate = value: builtins.isPath value || builtins.isString value;
-          onMissing = _entry: entryProblem subject "theme-source" "source must be a path or string";
-          onInvalid = _entry: _value: entryProblem subject "theme-source" "source must be a path or string";
+          onMissing =
+            _entry: entryProblem (fieldAt "source") "theme-source" "source must be a path or string";
+          onInvalid =
+            _entry: _value: entryProblem (fieldAt "source") "theme-source" "source must be a path or string";
         };
         output = {
           required = true;
           validate = validRelativePath;
-          onMissing = _entry: entryProblem subject "theme-output" "output must be a normalized relative path";
+          onMissing =
+            _entry: entryProblem (fieldAt "output") "theme-output" "output must be a normalized relative path";
           onInvalid =
-            _entry: _value: entryProblem subject "theme-output" "output must be a normalized relative path";
+            _entry: _value:
+            entryProblem (fieldAt "output") "theme-output" "output must be a normalized relative path";
         };
         subdir = {
           validate = value: value == null || validSubdir value;
           onInvalid =
             _entry: _value:
-            entryProblem subject "theme-subdir"
+            entryProblem (fieldAt "subdir") "theme-subdir"
               "subdir must be null, empty, or a normalized relative directory";
         };
         placedAs = {
           validate = validBaseName;
           onInvalid =
-            _entry: _value: entryProblem subject "theme-placed-name" "placedAs must be a normalized basename";
+            _entry: _value:
+            entryProblem (fieldAt "placedAs") "theme-placed-name" "placedAs must be a normalized basename";
         };
         subId = {
           validate = value: value == null || validBaseName value;
           onInvalid =
             _entry: _value:
-            entryProblem subject "theme-sub-id" "subId must be null or a normalized non-empty name";
+            entryProblem (fieldAt "subId") "theme-sub-id" "subId must be null or a normalized non-empty name";
         };
         reload = {
           validate = value: value == null || builtins.isString value;
-          onInvalid = _entry: _value: entryProblem subject "theme-reload" "reload must be null or a string";
+          onInvalid =
+            _entry: _value: entryProblem (fieldAt "reload") "theme-reload" "reload must be null or a string";
         };
         merge = {
           validate =
@@ -376,26 +310,16 @@ let
             && (value.arrays or "replace") == "replace";
           onInvalid =
             _entry: _value:
-            entryProblem subject "theme-merge"
+            entryProblem (fieldAt "merge") "theme-merge"
               "merge requires format=toml, base, conflict=error|first|last and arrays=replace";
         };
         native = {
           validate = builtins.isAttrs;
-          onInvalid = _entry: _value: entryProblem subject "theme-native" "native must be an attribute set";
+          onInvalid =
+            _entry: _value: entryProblem (fieldAt "native") "theme-native" "native must be an attribute set";
         };
       };
     };
-
-  themeEntryErrors =
-    themeEntries:
-    builtins.concatMap (
-      indexed:
-      let
-        inherit (indexed) index wrapped;
-        subject = "theme.${wrapped.renderer}.${wrapped.blockId}.templates[${toString index}]";
-      in
-      (themeEntrySchema subject wrapped.entry).diagnostics
-    ) (lib.imap0 (index: wrapped: { inherit index wrapped; }) themeEntries);
 
   normalizeThemeEntry =
     wrapped:
@@ -411,7 +335,6 @@ let
         else
           lib.removeSuffix "/" entry.subdir;
       subdir = if rawSubdir == "" then "" else "${rawSubdir}/";
-      # the placed name must not retain the source path's string context.
       placedAs = entry.placedAs or (builtins.unsafeDiscardStringContext (baseNameOf source));
       subId = entry.subId or null;
     in
@@ -491,9 +414,6 @@ let
           ;
       };
 
-  # an adapter that declares aggregate-files lowers every selected block
-  # together instead of emitting one registration file per block, and owes an
-  # aggregateFilesFor alongside the capability
   aggregatedThemeFiles =
     entries: pkgs:
     builtins.concatMap (
@@ -550,12 +470,10 @@ in
   inherit
     themeBackends
     themeSharedFields
-    themeEntryErrors
+    themeEntrySchema
     themeFields
     themeFiles
     themeTemplateErrors
-    themeUnits
     ;
-  elaborate = elaborateTheme;
   normalizeEntry = normalizeThemeEntry;
 }

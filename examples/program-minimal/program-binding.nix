@@ -1,6 +1,5 @@
 { lexicon, system }:
-# one fixed target keeps ordinary application declarations claim-free
-lexicon.lib.programDirect {
+lexicon.lib.lexicon.forTarget {
   target = {
     host = {
       name = "studio";

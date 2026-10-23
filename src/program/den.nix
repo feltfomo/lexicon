@@ -6,25 +6,18 @@
   den ? null,
 }:
 let
-  denApi = import ../den.nix {
-    inherit
-      den
-      lib
-      krisis
-      axiom
-      ;
-  };
-  inherit (denApi) roster;
-in
-builtins.seq roster (
-  import ./bind-ownerships.nix {
+  api = import ../lexicon {
     inherit
       lib
       krisis
       axiom
       mkCoordinator
-      roster
       ;
-    inherit (denApi) filePrincipals hostUserNames;
-  }
-)
+  };
+  canonical = api.forDen { inherit den; };
+  translate = import ../lexicon/legacy.nix {
+    inherit lib krisis axiom;
+    inherit (api.ownerships) claimKeys;
+  } { };
+in
+builtins.seq canonical (spec: canonical (translate spec))

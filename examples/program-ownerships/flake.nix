@@ -16,7 +16,7 @@
       ownerships = lexicon.lib.ownerships { };
       roster = import ./roster.nix { inherit ownerships system; };
       program = import ./program-binding.nix { inherit lexicon roster; };
-      editor = import ./editor.nix { inherit program; };
+      editor = import ./editor.nix { lexicon = program; };
       host = {
         id = "${system}/studio";
         name = "studio";
@@ -43,7 +43,6 @@
           modules = [
             editor.nixos
             {
-              # container scaffolding keeps the example buildable without host hardware
               boot.isContainer = true;
               networking.hostName = "studio";
               users.users.${name}.isNormalUser = true;
@@ -66,7 +65,6 @@
     in
     {
       nixosConfigurations = { inherit alice bob; };
-      # these values capture the module interface for this sample
       lib.result = {
         outputs = builtins.attrNames editor;
         alice = {

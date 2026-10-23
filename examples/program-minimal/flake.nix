@@ -13,7 +13,7 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
       program = import ./program-binding.nix { inherit lexicon system; };
-      paperkite = import ./paperkite.nix { inherit program; };
+      paperkite = import ./paperkite.nix { lexicon = program; };
       demo = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [ (import ./configuration.nix { inherit paperkite; }) ];
@@ -25,7 +25,6 @@
         assert demo.config.environment.variables.PAPERKITE_MODE == "focused";
         "touch $out"
       );
-      # these values capture the module interface for this sample
       lib.result = {
         mode = demo.config.environment.variables.PAPERKITE_MODE;
         outputs = builtins.attrNames paperkite;

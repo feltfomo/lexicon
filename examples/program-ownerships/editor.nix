@@ -1,11 +1,11 @@
-{ program }:
-program {
+{ lexicon }:
+lexicon {
   users = [ "alice" ];
-  imports = [ { home.sessionVariables.EDITOR = "hx"; } ];
-  files = [
+  homeManager.imports = [ { home.sessionVariables.EDITOR = "hx"; } ];
+  furnish.files = [
     {
-      dest = ".config/helix/config.toml";
-      src = ./config.toml;
+      destination = ".config/helix/config.toml";
+      source = ./config.toml;
     }
   ];
 }

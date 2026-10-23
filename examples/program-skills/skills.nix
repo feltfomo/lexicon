@@ -1,23 +1,26 @@
-{ program, sources }:
-program {
-  directories = { pkgs, ... }: [
+{ lexicon, sources }:
+lexicon {
+  furnish.directories = { pkgs, ... }: [
     {
-      src = sources.${pkgs.stdenv.hostPlatform.system};
-      dest = ".codex/skills/bundled";
+      source = sources.${pkgs.stdenv.hostPlatform.system};
+      destination = ".codex/skills/bundled";
     }
   ];
-  links =
-    { user, ... }:
-    map
-      (name: {
-        target = "/home/${user.name}/Projects/skills/${name}";
-        dest = ".codex/skills/${name}";
-      })
-      [
+  furnish.links = { user, ... }: [
+    {
+      source = "/home/${user.name}/Projects/skills";
+      names = [
         "subphase-architect"
         "subphase-implementer"
         "subphase-orchestrator"
       ];
+      destinations = [
+        ".claude/skills"
+        ".codex/skills"
+        ".agents/skills"
+      ];
+    }
+  ];
   homeManager = { pkgs, user, ... }: {
     systemd.user.services.skills-bootstrap = {
       Unit = {

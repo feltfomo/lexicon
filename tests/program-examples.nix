@@ -11,7 +11,7 @@ let
     builtins.replaceStrings [ "PAPERKITE_MODE = \"focused\"" ] [ "PAPERKITE_MODE = \"quiet\"" ]
       (builtins.readFile ../examples/program-minimal/paperkite.nix);
   changedPaperkite = import (builtins.toFile "program-minimal-changed.nix" changedSource) {
-    program = changedProgram;
+    lexicon = changedProgram;
   };
   changedSystem = nixpkgs.lib.nixosSystem {
     inherit system;

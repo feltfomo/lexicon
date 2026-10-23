@@ -11,11 +11,9 @@
     }:
     let
       system = "x86_64-linux";
-      # a real project passes the den value its Den flake exposes; this example
-      # substitutes a deterministic stand-in so it evaluates with no extra input
       den = import ./den-fixture.nix { inherit system; };
       program = import ./program-binding.nix { inherit lexicon den; };
-      paperkite = import ./paperkite.nix { inherit program; };
+      paperkite = import ./paperkite.nix { lexicon = program; };
       demo = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {
@@ -35,7 +33,6 @@
     in
     {
       nixosConfigurations.demo = demo;
-      # these values capture the module interface for this sample
       lib.result = {
         outputs = builtins.attrNames paperkite;
         entryCount = builtins.length manifest;

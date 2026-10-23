@@ -1,11 +1,10 @@
-{ program }:
-program {
-  # a claim names which roster principals receive this declaration
+{ lexicon }:
+lexicon {
   users = [ "river" ];
-  files = [
+  furnish.files = [
     {
-      dest = ".config/paperkite/den.conf";
-      src = ./settings.conf;
+      destination = ".config/paperkite/den.conf";
+      source = ./settings.conf;
     }
   ];
 }

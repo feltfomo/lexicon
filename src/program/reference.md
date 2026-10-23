@@ -1,4 +1,8 @@
-# Program API
+# Program compatibility API
+
+New declarations use [Lexicon factories](../lexicon/reference.md). These exports
+translate legacy syntax into that compiler. Native module results may use imports
+where the former compiler used config; evaluate them through their module system.
 
 All constructors return `spec: aspect`. Optional aspect attributes are
 `homeManager` and `nixos`.
@@ -27,8 +31,8 @@ roster fields are `hosts`, `users`, `membership`, `usersWithUnknownMembership`.
 Direct targets reject unknown fields. Files, links, directories and file-producing
 themes require `target.user`, including callbacks that return empty lists.
 Direct declarations reject ownership claims, including nested file,
-directory-rule and theme claims. Direct NixOS slices concatenate lists,
-recursively merge attribute sets and take the last other value.
+directory-rule and theme claims. Legacy direct NixOS slices are opaque native modules, including functions and paths.
+Ownership-bound slices retain Ownerships merging and its conflicting-scalar errors.
 
 ## Declaration
 
@@ -47,8 +51,9 @@ The declaration is closed: unknown fields are errors.
 | `hosts`, `users`, `exceptHosts`, `exceptUsers`, `when` | Ownership claims | Narrow the declaration |
 
 A `nixos` function receives `{ pkgs, config, host, user }`. Its returned units
-use the ownership unit vocabulary. System slices reject `users` and
+use the ownership unit vocabulary. Ownership-bound system slices reject `users` and
 `exceptUsers`; put a NixOS `users` configuration attribute under `value`.
+Legacy direct slices remain opaque native modules.
 The declaration's host claim wraps its system slices. User claims select home
 payloads and files but are projected out of the system wrapper.
 
@@ -91,7 +96,7 @@ program {
 
 [`examples/program-skills/skills.nix`](../../examples/program-skills/skills.nix)
 combines a system-indexed source tree, editable skill links, and a Home Manager
-bootstrap service in one declaration. The caller supplies `program` and `sources`,
+bootstrap service in one declaration. The canonical example receives the bound `lexicon` function and `sources`,
 an attribute set keyed by Nix system whose values are skill directories.
 
 ## Files

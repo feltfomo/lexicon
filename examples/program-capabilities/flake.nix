@@ -13,18 +13,24 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
       inherit (pkgs) lib;
-      # user is omitted because these declarations never publish home files
-      program = lexicon.lib.programDirect {
+      program = lexicon.lib.lexicon.forTarget {
         target.host = {
           name = "studio";
           inherit system;
         };
       };
-      packageOnly = import ./package.nix { inherit program; };
-      importsOnly = import ./imports.nix { inherit program; };
-      nixosOnly = import ./nixos.nix { inherit program; };
+      packageOnly = import ./package.nix { lexicon = program; };
+      importsOnly = import ./imports.nix { lexicon = program; };
+      nixosOnly = import ./nixos.nix { lexicon = program; };
       empty = program { };
-      packageModule = packageOnly.homeManager { inherit lib pkgs; };
+      packageModule =
+        (lib.evalModules {
+          specialArgs = { inherit pkgs; };
+          modules = [
+            packageOnly.homeManager
+            { options.home.packages = lib.mkOption { type = lib.types.listOf lib.types.package; }; }
+          ];
+        }).config;
       importsModule = importsOnly.homeManager { inherit lib pkgs; };
       nixosModule = nixosOnly.nixos {
         inherit lib pkgs;
@@ -38,7 +44,7 @@
       lib.results = {
         package = {
           outputs = builtins.attrNames packageOnly;
-          package = (builtins.head packageModule.config.home.packages).pname;
+          package = (builtins.head packageModule.home.packages).pname;
         };
         imports = {
           outputs = builtins.attrNames importsOnly;

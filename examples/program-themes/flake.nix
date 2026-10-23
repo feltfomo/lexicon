@@ -11,7 +11,7 @@
     }:
     let
       system = "x86_64-linux";
-      program = lexicon.lib.programDirect {
+      program = lexicon.lib.lexicon.forTarget {
         target = {
           host = {
             name = "studio";
@@ -20,7 +20,7 @@
           user.name = "river";
         };
       };
-      theme = import ./theme.nix { inherit program; };
+      theme = import ./theme.nix { lexicon = program; };
       demo = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [ (import ./configuration.nix { inherit theme; }) ];
@@ -31,7 +31,6 @@
     in
     {
       nixosConfigurations.demo = demo;
-      # these values capture the module interface for this sample
       lib.result = {
         outputs = builtins.attrNames theme;
         inherit destinations;

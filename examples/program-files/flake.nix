@@ -12,8 +12,8 @@
     let
       system = "x86_64-linux";
       program = import ./program-binding.nix { inherit lexicon system; };
-      fileOnly = import ./files.nix { inherit program; };
-      directoryOnly = import ./directory.nix { inherit program; };
+      fileOnly = import ./files.nix { lexicon = program; };
+      directoryOnly = import ./directory.nix { lexicon = program; };
       systemFor =
         declaration:
         nixpkgs.lib.nixosSystem {
@@ -34,7 +34,6 @@
         file = fileSystem;
         directory = directorySystem;
       };
-      # these values capture the module interface for this sample
       lib = {
         file = {
           outputs = builtins.attrNames fileOnly;

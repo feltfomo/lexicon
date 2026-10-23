@@ -152,7 +152,21 @@ let
   defaultHomeDeclaration = builtins.head (declarationsOf defaultHomeFile);
   directoryDestinations = map (declaration: declaration.destination) (declarationsOf directoryOnly);
   themeDestinations = map (declaration: declaration.destination) (declarationsOf themeOnly);
-  packageModule = packageOnly.homeManager homeArgs;
+  packagesOf =
+    module:
+    (lib.evalModules {
+      specialArgs = { inherit pkgs; };
+      modules = [
+        module
+        {
+          options.home.packages = lib.mkOption {
+            type = lib.types.listOf lib.types.package;
+            default = [ ];
+          };
+        }
+      ];
+    }).config.home.packages;
+  packageModule = packagesOf packageOnly.homeManager;
   importsModule = importsOnly.homeManager homeArgs;
   nixosModule = nixosOnly.nixos moduleArgs;
 
@@ -211,7 +225,7 @@ let
     let
       evaluated = (lazyDirect { pkg = packages: packages.hello; }).homeManager homeArgs;
     in
-    evaluated.imports == [ ] && builtins.length evaluated.config.home.packages == 1
+    builtins.length (packagesOf evaluated) == 1
   );
 
   topClaimFails = fails (direct {
@@ -372,7 +386,7 @@ let
   };
   denResult = builtins.tryEval (builtins.deepSeq (declarationsOfWith aliceArgs denFile) true);
   denDeclarations = if denResult.success then declarationsOfWith aliceArgs denFile else [ ];
-  denBindingSource = builtins.readFile ../../src/program/den.nix;
+  denBindingSource = builtins.readFile ../../src/lexicon/default.nix;
 
   sharedSpec = {
     files = [
@@ -401,8 +415,7 @@ in
   public-den-export-exists = builtins.isFunction lexicon.lib.programDen;
 
   direct-package-only-is-sparse =
-    builtins.attrNames packageOnly == [ "homeManager" ]
-    && packageModule.config.home.packages == [ pkgs.hello ];
+    builtins.attrNames packageOnly == [ "homeManager" ] && packageModule == [ pkgs.hello ];
   direct-imports-only-is-sparse =
     builtins.attrNames importsOnly == [ "homeManager" ] && importsModule.imports == [ importedModule ];
   direct-nixos-only-is-sparse-and-ordinary =

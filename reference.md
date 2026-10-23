@@ -10,6 +10,7 @@ set. Curried arguments are applied from left to right.
 | `ownerships` | `{ descriptors ? null, relations ? null, ... }` | Ownership API | `src/ownerships/reference.md` |
 | `registry` | Fleet declaration | Fleet records and lookups | `src/registry/reference.md` |
 | `den` | `{ den, ... }` | Den adapter | `src/den/reference.md` |
+| `lexicon` | Namespace with `configure`, `forTarget`, `forRoster`, `forDen`, `withResolvers` | Bound declaration functions | `src/lexicon/reference.md` |
 | `program` | `{ resolve, resolveSystem, resolvePrepared, filePrincipals, hostUserNames, ... }`, then `spec` | Aspect with optional `homeManager` and `nixos` modules | `src/program/reference.md` |
 | `programDirect` | `{ target, ... }`, then `spec` | Program bound to one explicit target | `src/program/reference.md` |
 | `programOwnerships` | `{ roster, ... }`, then `spec` | Program using ownership selection | `src/program/reference.md` |
@@ -28,8 +29,9 @@ defaults to the flake's nixpkgs library, or `pkgs.lib` for `toml`. `axiom` and
 `krisis` default to the flake's inputs instantiated with that library. Program
 constructors and `furnishRuntime` also accept `mkCoordinator` as an override.
 
-`program` has an optional internal `binding` argument. Consumer declarations
-use `programDirect`, `programOwnerships`, or `programDen` for bound APIs.
+The `program*` exports are compatibility translators. New declarations use
+`lexicon` factories and follow [the DSL contract](src/lexicon/syntax.md).
+Extension authors follow [the definition contract](src/lexicon/definitions.md).
 `praxis` has an internal `_prepareOnly` argument; it is outside the consumer API.
 
 Lexicon exports library constructors, not a Den flake module. A program result

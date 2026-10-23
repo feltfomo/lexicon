@@ -1,19 +1,18 @@
-{ program }:
-program {
-  pkg = pkgs: pkgs.helix;
-  imports = [ { home.sessionVariables.EDITOR = "hx"; } ];
-  nixos.environment.variables.EDITOR = "hx";
-  files = [
+{ lexicon }:
+lexicon {
+  package = pkgs: pkgs.helix;
+  homeManager.imports = [ { home.sessionVariables.EDITOR = "hx"; } ];
+  nixos = [ { value.environment.variables.EDITOR = "hx"; } ];
+  furnish.files = [
     {
-      dest = ".config/helix/config.toml";
-      src = ./config.toml;
+      destination = ".config/helix/config.toml";
+      source = ./config.toml;
     }
   ];
-  # query sources move as one tree while preserving their relative names
-  directories = [
+  furnish.directories = [
     {
-      src = ./queries;
-      dest = ".config/helix/runtime/queries";
+      source = ./queries;
+      destination = ".config/helix/runtime/queries";
     }
   ];
 }

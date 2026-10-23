@@ -64,7 +64,7 @@ let
     ${system} = ./fixtures/sample-tree;
   };
   skills = import ../../examples/program-skills/skills.nix {
-    program = owned;
+    lexicon = owned;
     sources = skillSources;
   };
   aliceDeclarations = declarations alice skills;
@@ -193,7 +193,7 @@ let
     directories = _: [ ];
   };
   directSkills = import ../../examples/program-skills/skills.nix {
-    program = direct;
+    lexicon = direct;
     sources = skillSources;
   };
   skillHome = (directSkills.homeManager alice).imports;
@@ -207,8 +207,10 @@ in
       "nixos"
     ];
   context-skills-two-host-user-targets =
-    builtins.length aliceDeclarations == 6
-    && builtins.length bobDeclarations == 6
+    builtins.length aliceDeclarations == 12
+    && builtins.length bobDeclarations == 12
+    && builtins.length (external aliceDeclarations) == 9
+    && builtins.length (external bobDeclarations) == 9
     && builtins.all (
       entry: entry.authority.identity == "alice" && entry.filesystemNamespace == "${system}/workstation"
     ) aliceDeclarations

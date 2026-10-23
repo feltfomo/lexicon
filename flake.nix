@@ -75,6 +75,43 @@
           ownerships = withDependencies ./src/ownerships;
           furnish = withDependencies ./src/furnish;
           furnishRuntime = withRuntimeDependencies ./src/furnish/runtime.nix;
+          lexicon =
+            let
+              make = args: withCoordinator ./src/lexicon args;
+              factories = [
+                "forDen"
+                "forRoster"
+                "forTarget"
+                "withResolvers"
+              ];
+              configure =
+                {
+                  extensions ? [ ],
+                }:
+                let
+                  environment = (make { }).configure { inherit extensions; };
+                in
+                (lib.genAttrs factories (
+                  name: args:
+                  let
+                    deps = builtins.intersectAttrs (lib.genAttrs [ "lib" "axiom" "krisis" "mkCoordinator" ] (
+                      _: null
+                    )) args;
+                  in
+                  (
+                    if builtins.attrNames deps == [ ] then
+                      environment
+                    else
+                      (make deps).configure { inherit extensions; }
+                  ).${name}
+                    (removeAttrs args (builtins.attrNames deps))
+                ))
+                // {
+                  inherit (environment) ownerships;
+                };
+              lib = inputs.nixpkgs.lib;
+            in
+            { inherit configure; } // configure { };
           program = withCoordinator ./src/program.nix;
           programDirect = withCoordinator ./src/program/direct.nix;
           programOwnerships = withCoordinator ./src/program/ownerships.nix;
@@ -347,6 +384,18 @@
               inherit (inputs) nixpkgs;
             };
             registry = gate "registry-tests" registryTests;
+            declarations-public = gate "declaration-public-tests" (
+              import ./tests/declarations/public.nix {
+                inherit
+                  lib
+                  pkgs
+                  axiom
+                  krisis
+                  ;
+                lexicon = inputs.self;
+              }
+            );
+            declarations = gate "declaration-tests" (import ./tests/declarations { inherit lib axiom krisis; });
             consumers =
               let
                 existing = import ./tests/consumers.nix {

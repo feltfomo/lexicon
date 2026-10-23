@@ -1,11 +1,7 @@
-# a declared directory becomes a concrete file list here. the walk is the only
-# part of the program layer that reads the filesystem, and it is deliberately
-# split in two: prewalkDirectory does everything that does not depend on the
-# resolve context, expandDirectory does the rest. an aspect walks each source
-# once and every user slice reuses the result.
 {
   lib,
   axiom,
+  krisis,
   fields,
   problem,
   directoryShapeErrors,
@@ -14,9 +10,9 @@
 let
   inherit (fields) joinSource lifecycleKeysAttrs;
 
-  # every diagnostic here labels itself with the index of the declaration it
-  # came from, so the label is built in one place.
-  subjectAt = index: "directories[" + toString index + "]";
+  subjectAt =
+    index:
+    if builtins.isList index then krisis.renderPath index else "directories[" + toString index + "]";
 
   excludedBy =
     exclusions: name:
@@ -97,10 +93,6 @@ let
     in
     if lib.hasPrefix prefix sourceString then lib.removePrefix prefix sourceString else null;
 
-  # the read-only directory walk (readDir recursion, membership inventory) plus
-  # the shape/source checks that gate it. all of it is ctx-independent, so the
-  # aspect closure computes it once per directory and the per-user slices thread
-  # the result through instead of re-walking the source for every user.
   prewalkDirectory =
     wrapped:
     let
@@ -229,10 +221,6 @@ let
       files = if errors == [ ] then map (fileFor { }) inheritedNames ++ selectedFiles else [ ];
     };
 
-  # the prewalk table is built from the same declaration list the resolved
-  # entries came from, so a missing index means the two drifted. this used to
-  # fall back to an empty walk, which turned that drift into a directory that
-  # silently contributed no files.
   prewalkFor =
     prewalked: index:
     prewalked.${builtins.toString index} or (throw (

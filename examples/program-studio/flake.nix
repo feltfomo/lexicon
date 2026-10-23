@@ -14,7 +14,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       inherit (pkgs) lib;
       program = import ./program-binding.nix { inherit lexicon system; };
-      helix = import ./helix.nix { inherit program; };
+      helix = import ./helix.nix { lexicon = program; };
       homeOptions =
         { lib, ... }:
         {
@@ -64,7 +64,6 @@
         assert home.sessionVariables.EDITOR == "hx";
         "touch $out"
       );
-      # these values capture the module interface for this sample
       lib.result = {
         outputs = builtins.attrNames helix;
         package = (builtins.head home.packages).pname;
