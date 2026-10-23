@@ -53,7 +53,7 @@ Registration belongs at factory construction, outside aspect files. The injected
 | `nixos` | Ownership-unit list or context function returning that list | System adapter and NixOS |
 | `homeManager` | Native module record or module function | Home Manager adapter |
 | `furnish` | Annotated block containing optional resource collections | Furnish subsystem |
-| `theme` | Annotated existing theme declaration | Theme subsystem |
+| `theme` | Annotated theme record or context function returning that record | Theme subsystem |
 
 `package` and native `homeManager` are specialized fields, not additional annotation-bearing record containers. Their enclosing declaration supplies shared annotations. Built-in convenience fields use the same registration and output contracts as external definitions.
 
@@ -100,7 +100,7 @@ Use Axiom's `src/schema.nix`, `src/registry.nix` and `src/validation.nix` throug
 
 Static directory preparation is a specific retained contract. The existing directory compiler separates a shared inventory from selection-dependent expansion, and inactive override names remain reserved. Preserve that behavior and its forcing boundaries while moving it behind a definition. Don't make arbitrary extension payloads eager under the name of preparation. Context-produced directories prepare only within their selected slice.
 
-A context collection receives the existing `{ pkgs, config, host, user }` values plus explicitly configured selection context. Resource callbacks run in the NixOS resource bridge. Definitions with multiple outputs explicitly project contextual branches; Home Manager evaluation must never invoke a resource callback with Home Manager config. See definitions.md for branch projection and `context.output`. Static collections remain lists. Record fields such as `source` remain data. Only registered callback boundaries invoke functions; no recursive function discovery. A whole `furnish` callback is outside this scope.
+A registered context callback receives the existing `{ pkgs, config, host, user }` values plus explicitly configured selection context. Resource callbacks run in the NixOS resource bridge. Definitions with multiple outputs explicitly project contextual branches; Home Manager evaluation must never invoke a resource callback with Home Manager config. See definitions.md for branch projection and `context.output`. Static collections remain lists; static themes remain records. Record fields such as `source` remain data. Only registered callback boundaries invoke functions; no recursive function discovery. A whole `furnish` callback is outside this scope.
 
 Errors name the authored location, such as `furnish.links[0].source`. Expanded outputs retain their origin. Krisis adds context to callback failures without replacing the original exception. No deep forcing, arbitrary payload serialization or `tryEval` conversion merely to improve a message.
 
@@ -125,6 +125,8 @@ Managed files and directories use individual records. No source-directory discov
 `homeManager` retains native `imports`, `options`, `config`, `_module`, and ordinary module arguments. Bound host/user injection applies to the declared function; nested imports receive ordinary module arguments.
 
 `nixos` retains system ownership units. Native module content belongs under each unit's `value`, keeping ownership `users` distinct from native `users.users`. Canonical syntax accepts a list or registered context callback returning a list. A system unit cannot select users. The built-in unit adapter preserves its current Ownerships selection/merge before emitting a native module contribution; ordinary native contribution lists keep native module merging.
+
+Theme accepts a static record or a context function returning that same record. The function receives the selected resource context, including NixOS `config`, `pkgs`, `host`, `user` and configured selection axes. Ancestor selection and output projection happen before invocation. Returned annotations then constrain the theme and its descendants; they cannot prevent the callback invocation that produces them. Returning another function is an error. A callback requires a concrete user target even when it returns an empty theme.
 
 Theme remains top-level because it owns renderer behavior and runtime publication. It emits user-owned theme plans through the shared resource contract; the resource backend assembles retained resources and host runtime modules without changing their principal. Bootstrap services stay native. A declaration needn't install a package to publish files.
 

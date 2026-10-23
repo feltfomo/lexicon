@@ -265,6 +265,7 @@ let
   compiler = import ../../src/declarations { inherit lib axiom krisis; };
   owners = import ../../src/lexicon/resources.nix { inherit lib axiom krisis; };
   internal = compiler.configure {
+    extensions = [ extension ];
     blocks = import ../../src/lexicon/builtins.nix {
       inherit lib axiom krisis;
       resources = owners;
@@ -281,6 +282,7 @@ let
       scope = "user";
       outputs = [ "resources" ];
       context = args // {
+        role.name = "desktop";
         output = "resources";
       };
     };
@@ -290,6 +292,7 @@ let
       scope = "user";
       outputs = [ "resources" ];
       context = args // {
+        role.name = "desktop";
         output = "resources";
       };
     };
@@ -457,6 +460,26 @@ let
         furnish
         executor
         link
+        ;
+    })
+    // (import ./contextual-theme.nix {
+      inherit
+        lib
+        pkgs
+        lexicon
+        owned
+        direct
+        hostTarget
+        target
+        args
+        roster
+        declarations
+        fails
+        plans
+        validate
+        locations
+        owners
+        compiler
         ;
     })
     // {

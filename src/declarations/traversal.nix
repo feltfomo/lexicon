@@ -77,6 +77,41 @@ let
           else
             validation.success inactive;
       }
+    else if node.kind == "contextual" then
+      if !builtins.isFunction raw then
+        prepare node.item path raw
+      else
+        {
+          structural = validation.success true;
+          claimPaths = [ ];
+          origins = path;
+          structure = raw;
+          scopeResult = _: validation.success true;
+          bindSelection =
+            args: context:
+            krisis.withErrorContext "lexicon callback at ${krisis.renderPath path}" (
+              let
+                result = raw (removeAttrs context [ "mergeSystem" ]);
+                shape = validation.fromDiagnostics (lib.optional (builtins.isFunction result) (
+                  at path "callback-result" "context callback must return data, not another function"
+                )) result;
+              in
+              validation.andThen (
+                value:
+                let
+                  child = prepare node.item path value;
+                  direct = validation.fromDiagnostics (lib.optionals args.direct (
+                    map (
+                      claim: at claim "direct-annotation" "direct binding rejects ownership annotations"
+                    ) child.claimPaths
+                  )) true;
+                in
+                validation.andThen (_: child.bindSelection args context) (
+                  validation.andThen (_: child.scopeResult args) (validation.andThen (_: direct) child.structural)
+                )
+              ) shape
+            );
+        }
     else
       let
         record =
@@ -198,19 +233,16 @@ let
           };
         collection =
           let
-            dynamic = node.contextual && builtins.isFunction raw;
-            shape = validation.fromDiagnostics (lib.optional (!builtins.isList raw && !dynamic) (
-              at path "collection-shape" "expected a list or permitted context callback"
+            shape = validation.fromDiagnostics (lib.optional (!builtins.isList raw) (
+              at path "collection-shape" "expected a list"
             )) raw;
-            items = lib.imap0 (index: value: prepare node.item (path ++ [ index ]) value) (
-              if dynamic then [ ] else shape.value
-            );
+            items = lib.imap0 (index: value: prepare node.item (path ++ [ index ]) value) shape.value;
             structural = validation.andThen (_: collect (map (item: item.structural) items)) shape;
           in
           {
             inherit structural;
             claimPaths = builtins.concatMap (item: item.claimPaths) items;
-            origins = if dynamic then path else map (item: item.origins) items;
+            origins = map (item: item.origins) items;
             structure = raw;
             scopeResult =
               args:
@@ -218,37 +250,12 @@ let
             bindSelection =
               args:
               let
-                staticBindings = map (item: item.bindSelection (childArgs args)) items;
+                bindings = map (item: item.bindSelection (childArgs args)) items;
               in
               context:
-              let
-                callbackItems =
-                  let
-                    result = raw (removeAttrs context [ "mergeSystem" ]);
-                    list = validation.fromDiagnostics (lib.optional (!builtins.isList result) (
-                      at path "callback-result" "context callback must return a list"
-                    )) result;
-                  in
-                  validation.andThen (
-                    values:
-                    let
-                      prepared = lib.imap0 (index: value: prepare node.item (path ++ [ index ]) value) values;
-                    in
-                    validation.map (_: prepared) (collect (map (item: item.scopeResult (childArgs args)) prepared))
-                  ) list;
-                bindings =
-                  if dynamic then
-                    validation.map (items: map (item: item.bindSelection (childArgs args)) items) callbackItems
-                  else
-                    validation.success staticBindings;
-                selected = validation.andThen (
-                  selects: validation.sequence (map (select: select context) selects)
-                ) bindings;
-                result = validation.map (
-                  values: { selected = true; } // bundle (builtins.filter (value: value.selected) values)
-                ) selected;
-              in
-              krisis.withErrorContext "lexicon collection at ${krisis.renderPath path}" result;
+              validation.map (
+                values: { selected = true; } // bundle (builtins.filter (value: value.selected) values)
+              ) (validation.sequence (map (select: select context) bindings));
           };
         recordMap =
           let

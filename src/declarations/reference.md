@@ -5,7 +5,7 @@ contribution validation. Public Lexicon factories bind it through `src/lexicon`.
 selected contributions through the shared composition stage.
 
 Import it with `{ lib, axiom, krisis }`. `definitions` provides `record`,
-`collection`, `recordMap`, `value`, `native`, `recursive`, `forOutputs`, `mkSetDescriptor` and
+`collection`, `contextual`, `recordMap`, `value`, `native`, `recursive`, `forOutputs`, `mkSetDescriptor` and
 `mkPredicateDescriptor`. `configure { extensions = []; blocks = []; }` validates
 registrations and returns the compiled `blocks`, configured `ownerships` and
 `bind` function. `blocks` supplies built-ins; extensions are ordinary imported
@@ -28,6 +28,7 @@ Node constructors accept these arguments:
 | --- | --- |
 | `record` | Optional Axiom `fields`, node-valued `children`, and `prepare` function |
 | `collection` | Required `item`; optional `contextual = true` permits callbacks |
+| `contextual` | One record, collection or record-map node; permits one callback returning its data shape |
 | `recordMap` | Required `item` and `key = name: bool` |
 | `value` | One Axiom field specification |
 | `native` | Required diagnostic `owner` and shallow `validate` predicate |
@@ -47,8 +48,13 @@ The bound `prepare declaration` returns `{ compile, validate, structure }`.
 `validate` returns an Axiom result; `compile` finishes it through Krisis. Invoke
 `compile { scope = "user"; context = ...; }` repeatedly for the same declaration.
 Static record preparation and prepared Ownerships selectors are retained across
-contexts. Collections produced by callbacks prepare within their selected context.
+contexts. Records and collections produced by callbacks prepare within their selected context.
 Independent validation failures accumulate in declared order before lowering.
+Contextual wrappers add no annotation boundary. Their callbacks run after ancestor
+selection and output projection, then validate the returned data at the same path.
+Returned claims narrow descendants; a returned function fails without invocation.
+Legacy contextual collections normalize to this owner.
+
 Static scope prohibitions run before selection; callback-produced records receive
 the same check after their callback runs. Callbacks and lowering receive context with its compilation `scope` supplied by
 the compiler. Ownership predicates retain Ownerships' registered-axis context.

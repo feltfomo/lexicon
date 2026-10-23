@@ -16,6 +16,10 @@ let
   constructors = {
     record = args: args // { kind = "record"; };
     collection = args: args // { kind = "collection"; };
+    contextual = item: {
+      kind = "contextual";
+      inherit item;
+    };
     recordMap = args: args // { kind = "record-map"; };
     value = field: {
       kind = "value";
@@ -77,7 +81,12 @@ let
           node:
           if !builtins.isAttrs node then
             false
-          else if (node.kind or null) == "projection" then
+          else if
+            builtins.elem (node.kind or null) [
+              "projection"
+              "contextual"
+            ]
+          then
             productive (node.item or { })
           else
             builtins.elem (node.kind or null) [
@@ -107,6 +116,7 @@ let
                 "value"
                 "native"
                 "projection"
+                "contextual"
               ]
             );
           })
@@ -134,6 +144,7 @@ let
             item = field path "item" builtins.isAttrs;
             key = field path "key" builtins.isFunction;
           };
+          contextual.item = field path "item" builtins.isAttrs;
           projection = {
             item = field path "item" builtins.isAttrs;
             outputs = field path "outputs" (
@@ -179,7 +190,22 @@ let
             fields = forceFields path node.fields;
             inherit children;
           };
-          collection = node // {
+          collection =
+            let
+              item = node // {
+                contextual = false;
+                validated = item.item.validated;
+                item = compileNode annotations references (path ++ [ "item" ]) node.item;
+              };
+            in
+            if node.contextual then
+              {
+                kind = "contextual";
+                inherit item;
+              }
+            else
+              item;
+          contextual = node // {
             item = compileNode annotations references (path ++ [ "item" ]) node.item;
           };
           "record-map" = node // {
@@ -211,9 +237,20 @@ let
               "collection"
               "record-map"
               "projection"
+              "contextual"
             ]
           then
-            compiled.${node.kind}.item.validated
+            checked (lib.optional
+              (
+                node.kind == "contextual"
+                && !builtins.elem compiled.contextual.item.kind [
+                  "record"
+                  "collection"
+                  "record-map"
+                ]
+              )
+              (at path "contextual-node" "contextual requires a record, collection or record map")
+            ) compiled.${node.kind}.item.validated
           else if node.kind == "value" then
             builtins.seq compiled.value.field true
           else
@@ -366,9 +403,11 @@ let
           false
         else if node.kind == "native" then
           builtins.elem "homeManager" allowed && builtins.elem "resources" allowed
-        else if node.kind == "collection" then
-          (node.contextual && builtins.elem "homeManager" allowed && builtins.elem "resources" allowed)
+        else if node.kind == "contextual" then
+          (builtins.elem "homeManager" allowed && builtins.elem "resources" allowed)
           || ambiguous allowed node.item
+        else if node.kind == "collection" then
+          ambiguous allowed node.item
         else if node.kind == "record-map" then
           ambiguous allowed node.item
         else if node.kind == "record" then

@@ -12,6 +12,7 @@ let
     record
     collection
     recordMap
+    contextual
     native
     value
     ;
@@ -213,10 +214,14 @@ in
     name = "theme";
     scope = "user";
     outputs = [ "resources" ];
-    node = themeNode;
+    node = contextual themeNode;
     resourceIntent =
       structure:
-      if structure ? templates && builtins.isList structure.templates && structure.templates == [ ] then
+      if builtins.isFunction structure then
+        true
+      else if
+        structure ? templates && builtins.isList structure.templates && structure.templates == [ ]
+      then
         report.checked (
           lib.optional (!resources.fields.validBaseName (structure.id or null)) (
             report.at [ "theme" "id" ] "theme-id" "theme.id must be a normalized nonempty name"

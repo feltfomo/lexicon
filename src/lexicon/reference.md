@@ -40,6 +40,24 @@ relative paths. Either empty list emits no links while still validating the grou
 Individual `source`/`destination` records remain supported. Group and individual
 fields cannot be mixed. Furnish still owns containment, collisions and retirement.
 
+Theme records can also use the selected resource context.
+
+```nix
+theme = { pkgs, ... }: {
+  id = "panel";
+  reload = "${pkgs.procps}/bin/pkill -USR2 waybar";
+  renderers.noctalia = {
+    source = ./palette.tmpl;
+    output = ".config/waybar/colors.css";
+  };
+};
+```
+
+Static `theme = { ... };` remains supported. Context callbacks receive NixOS
+`config`, selected `pkgs`, `host`, `user` and configured selection axes. Returned
+annotations apply after invocation. Ancestor claims and unrequested output bridges
+can skip invocation entirely. Even an empty callback result requires a user target.
+
 [Syntax](syntax.md) defines records and annotations. The [definition contract](definitions.md)
 explains extension registration, selection, preparation and typed outputs. Built-ins
 are registered in builtins.nix. `tests/declarations/fixtures/bookmarks.nix` is a
