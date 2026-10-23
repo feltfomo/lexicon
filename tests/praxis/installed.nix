@@ -29,11 +29,14 @@ pkgs.runCommandLocal "praxis-installed-consumer"
     ];
   }
   ''
-    export HOME="$TMPDIR/home"
+    set -euo pipefail
+    original_home="$HOME"
+    export XDG_CACHE_HOME="$TMPDIR/cache"
+    export NIX_USER_CONF_FILES=/dev/null
     export NIX_CONFIG='experimental-features = nix-command flakes pipe-operators'
-    mkdir -p "$HOME" "$TMPDIR/empty"
+    mkdir -p "$XDG_CACHE_HOME" "$TMPDIR/empty"
 
-    # outside any project: identity and help work, declarations are unavailable
+    # identity and help also work outside a project
     cd "$TMPDIR/empty"
     test "$(praxis --version)" = 'praxis 1.0.0'
     praxis help > help
@@ -143,7 +146,7 @@ pkgs.runCommandLocal "praxis-installed-consumer"
 
     # an ordinary invocation realizes the packages its declaration references
     probe_project="$test_root/build/project"
-    mkdir -p "$probe_project" "$test_root/tmp/home"
+    mkdir -p "$probe_project" "$test_root$HOME" "$test_root$XDG_CACHE_HOME"
     cd "$probe_project"
     cat > flake.nix <<'FLAKE'
     {
@@ -174,7 +177,7 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       printf 'unique package unexpectedly existed before praxis probe: %s\n' "$unique_path" >&2
       exit 1
     fi
-    if ! env HOME=/tmp/home NIX_REMOTE='local?state=/tmp/nix-state&log=/tmp/nix-log' nix run --store "$test_store" --impure --file ./run-praxis.nix praxis -- probe > probe.stdout 2> probe.stderr; then
+    if ! env NIX_REMOTE='local?state=/tmp/nix-state&log=/tmp/nix-log' nix run --store "$test_store" --impure --file ./run-praxis.nix praxis -- probe > probe.stdout 2> probe.stderr; then
       cat probe.stderr >&2
       exit 1
     fi
@@ -186,7 +189,7 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       exit 1
     fi
 
-    # a flake that does not expose Praxis is reported exactly, without skipping upward
+    # a flake without praxis stops discovery at its own root
     mkdir -p "$TMPDIR/parent/child"
     cp "$TMPDIR/imported/flake.nix" "$TMPDIR/parent/flake.nix"
     cp "$TMPDIR/imported/praxis.nix" "$TMPDIR/parent/praxis.nix"
@@ -225,5 +228,6 @@ pkgs.runCommandLocal "praxis-installed-consumer"
     ! praxis list > stdout 2> stderr
     grep -F 'praxis: could not prepare' stderr
 
+    test "$HOME" = "$original_home"
     touch "$out"
   ''

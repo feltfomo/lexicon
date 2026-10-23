@@ -2,7 +2,13 @@
 let
   inherit (pkgs) lib;
   axiom = lexicon.inputs.axiom.lib.axiom { inherit lib; };
-  krisis = lexicon.inputs.krisis.lib.krisis { inherit lib axiom; };
+  inherit
+    (import ../../src/dependencies.nix {
+      inherit lib axiom;
+      krisisSource = lexicon.inputs.krisis;
+    })
+    krisis
+    ;
   encoder = import ../../src/toml/encode.nix { inherit lib axiom krisis; };
   toml = lexicon.lib.toml { inherit pkgs; };
   diagnostics =

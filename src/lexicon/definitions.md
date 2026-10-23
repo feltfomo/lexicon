@@ -107,4 +107,4 @@ The fixture must exercise the role annotation on both `bookmarks` and built-in F
 
 Inactive blocks and entries contain throwing callbacks and sources to detect premature forcing. Native payloads contain ownership-like names to detect accidental traversal. Test original authored indexes after filtering and expansion. A malformed definition fails before its lower callback can run.
 
-Use Axiom validation results throughout staged composition and Krisis to report diagnostics. Callback exceptions keep their original exception with evaluation context. Never deep-force application payloads to print a registry error.
+Public field specifications retain Axiom's schema interpretation and result shape. The declaration reporting boundary converts those results once into native Krisis computations and explicit Checked values. Remaining traversal stages retain Axiom composition until their owners migrate. Extensions receive the compatible Krisis view from the same dependency owner. Callback exceptions keep their original exception with evaluation context. Never deep-force application payloads to print a registry error.

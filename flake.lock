@@ -116,24 +116,39 @@
     },
     "krisis": {
       "inputs": {
-        "axiom": [
-          "axiom"
-        ],
         "flake-parts": "flake-parts_3",
+        "nix-effects": "nix-effects",
         "nixpkgs": "nixpkgs_2",
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1788630352,
-        "narHash": "sha256-dGkqA7FUrDO+Q6LJ+7m2QWg+pKeBwX5da37O8HUBWT8=",
+        "lastModified": 1792793189,
+        "narHash": "sha256-Pm212+lx384qNnyq6YyXnaP4+J/yuiNPtDBeTYzqD90=",
         "owner": "feltfomo",
         "repo": "krisis",
-        "rev": "730e7b58602807ad781c8c0f2009cecc8976532b",
+        "rev": "c8c71c0a81012ebfc2d82a5c65da5ed8b8c195f0",
         "type": "github"
       },
       "original": {
         "owner": "feltfomo",
         "repo": "krisis",
+        "type": "github"
+      }
+    },
+    "nix-effects": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783166429,
+        "narHash": "sha256-oktsDBoufvZS0cKlo8sMFV2j/KmN+ZPrtzOZ6ioaDQk=",
+        "owner": "kleisli-io",
+        "repo": "nix-effects",
+        "rev": "55ec2657c3c37e178c7730992a0f510739c1f945",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kleisli-io",
+        "repo": "nix-effects",
+        "rev": "55ec2657c3c37e178c7730992a0f510739c1f945",
         "type": "github"
       }
     },

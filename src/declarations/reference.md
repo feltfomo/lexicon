@@ -45,7 +45,12 @@ selects every declaration and rejects registered ownership keys. This internal
 binding takes already-constructed context; public adapters own context enrichment.
 
 The bound `prepare declaration` returns `{ compile, validate, structure }`.
-`validate` returns an Axiom result; `compile` finishes it through Krisis. Invoke
+`validate` returns an Axiom result; `compile` finishes it through the shared native
+Krisis bridge. `src/dependencies.nix` supplies the compatible extension view and
+native instance. The reporting boundary retains Axiom's field interpreter and
+converts its result into a computation yielding `Valid` or `Invalid`. Invalid
+results have no value. Successful values cross effect boundaries in public thunk
+carriers. Invoke
 `compile { scope = "user"; context = ...; }` repeatedly for the same declaration.
 Static record preparation and prepared Ownerships selectors are retained across
 contexts. Records and collections produced by callbacks prepare within their selected context.

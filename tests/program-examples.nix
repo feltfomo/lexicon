@@ -3,6 +3,11 @@ let
   system = "x86_64-linux";
   pkgs = nixpkgs.legacyPackages.${system};
   inherit (pkgs) lib;
+  dependencies = import ../src/dependencies.nix {
+    inherit lib;
+    axiom = lexicon.inputs.axiom.lib.axiom { inherit lib; };
+    krisisSource = lexicon.inputs.krisis;
+  };
   examples = import ../examples/program-suite.nix { inherit lexicon nixpkgs; };
   minimalOutput = (import ../examples/program-minimal/flake.nix).outputs { inherit lexicon nixpkgs; };
   filesOutput = (import ../examples/program-files/flake.nix).outputs { inherit lexicon nixpkgs; };
@@ -154,11 +159,7 @@ let
       pkgs
       lexicon
       ;
-    axiom = lexicon.inputs.axiom.lib.axiom { inherit lib; };
-    krisis = lexicon.inputs.krisis.lib.krisis {
-      inherit lib;
-      axiom = lexicon.inputs.axiom.lib.axiom { inherit lib; };
-    };
+    inherit (dependencies) axiom krisis;
   };
   fileManifest = filesOutput.nixosConfigurations.file.config.lexicon.furnish.manifestData;
   firstFile = builtins.head fileManifest;

@@ -89,7 +89,7 @@ Roster and Den bindings may accept `selectionContext = args: extraContext` for a
 
 ## Evaluation and validation
 
-Use Axiom's `src/schema.nix`, `src/registry.nix` and `src/validation.nix` through the injected Axiom API. Use its runtime types when nested data needs them. Use Krisis diagnostic factories, reporters, structured paths and contextual evaluation. Axiom's `language/` is excluded. These dependencies already exist; this refactor doesn't require new libraries.
+Use the injected Axiom API for public field schemas and retained collision-validating registries. The declaration reporting boundary converts Axiom results to native Krisis computations through the shared dependency owner. Extension arguments retain the old-facing Krisis view, including diagnostic factories, reporters, structured paths and contextual evaluation. Axiom's `language/` is excluded. Internal effect dependencies aren't declaration fields.
 
 1. Compile and validate registrations. Freeze the vocabulary and deterministic order. Reject malformed definitions and collisions before creating lookup maps.
 2. Check the declaration record and immediate known field/container shapes. Validate annotation shapes at reachable declared nodes. Don't force native bodies or resource sources to discover vocabulary.

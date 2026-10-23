@@ -26,7 +26,11 @@ Program theme fields are specified in `src/program/theme/reference.md`.
 
 Except for `mkCoordinator`, constructors accept dependency overrides. `lib`
 defaults to the flake's nixpkgs library, or `pkgs.lib` for `toml`. `axiom` and
-`krisis` default to the flake's inputs instantiated with that library. Program
+`krisis` default to the flake's inputs instantiated with that library. The dependency
+owner imports Krisis's public corrected nix-effects source and shares that effect
+instance with native Krisis and the compatibility adapter. Consumers don't pass
+`fx`. Extensions retain the old-facing Krisis operations; an explicit old Krisis
+provider participates through the same adapter. Program
 constructors and `furnishRuntime` also accept `mkCoordinator` as an override.
 
 The `program*` exports are compatibility translators. New declarations use

@@ -33,7 +33,15 @@ let
           project.praxis;
       lib = pkgs.lib;
       axiom = import ${axiomSource}/src { inherit lib; };
-      krisis = import ${krisisSource}/src { inherit lib axiom; };
+      krisisInput.lib = {
+        qualifiedNixEffectsSource = ${krisisSource.lib.qualifiedNixEffectsSource};
+        krisis = import ${krisisSource}/src;
+      };
+      dependencies = import ${lexiconSource}/src/dependencies.nix {
+        inherit lib axiom;
+        krisisSource = krisisInput;
+      };
+      inherit (dependencies) krisis;
       result = import ${lexiconSource}/src/praxis.nix (
         {
           inherit

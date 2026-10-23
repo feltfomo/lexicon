@@ -8,7 +8,7 @@ let
     severity = "error";
     codePrefix = "lexicon";
   };
-  reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
+  reporter = krisis.effects.reporter { formatDiagnostic = krisis.renderPlain; };
   at =
     path: code: message:
     problem {

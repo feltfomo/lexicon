@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""compare equal projections with a fixed sample schedule"""
+
+import argparse
+import json
+from pathlib import Path
+import statistics
+import subprocess
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--baseline", required=True)
+    parser.add_argument("--candidate", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    args.output.mkdir(parents=True, exist_ok=False)
+    sources = {"baseline": args.baseline, "candidate": args.candidate}
+    comparisons = []
+    for component in ("ownerships", "registry", "declaration", "resource", "toml", "praxis"):
+        for size in (4, 16, 64):
+            records = {"baseline": [], "candidate": []}
+            digest = None
+            schedule = [("warm", "baseline"), ("warm", "candidate")]
+            for pair in range(3):
+                order = ("baseline", "candidate") if pair % 2 == 0 else ("candidate", "baseline")
+                schedule.extend((str(pair), side) for side in order)
+            for repetition, side in schedule:
+                target = args.output / f"{component}-{size}-{repetition}-{side}"
+                subprocess.run([
+                    sys.executable, str(Path(__file__).with_name("observe.py")),
+                    "--source", sources[side], "--component", component,
+                    "--size", str(size), "--output", str(target),
+                ], check=True)
+                record = json.loads((target / "record.json").read_text())
+                if not record["admitted"] or not record["process_released"]:
+                    raise RuntimeError(f"unusable sample {target}")
+                if digest is None:
+                    digest = record["sha256"]
+                elif digest != record["sha256"]:
+                    raise RuntimeError(f"projection mismatch {target}")
+                if repetition != "warm":
+                    records[side].append(record)
+            medians = {
+                side: {metric: statistics.median(record[metric] for record in samples)
+                       for metric in ("wall_seconds", "peak_rss_kib", "output_bytes")}
+                for side, samples in records.items()
+            }
+            baseline, candidate = medians["baseline"], medians["candidate"]
+            comparison = {
+                "component": component, "size": size, "medians": medians,
+                "wall_within_noise": candidate["wall_seconds"] <= baseline["wall_seconds"] * 1.35 + 0.03,
+                "rss_within_noise": candidate["peak_rss_kib"] <= baseline["peak_rss_kib"] * 1.25 + 8192,
+            }
+            comparisons.append(comparison)
+            (args.output / "comparisons.json").write_text(json.dumps(comparisons, indent=2) + "\n")
+
+
+if __name__ == "__main__":
+    main()

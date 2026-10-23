@@ -15,11 +15,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     axiom.url = "github:feltfomo/axiom-nix";
-    # keep schema and validation behavior on one dependency version
-    krisis = {
-      url = "github:feltfomo/krisis";
-      inputs.axiom.follows = "axiom";
-    };
+    krisis.url = "github:feltfomo/krisis";
     # lexicon owns the coordinator version used by its manifests
     furnish-coordinator = {
       url = "github:feltfomo/furnish-coordinator";
@@ -29,6 +25,19 @@
 
   outputs =
     inputs:
+    let
+      dependenciesFor =
+        args:
+        let
+          lib = args.lib or inputs.nixpkgs.lib;
+          axiom = args.axiom or (inputs.axiom.lib.axiom { inherit lib; });
+        in
+        import ./src/dependencies.nix {
+          inherit lib axiom;
+          krisisSource = inputs.krisis;
+          krisis = args.krisis or null;
+        };
+    in
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
         inputs.treefmt-nix.flakeModule
@@ -45,17 +54,7 @@
       # explicit dependency overrides keep isolated fixtures possible
       flake.lib =
         let
-          dependenciesFor =
-            args:
-            let
-              lib = args.lib or inputs.nixpkgs.lib;
-              axiom = args.axiom or inputs.axiom.lib.axiom { inherit lib; };
-              krisis = args.krisis or inputs.krisis.lib.krisis { inherit lib axiom; };
-            in
-            {
-              inherit lib axiom krisis;
-            };
-          withDependencies = path: args: import path (dependenciesFor args // args);
+          withDependencies = path: args: import path (args // dependenciesFor args);
           withCoordinator =
             path: args:
             withDependencies path ({ inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args);
@@ -63,7 +62,7 @@
             path: args:
             import path (
               removeAttrs
-                (dependenciesFor args // { inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args)
+                ({ inherit (inputs.furnish-coordinator.lib) mkCoordinator; } // args // dependenciesFor args)
                 [
                   "lib"
                 ]
@@ -132,8 +131,7 @@
           system = "x86_64-linux";
           pkgs = import inputs.nixpkgs { inherit system; };
           inherit (pkgs) lib;
-          axiom = inputs.axiom.lib.axiom { inherit lib; };
-          krisis = inputs.krisis.lib.krisis { inherit lib axiom; };
+          inherit (dependenciesFor { inherit lib; }) axiom krisis;
 
           merge =
             left: right:
@@ -244,8 +242,7 @@
         { pkgs, ... }:
         let
           inherit (pkgs) lib;
-          axiom = inputs.axiom.lib.axiom { inherit lib; };
-          krisis = inputs.krisis.lib.krisis { inherit lib axiom; };
+          inherit (dependenciesFor { inherit lib; }) axiom krisis;
           ownerships = import ./src/ownerships { inherit lib krisis axiom; };
           praxis = inputs.self.lib.praxis;
           praxisTests = import ./tests/praxis { inherit lib krisis axiom; };
@@ -378,6 +375,12 @@
           apps.lexicon-praxis = praxisCommands.apps.lexicon-praxis;
 
           checks = {
+            effects-contract = gate "effects-contract-tests" (
+              import ./tests/effects-contract.nix {
+                inherit lib axiom krisis;
+                lexicon = inputs.self;
+              }
+            );
             toml-composition = import ./tests/toml {
               inherit pkgs;
               lexicon = inputs.self;
@@ -447,6 +450,7 @@
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
               bashInteractive
+              nix
               praxisCommands.cli
               cargo
               rustc
