@@ -4,6 +4,7 @@
   size,
   bad ? false,
   artifact ? false,
+  initializeReport ? false,
 }:
 let
   project = builtins.getFlake source;
@@ -83,7 +84,30 @@ assert size > 0;
 if artifact then
   workloads.toml
 else
-  {
-    inherit component size;
-    value = if component == "toml" then toString workloads.toml else workloads.${component};
-  }
+  builtins.seq
+    (
+      if initializeReport then
+        (api.report { }).finish {
+          diagnostics = [ ];
+          value = true;
+        }
+      else
+        true
+    )
+    {
+      inherit component size;
+      value =
+        if lib.hasPrefix "fleet-" component || component == "registry-queries" then
+          import ./fleet.nix {
+            inherit
+              project
+              component
+              size
+              bad
+              ;
+          }
+        else if component == "toml" then
+          toString workloads.toml
+        else
+          workloads.${component};
+    }

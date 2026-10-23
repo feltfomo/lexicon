@@ -22,6 +22,7 @@ let
     ;
 
   inherit (krisis) safeShape;
+  inherit (krisis.effects) fromAxiom fromDiagnostics finishComputation;
 
   # every registered axis at its identity - globally owned on all axes. a claim
   # missing an axis key falls back to that axis's top, so untagged == global.
@@ -79,26 +80,41 @@ let
 
   compileStages =
     stages:
-    axiom.validation.finish (diagnostics: throw (builtins.head diagnostics)) (
-      axiom.phases.compile {
-        names = knownViews;
-        registrations = stages;
-        phaseOf =
-          stage:
-          if builtins.isAttrs stage && stage ? view && builtins.isString stage.view then stage.view else null;
-        runnable = stage: builtins.isAttrs stage && stage ? run && builtins.isFunction stage.run;
-        onUnknown =
-          stage: _view:
-          let
-            shownView =
-              if builtins.isAttrs stage && stage ? view then builtins.toJSON stage.view else "<missing>";
-          in
-          "ownerships: unknown stage view ${shownView}";
-        onInvalid = _stage: view: "ownerships: stage for view '${view}' must provide a 'run' function";
-      }
+    finishComputation (diagnostics: throw (builtins.head diagnostics)) (
+      fromAxiom (
+        axiom.phases.compile {
+          names = knownViews;
+          registrations = stages;
+          phaseOf =
+            stage:
+            if builtins.isAttrs stage && stage ? view && builtins.isString stage.view then stage.view else null;
+          runnable = stage: builtins.isAttrs stage && stage ? run && builtins.isFunction stage.run;
+          onUnknown =
+            stage: _view:
+            let
+              shownView =
+                if builtins.isAttrs stage && stage ? view then builtins.toJSON stage.view else "<missing>";
+            in
+            "ownerships: unknown stage view ${shownView}";
+          onInvalid = _stage: view: "ownerships: stage for view '${view}' must provide a 'run' function";
+        }
+      )
     );
 
-  stagesFor = view: stages: (compileStages stages).for view;
+  # raw registrations compile lazily when the first pipeline view is demanded
+  prepareStages =
+    stages:
+    if builtins.isAttrs stages && stages ? _ownershipStages then
+      if
+        builtins.attrNames stages == [ "_ownershipStages" ] && builtins.isFunction stages._ownershipStages
+      then
+        stages
+      else
+        throw "ownerships: invalid prepared stage registration"
+    else
+      { _ownershipStages = (compileStages stages).for; };
+  registerArgs = args: args // { stages = prepareStages args.stages; };
+  stagesFor = view: stages: (prepareStages stages)._ownershipStages view;
 
   # leaf stages retain one trace entry per leaf, but diagnostics flatten in
   # stage-registration order so one rule reports every leaf it rejects before
@@ -117,7 +133,7 @@ let
       }) leaves;
     in
     {
-      value = if diagnostics == [ ] then leaves else throwDiags diagnostics;
+      value = finishChecks diagnostics leaves;
       trace = map (column: column.diagnostics) columns;
       byKey = builtins.listToAttrs (
         map (column: {
@@ -149,7 +165,7 @@ let
       input = if view == "tree" then args.leaves else args.survivors;
     in
     {
-      value = if diagnostics == [ ] then input else throwDiags diagnostics;
+      value = finishChecks diagnostics input;
       trace = entries;
     };
 
@@ -164,8 +180,7 @@ let
   # package or a secret-backed value, so it's never safe to tojson/topretty in
   # full. identify it by label/source when the unit set one; otherwise fall
   # back to safeshape, which only ever lists attribute names and never touches
-  # what they point to. axis/claims are always safe (polarity-set data, plain
-  # strings), so those render in full.
+  # what they point to. claims render only when a diagnostic requests them.
   identifyUnit =
     d:
     if d.label or null != null then
@@ -224,6 +239,9 @@ let
 
   renderDiags = diagnostics: reporter.render (map toDiagnostic diagnostics);
   throwDiags = diagnostics: reporter.fail (map toDiagnostic diagnostics);
+  finishChecks =
+    diagnostics: value:
+    finishComputation reporter.fail (fromDiagnostics (map toDiagnostic diagnostics) value);
 
   # keep the leaves this build's ctx falls under on every axis; dropped leaves are
   # inactive -- silent, not an error. runs after check, so an impossible leaf
@@ -455,7 +473,7 @@ let
       diagnostics = concatMap (entry: entry.diagnostics) entries;
     in
     {
-      value = if diagnostics == [ ] then ctx else throwDiags diagnostics;
+      value = finishChecks diagnostics ctx;
       trace = map (entry: entry.requirements) entries;
       byKey = builtins.listToAttrs (
         map (entry: {
@@ -511,16 +529,18 @@ let
     unit:
     let
       leaves = compose registry unit;
-      leafObservation = observeLeafStages stages registry leaves;
+      registered = prepareStages stages;
+      leafObservation = observeLeafStages registered registry leaves;
       leafChecked = leafObservation.value;
-      treeObservation = observeViewStages "tree" stages {
+      treeObservation = observeViewStages "tree" registered {
         inherit registry;
         leaves = leafChecked;
       };
       treeChecked = treeObservation.value;
     in
     {
-      inherit registry merge stages;
+      inherit registry merge;
+      stages = registered;
       leaves = treeChecked;
       leafObservation = removeAttrs leafObservation [ "value" ];
       treeTrace = treeObservation.trace;
@@ -545,9 +565,7 @@ let
     {
       inherit (merged) value;
       mergeProvenance = merged.provenance;
-      # joined on the leaf key every observation carries. this was a genList
-      # zipping three parallel lists by index, which only held while all three
-      # phases preserved compose order exactly.
+      # authored keys preserve alignment when a later phase filters leaves
       trace = map (
         entry:
         entry
@@ -585,6 +603,8 @@ in
     mkRelationCheck
     defaultStages
     knownViews
+    prepareStages
+    registerArgs
     stageDiagnostics
     selectPrepared
     prepare

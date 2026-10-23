@@ -1,4 +1,4 @@
-# lexicon.lib.registry: the one place a configuration says which hosts and
+# the registry is the one place a configuration says which hosts and
 # users exist. every other subsystem asks this table instead of carrying its
 # own fleet declaration.
 args@{

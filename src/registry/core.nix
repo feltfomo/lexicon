@@ -1,10 +1,5 @@
-# the fleet table and the closed-world lookups over it.
-#
-# two layers produce records: the lexicon declaration and an optional den input.
-# they merge per field with lexicon winning, hosts.<name> = null removes a den
-# host outright, and every record remembers which layers it came from. nothing
-# is forced eagerly: reading root never builds the user table, and building the
-# host table never forces a den user body.
+# layers merge per field with lexicon winning. reading root leaves both tables
+# lazy, and den user bodies remain opaque while constructing either table.
 {
   lib,
   axiom,
@@ -14,13 +9,14 @@
 }:
 let
   ownerships = import ../ownerships { inherit lib axiom krisis; };
-  inherit (axiom) validation;
+  inherit (krisis.effects) native fromDiagnostics accept;
+  inherit (native) validation;
   inherit (fields)
     diagnostic
     hinted
     problem
     failOne
-    finish
+    finishComputation
     ;
 
   canonicalId =
@@ -31,8 +27,6 @@ let
     };
 
   sorted = builtins.sort (a: b: a < b);
-
-  # ---------------------------------------------------------------- den layer
 
   aliasesFor =
     aliasMap: id: builtins.attrNames (lib.filterAttrs (_alias: ids: builtins.elem id ids) aliasMap);
@@ -151,10 +145,8 @@ let
         users = denUsersFrom roster hosts;
       };
 
-  # ------------------------------------------------------------ lexicon layer
-
   # a user written under a host is the same registration written from the other
-  # side: it adds membership, and a home there, without a second top-level entry
+  # side, adding membership and a home without a second top-level entry
   usersFromHosts =
     hosts:
     let
@@ -183,8 +175,6 @@ let
         }) (builtins.filter (entry: entry.declaration.home != null) group)
       );
     }) (builtins.groupBy (entry: entry.userName) entries);
-
-  # ----------------------------------------------------------------- merging
 
   pick = over: under: if over != null then over else under;
 
@@ -261,8 +251,6 @@ let
       }) names
     );
 
-  # -------------------------------------------------------------- dimensions
-
   dimensionDefaults =
     space:
     lib.mapAttrs (_name: dimension: dimension.default) (
@@ -282,7 +270,7 @@ let
         subject = "hosts.${host.name}";
         unknown = builtins.concatMap (
           name:
-          validation.optional (!(space ? ${name})) (
+          lib.optional (!(space ? ${name})) (
             hinted subject "unknown-dimension" "host '${host.name}' sets undeclared dimension '${name}'" name
               declared
           )
@@ -292,7 +280,7 @@ let
           let
             value = host.dimensions.${name};
           in
-          validation.optional (space ? ${name} && !(builtins.elem value space.${name}.values)) (
+          lib.optional (space ? ${name} && !(builtins.elem value space.${name}.values)) (
             hinted subject "dimension-value"
               "host '${host.name}' sets dimension '${name}' to '${value}', which is not a declared value"
               value
@@ -301,27 +289,25 @@ let
         ) (builtins.attrNames host.dimensions);
         missing = builtins.concatMap (
           name:
-          validation.optional (space.${name}.required && !(host.dimensions ? ${name})) (
+          lib.optional (space.${name}.required && !(host.dimensions ? ${name})) (
             diagnostic subject "dimension-required"
               "host '${host.name}' is missing required dimension '${name}'"
           )
         ) declared;
       in
-      validation.collect [
+      lib.concatLists [
         unknown
         values
         missing
       ];
-
-  # -------------------------------------------------------------- host table
 
   hostRecord =
     space: defaultSystem: host:
     let
       system = if host.system != null then host.system else defaultSystem;
       dimensions = dimensionDefaults space // host.dimensions;
-      diagnostics = validation.collect [
-        (validation.optional (system == null) (problem {
+      diagnostics = lib.concatLists [
+        (lib.optional (system == null) (problem {
           code = "host-system-missing";
           message = "host '${host.name}' has no system";
           primary.label = "hosts.${host.name}";
@@ -330,15 +316,13 @@ let
         (dimensionDiagnostics space (host // { inherit dimensions; }))
       ];
     in
-    validation.fromDiagnostics diagnostics {
+    fromDiagnostics diagnostics {
       inherit (host) name origin;
       inherit dimensions;
       system = if system == null then "" else system;
       id = if system == null then host.name else canonicalId system host.name;
       aliases = if host.aliases == null then [ host.name ] else host.aliases;
     };
-
-  # -------------------------------------------------------------- user table
 
   userRecord =
     hostTable: user:
@@ -348,13 +332,13 @@ let
       hosts = if user.hosts == null then [ ] else user.hosts;
       unknownHosts = builtins.concatMap (
         name:
-        validation.optional (!(hostTable ? ${name})) (
+        lib.optional (!(hostTable ? ${name})) (
           hinted subject "unknown-host" "user '${user.name}' lives on unregistered host '${name}'" name known
         )
       ) hosts;
       strayHomes = builtins.concatMap (
         name:
-        validation.optional (!(builtins.elem name hosts)) (
+        lib.optional (!(builtins.elem name hosts)) (
           hinted subject "unknown-host"
             "user '${user.name}' sets a home on '${name}', which is not one of that user's hosts"
             name
@@ -363,8 +347,8 @@ let
       ) (builtins.attrNames user.on);
       home = if user.home == null then "/home/${user.name}" else user.home;
     in
-    validation.fromDiagnostics
-      (validation.collect [
+    fromDiagnostics
+      (lib.concatLists [
         unknownHosts
         strayHomes
       ])
@@ -381,8 +365,6 @@ let
           }) hosts
         );
       };
-
-  # ------------------------------------------------------------ name clashes
 
   duplicates =
     registrations: code: describe:
@@ -405,7 +387,7 @@ let
 
   clashDiagnostics =
     hosts: users:
-    validation.collect [
+    lib.concatLists [
       (duplicates (aliasRegistrations (builtins.attrValues hosts)) "alias-conflict" (
         key: "host name or alias '${key}' is registered more than once"
       ))
@@ -416,8 +398,6 @@ let
         key: "user id '${key}' belongs to more than one registered user"
       ))
     ];
-
-  # ----------------------------------------------------------------- lookups
 
   indexBy =
     records:
@@ -441,7 +421,7 @@ let
 
       strayExclusions = builtins.concatMap (
         name:
-        validation.optional (!(layer.hosts ? ${name})) (
+        lib.optional (!(layer.hosts ? ${name})) (
           hinted "hosts.${name}" "exclude-no-match" "hosts.${name} = null excludes a host no layer declares"
             name
             (builtins.attrNames layer.hosts)
@@ -467,9 +447,7 @@ let
         merge = mergeHost;
       };
 
-      # den only knew these users through their hosts, so excluding a host also
-      # withdraws the membership it implied, and a user left with nothing was
-      # never registered here in the first place
+      # removing the last inherited membership withdraws that den registration.
       denUsers = lib.filterAttrs (_name: user: user.hosts != [ ]) (
         lib.mapAttrs (
           _name: user: user // { hosts = builtins.filter (host: !(builtins.elem host excluded)) user.hosts; }
@@ -483,22 +461,33 @@ let
         merge = mergeLayerUser;
       };
 
-      hostResults = validation.traverseAttrs (
-        _name: hostRecord declaration.dimensions declaration.defaultSystem
-      ) mergedHosts;
+      records =
+        build: entries:
+        validation.andThen (
+          values:
+          accept (
+            builtins.listToAttrs (
+              lib.imap0 (index: name: {
+                inherit name;
+                value = builtins.elemAt values index;
+              }) (builtins.attrNames entries)
+            )
+          )
+        ) (validation.all (map (name: build entries.${name}) (builtins.attrNames entries)));
 
-      hosts = finish (
-        validation.fromDiagnostics (validation.collect [
-          strayExclusions
-          hostResults.diagnostics
-        ]) (hostResults.value or { })
+      hosts = finishComputation (
+        validation.andThen (values: accept (builtins.elemAt values 1)) (
+          validation.all [
+            (fromDiagnostics strayExclusions null)
+            (records (hostRecord declaration.dimensions declaration.defaultSystem) mergedHosts)
+          ]
+        )
       );
 
-      users = finish (validation.traverseAttrs (_name: userRecord hosts) mergedUsers);
+      users = finishComputation (records (userRecord hosts) mergedUsers);
 
-      # name clashes are a property of the whole table, so they are one gate
-      # every lookup passes through rather than a per-record check
-      checked = finish (validation.fromDiagnostics (clashDiagnostics hosts users) true);
+      # all lookups share the fleet's clash validation
+      checked = finishComputation (fromDiagnostics (clashDiagnostics hosts users) true);
 
       hostIndex = indexBy (builtins.attrValues hosts);
       userIndex = indexBy (map (user: user // { idAliases = [ user.id ]; }) (builtins.attrValues users));
@@ -506,7 +495,7 @@ let
       knowsHost = name: builtins.seq checked (hostIndex ? ${name});
       knowsUser = name: builtins.seq checked (userIndex ? ${name});
 
-      # an excluded name is never offered back as a spelling suggestion: the
+      # an excluded name is never offered back as a spelling suggestion, since the
       # answer to a removed host is not the removed host
       hostFor =
         name:
@@ -598,7 +587,6 @@ let
               });
         };
 
-      # kept until ownerships reads its world from this table directly
       roster =
         let
           hostDeclarations = map (

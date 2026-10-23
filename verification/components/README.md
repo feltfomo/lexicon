@@ -45,3 +45,42 @@ Use a quiet machine with no concurrent builds. The small default batch has 144
 evaluations and is expected to finish in minutes. A larger campaign needs a fresh
 readiness review. Preserve source manifests with the evidence; local dependency
 overrides establish provisional integration only.
+
+The fleet comparison selects `fleet-resolve`, `fleet-prepared`, `fleet-custom`,
+`fleet-trace`, `fleet-matrix` and `registry-queries` through `--components`.
+Each runs at 4, 16 and 64 names. The same warm-up, three alternating pairs and
+fixed noise bounds above apply, including allocations at size 4.
+
+Resolve and prepared fixtures use N hosts, one user, N nested units with two
+leaves each, and N contexts. They demand every selected `values` map. Each unit
+has an inactive throwing payload. The custom fixture uses one integer-valued
+axis and N units, demanding the complete merged map. Trace demands its value,
+every leaf key/selection/rejection/check count and stage counts. Matrix demands
+all context selections, coverage and host-pair differences, plus dead and dormant
+counts; it never demands configuration payloads. Registry declares N hosts and
+N users with N memberships each, then performs N usersOn, forSystem, hostsFor and
+homeFor queries. Every projected name and home is checked against an independent
+expected value in the observer. Bad variants enter actual shape/name validators.
+
+`--initialize-report` first finishes one valid value through the public Program
+reporter, then demands the unchanged workload. This sensitivity control exposes
+reporter initialization cost. It doesn't replace the uninitialized baseline or
+authorize subtracting startup from acceptance measurements.
+
+`snapshot.py --root /absolute/repo --output /absolute/scratch/snapshot` copies
+Git-admitted working files, including untracked nonignored files. It verifies
+content, file kinds and executable modes against the source before and after
+copying, and writes the manifest and identity beside the clean `source` tree.
+
+`contracts.py --source path:/absolute/source --output /absolute/scratch/contracts`
+checks real Ownerships factories with callback traces and original exception
+text. Prepared translation runs once; ordinary translation remains per context.
+Both share stage registration. Leaf and matrix stage callback orders are checked
+separately. The probes also cover lazy stage demand, opaque payload/context
+transport, left-to-right custom merges and early failure suppression. `--baseline`
+uses the original registration counts for the Foundation source. The flake's
+`ownerships-observations` check runs these probes with pinned embedded dependency
+sources and a dummy store, retaining stdout, stderr and exits in its output.
+`--reference /absolute/baseline/contracts` also compares the complete terminal
+error text with retained baseline stderr. Callback stack context is checked
+separately from that terminal text.

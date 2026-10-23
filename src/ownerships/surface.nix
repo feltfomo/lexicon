@@ -1,17 +1,3 @@
-# _lib/ownerships/surface.nix
-#
-# the surface aspects author against. its only job is to erase the ceremony the
-# old scoped path needed -- instead of `{ host, user } - let for = scoped.for ...`
-# an aspect hands `resolve` a plain list of self-labeling units, and the build
-# context is read in here, not by the author. a unit carries its owners as
-# ordinary keys (hosts / users / excepthosts / exceptusers / when); whatever's
-# left is its config. untagged means globally owned. this is a thin translator
-# onto the engine's claim tree and holds no resolution logic of its own, so every
-# nesting and conflict guarantee still comes from the engine.
-#
-# every door is one point in a four-axis product -- scope x projection x strict x
-# merge -- and `resolverFor` is the only body. the tables at the bottom name the
-# points worth exporting, so adding or dropping a door is a row, not a function.
 {
   lib,
   krisis,
@@ -22,7 +8,12 @@
 let
   engine = import ./engine.nix { inherit lib krisis axiom; };
   axes = import ./axes.nix { inherit lib krisis axiom; };
-  inherit (axiom) schema validation;
+  inherit (axiom) schema;
+  inherit (krisis.effects)
+    native
+    fromDiagnostics
+    finishComputation
+    ;
 
   unitProblem = krisis.mkDiagnosticFactory {
     severity = "error";
@@ -30,8 +21,6 @@ let
   };
 
   reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
-
-  finish = validation.finish reporter.fail;
 
   failUnit = reporter.failOne;
 
@@ -144,8 +133,7 @@ let
     };
   };
 
-  # claim keys stay a separate earlier stage because their errors are the
-  # descriptor author's own strings, not krisis records
+  # author-key failures suppress unit-schema work and retain their own text
   checkShape =
     unit:
     if !builtins.isAttrs unit then
@@ -155,15 +143,14 @@ let
       })
     else
       let
-        checkedClaims = axes.validateUnitWith descriptorSet.authorKeys unit;
         # a value block routes unambiguously only when it's the sole non-reserved
         # content on the unit -- claims and children still narrow around it
         # exactly as they do around inline config, so only a genuine leftover
         # inline key next to `value` is the ambiguous case.
         leftover = removeAttrs unit reserved;
-        diagnostics = validation.collect [
+        diagnostics =
           (unitSchema unit).diagnostics
-          (validation.optional (unit ? value && leftover != { }) (
+          ++ (lib.optional (unit ? value && leftover != { }) (
             unitProblem (
               {
                 code = "unit-mixed-value";
@@ -171,19 +158,23 @@ let
               }
               // labelOf unit
             )
-          ))
-        ];
+          ));
+        failShape =
+          diagnostics:
+          if builtins.isString (builtins.head diagnostics) then
+            throw (lib.concatStringsSep "\n" diagnostics)
+          else
+            reporter.fail diagnostics;
       in
-      builtins.seq checkedClaims (finish (validation.fromDiagnostics diagnostics unit));
+      finishComputation failShape (
+        native.validation.andThen (_: fromDiagnostics diagnostics unit) (
+          axes.checkUnitWith descriptorSet.authorKeys unit
+        )
+      );
 
   claimOf = axes.claimOf axisDescriptors;
 
-  # the payload riding this leaf is the escape-hatch block verbatim when the unit
-  # used one, otherwise whatever's left after stripping the reserved keys --
-  # same rule as before the hatch existed. two different `value`s share the
-  # word, not the meaning. `checked.value` is the author-facing escape-hatch
-  # key, `payload` becomes the engine leaf's `value` field (the config every
-  # leaf carries, hatch or not) -- don't conflate them.
+  # the value block is opaque payload, including names reserved on the unit
   translateWith =
     profileNames: unit:
     let
@@ -273,7 +264,9 @@ let
     let
       violations = axes.scopeViolationsFor axisDescriptors scope units;
     in
-    if violations == [ ] then true else throw (lib.concatStringsSep "\n" violations);
+    finishComputation (diagnostics: throw (lib.concatStringsSep "\n" diagnostics)) (
+      fromDiagnostics violations true
+    );
 
   # matrix contexts differ only in which entity names the roster projection
   # yields, so the scope picks the constructor and the default ctx together.
@@ -310,6 +303,7 @@ let
       profileArgs ? null,
     }:
     let
+      registered = engine.registerArgs base;
       profiles = if profileArgs == null then null else profileArgs.profiles or mergeLib.builtinProfiles;
       merge =
         if profiles == null then
@@ -325,11 +319,11 @@ let
       withContext =
         rawCtx: body:
         let
-          ctx = axes.contextFor base.registry rawCtx;
+          ctx = axes.contextFor registered.registry rawCtx;
         in
-        if strict then builtins.seq (resolveLib.validateCtxWith base ctx) (body ctx) else body ctx;
+        if strict then builtins.seq (resolveLib.validateCtxWith registered ctx) (body ctx) else body ctx;
       pipelineArgs = ctx: {
-        inherit (base) registry stages;
+        inherit (registered) registry stages;
         inherit merge ctx;
       };
       projections = {
@@ -346,7 +340,7 @@ let
           guarded units (
             let
               half = engine.prepare {
-                inherit (base) registry stages;
+                inherit (registered) registry stages;
                 inherit merge;
               } (tree units);
             in
@@ -360,10 +354,10 @@ let
           guarded units (
             matrixLib.report {
               inherit roster scope;
-              inherit (base) registry stages;
+              inherit (registered) registry stages;
               contexts = matrixScopes.${scope}.contexts {
                 inherit roster;
-                contextFor = names: axes.contextFor base.registry (contextFor names);
+                contextFor = names: axes.contextFor registered.registry (contextFor names);
               };
               unit = tree units;
             }
@@ -416,7 +410,7 @@ let
   mkResolvers =
     roster:
     let
-      base = resolveLib.engineArgsFor roster;
+      base = engine.registerArgs (resolveLib.engineArgsFor roster);
       door = args: resolverFor (args // { inherit roster base; });
     in
     lib.mapAttrs (_: door) doorTable

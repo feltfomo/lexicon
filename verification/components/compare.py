@@ -14,12 +14,15 @@ def main():
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--candidate", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--components", nargs="+", default=["ownerships", "registry", "declaration", "resource", "toml", "praxis"])
+    parser.add_argument("--sizes", type=int, choices=[4, 16, 64], nargs="+", default=[4, 16, 64])
+    parser.add_argument("--initialize-report", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     sources = {"baseline": args.baseline, "candidate": args.candidate}
     comparisons = []
-    for component in ("ownerships", "registry", "declaration", "resource", "toml", "praxis"):
-        for size in (4, 16, 64):
+    for component in args.components:
+        for size in args.sizes:
             records = {"baseline": [], "candidate": []}
             digest = None
             schedule = [("warm", "baseline"), ("warm", "candidate")]
@@ -28,11 +31,14 @@ def main():
                 schedule.extend((str(pair), side) for side in order)
             for repetition, side in schedule:
                 target = args.output / f"{component}-{size}-{repetition}-{side}"
-                subprocess.run([
+                command = [
                     sys.executable, str(Path(__file__).with_name("observe.py")),
                     "--source", sources[side], "--component", component,
                     "--size", str(size), "--output", str(target),
-                ], check=True)
+                ]
+                if args.initialize_report:
+                    command.append("--initialize-report")
+                subprocess.run(command, check=True)
                 record = json.loads((target / "record.json").read_text())
                 if not record["admitted"] or not record["process_released"]:
                     raise RuntimeError(f"unusable sample {target}")

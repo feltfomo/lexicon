@@ -128,9 +128,108 @@ let
     user = "quiet";
   };
 
+  inaccessibleFleet = registry {
+    root = ../..;
+    runtimeRoot = null;
+    den = throw "registry root forced the fleet input";
+    hosts = { };
+    users = { };
+  };
+
+  invalidFleet = registry {
+    root = ../..;
+    runtimeRoot = null;
+    hosts.missingSystem = { };
+    users = { };
+  };
+
+  identified = registry {
+    root = ../..;
+    runtimeRoot = null;
+    defaultSystem = "x86_64-linux";
+    hosts = {
+      alpha.aliases = [ "first" ];
+      beta = { };
+    };
+    users = {
+      zed = {
+        id = "account/zed";
+        aliases = [ "last" ];
+        hosts = [ "alpha" ];
+      };
+      amy.hosts = [ "alpha" ];
+      nobody = { };
+    };
+  };
+
   names = records: map (record: record.name) records;
 
+  diagnosticFleet = import ../../src/registry.nix {
+    inherit lib axiom;
+    krisis = krisis // {
+      mkReporter = options: (krisis.mkReporter options) // { failOne = diagnostic: diagnostic; };
+    };
+    root = ../..;
+    runtimeRoot = null;
+    defaultSystem = "x86_64-linux";
+    hosts.alpha = { };
+    users.amy = { };
+  };
+
   checks = {
+    rootDoesNotDemandFleet = inaccessibleFleet.root == ../..;
+    rootDoesNotValidateTables = invalidFleet.root == ../..;
+    checkValidatesCompleteTables = fails invalidFleet.check;
+    emptySystemQueryKeepsSelectorLazy =
+      empty.forSystem (throw "empty system query forced its selector") == [ ];
+    emptyMembershipQueryKeepsHostLazy =
+      empty.usersOn (throw "empty membership query forced its host") == [ ]
+      && diagnosticFleet.usersOn (throw "known-empty membership query forced its host") == [ ];
+    nonStringSystemQueryIsEmpty = identified.forSystem null == [ ];
+    userIdLookup = (identified.user "account/zed").name == "zed";
+    usersOnAliasPreservesNameOrder =
+      names (identified.usersOn "first") == [
+        "amy"
+        "zed"
+      ];
+    usersOnKnownEmptyHost = identified.usersOn "beta" == [ ];
+    hostsForKnownEmptyUser = identified.hostsFor "nobody" == [ ];
+    unknownSystemHasNoHosts = identified.forSystem "unknown-system" == [ ];
+    systemQueryPreservesNameOrder =
+      names (identified.forSystem "x86_64-linux") == [
+        "alpha"
+        "beta"
+      ];
+    homeLookupAcceptsAliasesAndId =
+      identified.homeFor {
+        host = "first";
+        user = "account/zed";
+      } == "/home/zed";
+    membershipRejectsKnownEmptyHost = fails (
+      identified.homeFor {
+        host = "beta";
+        user = "last";
+      }
+    );
+    unknownHostDiagnosticRetainsPublicProjection =
+      let
+        diagnostic = diagnosticFleet.host "alph";
+      in
+      diagnostic.code == "registry/unknown-host"
+      && diagnostic.severity == "error"
+      && diagnostic.message == "'alph' is not a registered host"
+      && diagnostic.primary.label == "registry"
+      && diagnostic.help == "did you mean 'alpha'?";
+    membershipDiagnosticRetainsPublicProjection =
+      let
+        diagnostic = diagnosticFleet.homeFor {
+          host = "alpha";
+          user = "amy";
+        };
+      in
+      diagnostic.code == "registry/unknown-user"
+      && diagnostic.message == "user 'amy' is not registered on host 'alpha'"
+      && diagnostic.help == "add 'alpha' to users.amy.hosts";
     rootsStayDistinct = fleet.root == ../.. && fleet.runtimeRoot == "/etc/my-config";
     canonicalIds =
       fleet.hosts.khion.id == "x86_64-linux/khion" && fleet.hosts.pi.id == "aarch64-linux/pi";

@@ -11,8 +11,9 @@ The development shell now selects that same package explicitly.
 order, and produces an explicit Checked value. Input values, diagnostic recovery
 data and successful results use public `fx.state.mkThunk` and `forceThunk`. The
 collector's continuation doesn't authorize dependent work. A failed result has no
-value even when it contains only warnings. The declaration report boundary selects
-this owner; traversal and other subsystems retain their existing algorithms.
+value even when it contains only warnings. Declaration reporting, Ownerships
+orchestration and Registry orchestration select this owner. Declaration traversal
+and resource composition retain their existing algorithms.
 The bridge shares one collecting-handler configuration. Its initial state is
 immutable, so separate interpretations retain separate diagnostic histories.
 
@@ -22,6 +23,20 @@ reporters eliminate results through the native bridge. Injected old providers
 override the old-facing operations, including reporter construction. Native Krisis
 remains available to internal owners as `krisis.effects.native`, with its shared
 effect instance at `krisis.effects.fx`.
+
+Ownerships author-key, scope and phase errors include plain strings. The bridge
+normalizes this finite string/record vocabulary for native emission and protects
+the original diagnostic in a thunk. Terminal callbacks recover that original
+value. Code and severity are demanded before native envelope validation so a
+throwing callback retains its exception. Presentation fields stay deferred.
+Each demanded unit combines dependent author-key and unit-schema checks within
+one interpretation. Ordinary resolution keeps its existing per-context work;
+prepared resolution keeps its shared static half.
+
+`finishWithReporter` uses native Checked/Outcome elimination by default. An
+injected reporter's `finish` receives the retained Axiom result envelope through
+the single compatibility owner. That terminal adaptation does not introduce
+application-level Axiom sequencing.
 
 ## Old operations
 
@@ -63,11 +78,11 @@ the native inspector. Native reports still obtain their summaries from Krisis.
 | Capability | Production owners | Disposition |
 | --- | --- | --- |
 | `schema.compile` | Declaration reports/definitions, Ownerships axes/surface/merge, Registry fields, Furnish core, TOML encoding, theme, Praxis fields | Retain the public field interpreter and its result bridge |
-| `validation` | Declaration traversal/output/resource stages and unmigrated subsystem composition | Retain until the owning stage migrates; default diagnostic reporters bridge once |
+| `validation` | Retained schema/parse callbacks, compatibility result envelopes, declaration traversal/output/resource stages and unmigrated subsystems | Keep callback result construction at its boundary; Ownerships and Registry orchestration use native `all`/`andThen` and Fx |
 | `types` | Praxis schemas and fields | Retain Axiom type objects and `validateType` adaptation |
 | `registry.compile` | Declaration registration, Ownerships descriptors/relations, Registry core, directory reservations, Furnish collisions/executors, theme renderers, Praxis ownership | Retain collision validation before indexing; each owner needs a later capability-specific decision |
-| `phases.compile` | Ownerships engine | Retain phase dependency/order validation |
-| `requirements.evaluate`, `requirements.observe` | Ownerships relations, Furnish executors, theme capabilities and runtime | Retain requirement evaluation; no diagnostic substitution |
+| `phases.compile` | Ownerships engine | Retain closed view/callback validation and registration order; share one prepared registration |
+| `requirements.evaluate`, `requirements.observe` | Ownerships context requirements and relations, Furnish executors, theme capabilities and runtime | Retain requirement evaluation; no diagnostic substitution |
 | `canonical.qualified`, `canonical.path`, `canonical.join` | Ownerships axes/matrix/import/merge, Registry identities, program fields, Furnish identities, theme identities and diagnostic code qualification | Retain canonical encoding contracts |
 | `sets.unique`, `sets.index` | Registry field constraints and Praxis parameter/schema validation | Retain ordering and index semantics |
 | `identity.mk`, `identity.render` | Compatible `safeIdentity` projection | Retain label/source precedence and injected identity behavior |
@@ -76,3 +91,10 @@ No Axiom language implementation is imported. Native new Krisis owns report
 interpretation, Checked/Outcome elimination, scope behavior and the shared effect
 transport boundary. This change doesn't replace the compiler traversal or resource
 collision algorithms.
+
+Ownerships set operations and roster projection remain pure. Set indexing would
+force member tails that current short-circuit queries leave opaque. Its public
+suggestion helpers retain their existing thresholds, ties and malformed-input
+exceptions. Den roster/principal projection also stays pure, with no host
+instantiation or Den user-body evaluation. Den's `drop` retains its injected
+terminal diagnostic operation.

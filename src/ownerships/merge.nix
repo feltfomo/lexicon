@@ -18,7 +18,7 @@ let
     ;
 
   inherit (krisis) safeRender;
-  inherit (axiom) canonical schema validation;
+  inherit (axiom) canonical schema;
 
   mergeProblem = krisis.mkDiagnosticFactory {
     severity = "error";
@@ -27,7 +27,7 @@ let
 
   reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
 
-  finish = validation.finish reporter.fail;
+  finish = krisis.effects.finish reporter.fail;
 
   failMerge = reporter.failOne;
 
@@ -199,8 +199,6 @@ let
           };
         };
 
-      # every bad field on a profile at once, where the old ladder stopped at the
-      # first one
       profileNamed =
         path: name:
         if !builtins.isString name then
@@ -272,7 +270,7 @@ let
 
       # a branch written by only one input still needs a lazy provenance subtree.
       # with no lockFor argument its value is returned untouched and the subtree
-      # isn't walked. An opt-in lock must inspect every descendant so a caller's
+      # isn't walked. an opt-in lock must inspect every descendant so a caller's
       # path policy covers writes below a locked subtree.
       adoptNode =
         path: node:
@@ -451,7 +449,7 @@ let
                 value = checkedStrategy a.value b.value;
                 inherit contributors;
                 # lists are terminal because their strategy merges the list as a
-                # whole. Contributors are ordered leaves, never per-element owners.
+                # whole. contributors are ordered leaves, never per-element owners.
                 provenance = {
                   inherit path contributors;
                   children = { };
@@ -497,7 +495,7 @@ let
           };
 
       # kept for direct low-level callers, but projected from the tracked merge
-      # so there is only one shape recursion to maintain. The engine's resolve
+      # so there is only one shape recursion to maintain. the engine's resolve
       # path uses mergeTracked and never calls these compatibility projections.
       unattributed = {
         identity = "unattributed unit";

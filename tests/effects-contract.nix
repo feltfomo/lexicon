@@ -337,6 +337,43 @@ let
       (declaration.homeManager args).imports;
   };
   tests = {
+    string-and-record-diagnostics-recover-in-order =
+      krisis.effects.finishComputation
+        (items: [
+          (builtins.head items)
+          (builtins.elemAt items 1).code
+        ])
+        (
+          native.validation.all [
+            (krisis.effects.fromDiagnostics [ "authored string" ] poison)
+            (krisis.effects.fromDiagnostics [ first ] poison)
+          ]
+        ) == [
+        "authored string"
+        first.code
+      ];
+    composed-checked-values-protect-arbitrary-payloads =
+      (krisis.effects.finishComputation (_: poison) (
+        native.validation.andThen
+          (
+            values:
+            krisis.effects.accept {
+              context = builtins.elemAt values 0;
+              payload = builtins.elemAt values 1;
+              predecessor = builtins.elemAt values 2;
+            }
+          )
+          (
+            native.validation.all [
+              (krisis.effects.accept {
+                safe = true;
+                opaque = poison;
+              })
+              (krisis.effects.accept { opaque = poison; })
+              (krisis.effects.accept { previous = poison; })
+            ]
+          )
+      )).context.safe;
     old-location-poison-stays-opaque =
       (krisis.effects.run {
         diagnostics = [

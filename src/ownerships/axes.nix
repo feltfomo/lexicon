@@ -9,8 +9,9 @@ let
     canonical
     registry
     schema
-    validation
     ;
+  inherit (krisis) effects;
+  inherit (effects) native;
 
   axisProblem = krisis.mkDiagnosticFactory {
     severity = "error";
@@ -19,14 +20,14 @@ let
 
   reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
 
-  finish = validation.finish reporter.fail;
+  finish = effects.finishComputation reporter.fail;
 
   failAxis = reporter.failOne;
 
-  # author-key shape errors are the plain strings the descriptor author wrote,
-  # not krisis records, so they join on their own rather than going through the
-  # diagnostic renderer
-  finishShape = validation.finish (diagnostics: throw (lib.concatStringsSep "\n" diagnostics));
+  # descriptor authors own the plain-string presentation of shape failures
+  finishShape = effects.finishComputation (
+    diagnostics: throw (lib.concatStringsSep "\n" diagnostics)
+  );
 
   inherit (builtins) elem filter;
 
@@ -40,6 +41,7 @@ let
   diff = a: b: filter (x: !(elem x b)) a;
   union = a: b: a ++ filter (x: !(elem x a)) b;
 
+  # authored names meet before alias observation, retaining duplicates and order
   meet =
     a: b:
     if a.tag == "include" && b.tag == "include" then
@@ -586,9 +588,9 @@ let
         builtins.isAttrs descriptor && descriptor ? authorKeys && builtins.isList descriptor.authorKeys
       ) (lib.imap0 (keyIndex: key: authorKeySchema subject keyIndex key) descriptor.authorKeys);
     in
-    validation.fromDiagnostics (validation.collect (
-      [ shape.diagnostics ] ++ map (result: result.diagnostics) keyResults
-    )) descriptor;
+    native.validation.andThen (_: effects.accept descriptor) (
+      native.validation.all (map effects.fromAxiom ([ shape ] ++ keyResults))
+    );
 
   duplicateDescriptorDiagnostics =
     axisDescriptors:
@@ -605,7 +607,7 @@ let
 
   duplicateAuthorKeyDiagnostics =
     authorKeys:
-    validation.collect [
+    lib.concatLists [
       (registry.compile {
         registrations = authorKeys;
         keyOf = key: key.name;
@@ -633,18 +635,16 @@ let
   validateDescriptors =
     axisDescriptors:
     let
-      shaped = validation.sequence (lib.imap0 descriptorResult axisDescriptors);
+      shaped = native.validation.all (lib.imap0 descriptorResult axisDescriptors);
     in
     finish (
-      if shaped.diagnostics != [ ] then
-        shaped
-      else
-        validation.fromDiagnostics (validation.collect [
-          (duplicateDescriptorDiagnostics axisDescriptors)
-          (duplicateAuthorKeyDiagnostics (
-            builtins.concatMap (descriptor: descriptor.authorKeys) axisDescriptors
-          ))
-        ]) axisDescriptors
+      native.validation.andThen (
+        checked:
+        effects.fromDiagnostics (lib.concatLists [
+          (duplicateDescriptorDiagnostics checked)
+          (duplicateAuthorKeyDiagnostics (builtins.concatMap (descriptor: descriptor.authorKeys) checked))
+        ]) checked
+      ) shaped
     );
 
   validateRelations =
@@ -684,10 +684,12 @@ let
 
       subjectAt = index: relation: subjectFor "relation" index relation;
 
-      shaped = validation.sequence (
+      shaped = native.validation.all (
         lib.imap0 (
           index: relation:
-          validation.fromDiagnostics (relationSchema (subjectAt index relation) relation).diagnostics relation
+          native.validation.andThen (_: effects.accept relation) (
+            effects.fromAxiom (relationSchema (subjectAt index relation) relation)
+          )
         ) relationRegistrations
       );
 
@@ -696,7 +698,7 @@ let
         builtins.concatMap
           (
             side:
-            validation.optional (!(builtins.elem relation.${side} axisNames)) (axisProblem {
+            lib.optional (!(builtins.elem relation.${side} axisNames)) (axisProblem {
               code = "relation-unknown-axis";
               message = "${subjectAt index relation} references unknown axis '${relation.${side}}' as ${side}";
             })
@@ -707,13 +709,12 @@ let
           ];
     in
     finish (
-      if shaped.diagnostics != [ ] then
-        shaped
-      else
-        validation.fromDiagnostics (validation.collect (
+      native.validation.andThen (
+        checked:
+        effects.fromDiagnostics (lib.concatLists (
           [
             (registry.compile {
-              registrations = relationRegistrations;
+              registrations = checked;
               keyOf = relation: relation.name;
               onDuplicate =
                 key: _registrations:
@@ -723,8 +724,9 @@ let
                 };
             }).diagnostics
           ]
-          ++ lib.imap0 unknownAxisDiagnostics relationRegistrations
-        )) relationRegistrations
+          ++ lib.imap0 unknownAxisDiagnostics checked
+        )) checked
+      ) shaped
     );
 
   compileDescriptors =
@@ -745,18 +747,15 @@ let
 
   claimKeysFor = axisDescriptors: (compileDescriptors axisDescriptors).claimKeys;
 
-  # every misplaced claim key on the unit, not just the first -- a nixos `users`
-  # attrset landing on the ownership key used to hide a second bad key behind it
-  validateUnitWith =
+  # independent author-key failures retain their declared order
+  checkUnitWith =
     authorKeys: unit:
-    finishShape (
-      validation.fromDiagnostics (builtins.concatMap (
-        key:
-        validation.optional (unit ? ${key.name} && !key.valid unit.${key.name}) (
-          key.shapeError unit.${key.name}
-        )
-      ) authorKeys) unit
-    );
+    effects.fromDiagnostics (builtins.concatMap (
+      key:
+      lib.optional (unit ? ${key.name} && !key.valid unit.${key.name}) (key.shapeError unit.${key.name})
+    ) authorKeys) unit;
+
+  validateUnitWith = authorKeys: unit: finishShape (checkUnitWith authorKeys unit);
 
   validateUnit = axisDescriptors: validateUnitWith (compileDescriptors axisDescriptors).authorKeys;
 
@@ -942,6 +941,7 @@ in
     authorKeysFor
     claimKeysFor
     validateUnitWith
+    checkUnitWith
     validateUnit
     claimOf
     registryFor

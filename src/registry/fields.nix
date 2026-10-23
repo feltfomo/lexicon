@@ -92,4 +92,5 @@ in
     stringAttrs
     ;
   inherit (reporter) finish fail failOne;
+  finishComputation = krisis.effects.finishWithReporter reporter;
 }

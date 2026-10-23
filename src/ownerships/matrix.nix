@@ -118,11 +118,12 @@ let
     }:
     let
       composed = engine.compose registry unit;
-      classified = classify registry stages composed;
+      registered = engine.prepareStages stages;
+      classified = classify registry registered composed;
       classifiedParts = builtins.partition (entry: entry.impossible != [ ]) classified;
       deadEntries = classifiedParts.right;
       liveEntries = classifiedParts.wrong;
-      treeDiagnostics = engine.stageDiagnostics "tree" stages {
+      treeDiagnostics = engine.stageDiagnostics "tree" registered {
         inherit registry;
         leaves = map (entry: entry.leaf) liveEntries;
       };
@@ -136,10 +137,11 @@ let
         context:
         let
           selected = engine.selectPrepared {
-            inherit registry stages;
+            inherit registry;
+            stages = registered;
             inherit (context) ctx;
           } liveLeaves;
-          # survivor stages are part of this projection's contract: a failing
+          # survivor stages are part of this projection's contract, and a failing
           # survivor rule must surface for every modeled context. the engine's
           # per-ctx handle keeps survivor diagnostics lazy behind `.survivors`,
           # so the matrix -- which reads the selection trace, not the merged

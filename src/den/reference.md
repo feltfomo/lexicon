@@ -22,7 +22,11 @@ has `authority = { scope = "system"; identity = "system/host"; }` and
 
 `roster` includes host dimensions, canonical host IDs, user names, aliases,
 display names and host-user membership. Den users have known membership.
-Roster construction does not evaluate the host's NixOS configuration.
+Roster and principal enumeration read host and user names without evaluating Den
+user bodies, `den.lib`, host aspects or host instantiation. Roster construction
+also reads host dimensions. `filePrincipals` reads only the selected resolved
+user's name; other user fields remain opaque. `mkTarget` has a separate host
+resolution path and evaluates Den's resolution and instantiation operations.
 
 `filePrincipals` selects the user under whom a module was resolved. It does not
 assign that module's files to every user on the host. `hostPrincipals` enumerates

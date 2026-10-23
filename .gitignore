@@ -2,3 +2,4 @@ result
 result-*
 /.runtime/
 /src/praxis/runtime/target/
+__pycache__/

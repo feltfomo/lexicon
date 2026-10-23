@@ -1,5 +1,3 @@
-# tests/ownerships/descriptors.nix
-#
 # a throwaway axis proving that one descriptor carries author syntax, scope,
 # registry construction, and standalone roster projection end to end. production
 # defaults remain host, user, and when; this descriptor exists only in this test.
@@ -11,6 +9,15 @@
 let
   axes = import ../../src/ownerships/axes.nix { inherit lib krisis axiom; };
   engine = import ../../src/ownerships/engine.nix { inherit lib krisis axiom; };
+  diagnosticAxes = import ../../src/ownerships/axes.nix {
+    inherit lib axiom;
+    krisis = krisis // {
+      mkReporter = _options: {
+        fail = diagnostics: diagnostics;
+        failOne = diagnostic: [ diagnostic ];
+      };
+    };
+  };
 
   roleDescriptor = axes.mkSetDescriptor {
     name = "role";
@@ -130,6 +137,96 @@ let
   );
 
   cases = [
+    {
+      name = "set axis selection leaves a skipped roster member tail opaque";
+      pass =
+        let
+          ownerships = import ../../src/ownerships {
+            inherit
+              lib
+              krisis
+              axiom
+              descriptors
+              ;
+            relations = [ ];
+          };
+        in
+        ownerships.mkResolve
+          (
+            roster
+            // {
+              roles = [
+                "desktop"
+                (throw "unused roster member tail")
+              ];
+            }
+          )
+          [
+            {
+              roles = [ "desktop" ];
+              value.selected = true;
+            }
+          ]
+          ctx == {
+          selected = true;
+        };
+    }
+    {
+      name = "suggestion helpers retain thresholds and the first tied candidate";
+      pass =
+        axes.editDistance "kitten" "sitting" == 3
+        && axes.suggest [ "bat" "car" ] "cat" == "bat"
+        && axes.suggest [ "far" ] "cat" == null
+        && axes.suggest [ "sitting" ] "kitten" == "sitting"
+        && axes.suggestionFor [ "bat" "car" ] "cat" == " -- did you mean 'bat'?"
+        && axes.suggestionFor [ "far" ] "cat" == "";
+    }
+    {
+      name = "descriptor preparation transports opaque extension fields";
+      pass =
+        (axes.compileDescriptors [
+          (roleDescriptor // { extensionPayload = throw "opaque descriptor extension payload"; })
+        ]).claimKeys == [
+          "roles"
+          "exceptRoles"
+        ];
+    }
+    {
+      name = "descriptor shape failures accumulate before duplicate registration";
+      pass =
+        let
+          diagnostics = diagnosticAxes.validateDescriptors [
+            (removeAttrs roleDescriptor [ "parse" ])
+            (removeAttrs roleDescriptor [ "axisFor" ])
+          ];
+        in
+        map (diagnostic: { inherit (diagnostic) code message; }) diagnostics == [
+          {
+            code = "ownerships/descriptor-malformed";
+            message = "axis descriptor 'role' is missing required field 'parse'";
+          }
+          {
+            code = "ownerships/descriptor-malformed";
+            message = "axis descriptor 'role' is missing required field 'axisFor'";
+          }
+        ];
+    }
+    {
+      name = "descriptor collision diagnostics retain registry and authored order";
+      pass =
+        map (diagnostic: diagnostic.code) (
+          diagnosticAxes.validateDescriptors [
+            roleDescriptor
+            roleDescriptor
+          ]
+        ) == [
+          "ownerships/descriptor-duplicate-name"
+          "ownerships/descriptor-duplicate-key"
+          "ownerships/descriptor-duplicate-key"
+          "ownerships/descriptor-duplicate-order"
+          "ownerships/descriptor-duplicate-order"
+        ];
+    }
     {
       name = "compiled descriptors retain ordered syntax and roster projections";
       pass =

@@ -376,6 +376,21 @@ let
     lib = throw "programDen forced den.lib";
   };
   denProgram = lexicon.lib.programDen { den = denFixture; };
+  denAdapter = lexicon.lib.den { den = denFixture; };
+  denProjection = {
+    inherit system;
+    host = "workstation";
+  };
+  denHostPrincipals = denAdapter.hostPrincipals denProjection;
+  denSelectedPrincipals = denAdapter.filePrincipals (
+    denProjection
+    // {
+      user = {
+        name = "alice";
+        unused = throw "filePrincipals forced an unrelated resolved-user field";
+      };
+    }
+  );
   denFile = denProgram {
     files = [
       {
@@ -507,6 +522,31 @@ in
     && !lib.hasInfix "den.lib" denBindingSource
     && !lib.hasInfix "den.aspects" denBindingSource;
   den-binding-does-not-force-host-instantiation = denResult.success;
+  den-roster-enumerates-without-user-bodies =
+    denAdapter.roster.hosts == [ hostId ]
+    && denAdapter.roster.users == [ "alice" ]
+    && denAdapter.roster.membership.${hostId} == [ "alice" ];
+  den-host-user-names-enumerate-without-user-bodies =
+    denAdapter.hostUserNames denProjection == [ "alice" ];
+  den-host-principals-enumerate-possible-authorities =
+    map (principal: principal.authority) denHostPrincipals == [
+      {
+        scope = "system";
+        identity = hostId;
+      }
+      {
+        scope = "user";
+        identity = "alice";
+      }
+    ];
+  den-file-principals-select-one-resolved-user =
+    builtins.length denSelectedPrincipals == 1
+    &&
+      (builtins.head denSelectedPrincipals).authority == {
+        scope = "user";
+        identity = "alice";
+      }
+    && denAdapter.filePrincipals denProjection == [ ];
   den-binding-keeps-the-program-output-shape = builtins.attrNames denFile == [ "nixos" ];
   den-binding-resolves-one-user-file-to-one-principal =
     builtins.length denDeclarations == 1

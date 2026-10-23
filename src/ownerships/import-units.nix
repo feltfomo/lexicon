@@ -8,7 +8,13 @@
   axiom,
 }:
 let
-  inherit (axiom) validation canonical;
+  inherit (axiom) canonical;
+  inherit (krisis.effects)
+    native
+    fromDiagnostics
+    accept
+    finishComputation
+    ;
 
   importProblem = krisis.mkDiagnosticFactory {
     severity = "error";
@@ -17,7 +23,7 @@ let
 
   reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
 
-  finish = validation.finish reporter.fail;
+  finish = finishComputation reporter.fail;
 
   failImport = reporter.failOne;
 
@@ -63,13 +69,12 @@ let
 
   argsDiagnostics =
     subject: args:
-    validation.optional (!builtins.isAttrs args) (importProblem {
+    lib.optional (!builtins.isAttrs args) (importProblem {
       code = "args-shape";
       message = "${subject} args must be an attribute set; got ${builtins.typeOf args}";
     });
 
-  # a returned result rather than a throw, so one bad unit file no longer hides
-  # every other bad unit file in the same tree
+  # independent file-shape failures accumulate in declared-source order
   normalizeFile =
     args: file:
     krisis.withErrorContext "while importing ownership units from ${shown file.relative}" (
@@ -79,7 +84,7 @@ let
         units = if builtins.isList result then result else [ result ];
         invalid = builtins.filter (unit: !builtins.isAttrs unit) units;
       in
-      validation.fromDiagnostics (validation.optional (invalid != [ ]) (importProblem {
+      fromDiagnostics (lib.optional (invalid != [ ]) (importProblem {
         code = "unit-shape";
         message = "imported unit file ${shown file.relative} must return an attribute set or a list of attribute sets; found ${builtins.typeOf (builtins.head invalid)}";
       })) units
@@ -99,7 +104,9 @@ let
       reporter.fail badArgs
     else
       finish (
-        validation.map builtins.concatLists (validation.traverse (normalizeFile args) (orderedFiles dir))
+        native.validation.andThen (values: accept (builtins.concatLists values)) (
+          native.validation.all (map (normalizeFile args) (orderedFiles dir))
+        )
       );
 
   collectionNames = [
@@ -142,7 +149,7 @@ let
 
       # the five tree checks are independent of each other, so an author sees
       # every misplaced entry at once instead of one per rebuild
-      diagnostics = validation.collect [
+      checks = map (diagnostics: fromDiagnostics diagnostics null) [
         (argsDiagnostics "importUnitSets" args)
         (map (
           name:
@@ -172,17 +179,20 @@ let
             message = "cannot inspect unit-tree entry ${shown name}: filesystem entry type ${shown entries.${name}} is unsupported";
           }
         ) unsafeEntries)
-        (validation.optional (!hasHome && !hasSystem) (importProblem {
+        (lib.optional (!hasHome && !hasSystem) (importProblem {
           code = "tree-empty";
           message = "mixed unit tree must contain a 'system' or 'home' directory";
         }))
       ];
     in
     finish (
-      validation.fromDiagnostics diagnostics {
-        home = if hasHome then load "home" else [ ];
-        system = if hasSystem then load "system" else [ ];
-      }
+      native.validation.andThen (
+        _:
+        accept {
+          home = if hasHome then load "home" else [ ];
+          system = if hasSystem then load "system" else [ ];
+        }
+      ) (native.validation.all checks)
     );
 in
 {

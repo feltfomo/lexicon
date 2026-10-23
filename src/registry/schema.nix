@@ -19,6 +19,7 @@ let
     diagnostic
     field
     finish
+    finishComputation
     nameList
     nonEmpty
     nullable
@@ -97,7 +98,6 @@ let
         validation.fromDiagnostics parsed.diagnostics (parsed.value or { })
       ) value;
 
-  # the three fields a user may carry wherever that user is declared
   identityFields = subject: {
     id = field subject "user-id" "id must be a non-empty string" (nullable nonEmpty) // {
       default = null;
@@ -207,9 +207,7 @@ let
     else
       validation.traverseAttrs hostResult value;
 
-  # den stays unvalidated and unforced here. it is an opaque input the den layer
-  # reads later, and forcing it at declaration time would defeat the laziness the
-  # den adapter exists to preserve.
+  # the den layer reads this opaque input only when fleet data is demanded.
   declarationSchema = closed "declaration" "registry" {
     den = {
       default = null;
@@ -244,31 +242,15 @@ let
     };
   };
 
-  # the four required keys are checked by presence rather than by the schema's
-  # own required flag, so each one can say what to write when the answer is
-  # genuinely nothing
+  # explicit empty declarations need different guidance for each required key.
   missingField =
     raw: key: help:
-    validation.optional (builtins.isAttrs raw && !(raw ? ${key})) (problem {
+    lib.optional (builtins.isAttrs raw && !(raw ? ${key})) (problem {
       code = "${key}-missing";
       message = "${key} is required";
       primary.label = key;
       inherit help;
     });
-
-  declarationResult =
-    raw:
-    let
-      parsed = declarationSchema raw;
-      diagnostics = validation.collect [
-        (missingField raw "root" "root is the Nix path holding this configuration's source")
-        (missingField raw "runtimeRoot" "set runtimeRoot = null when there is no live checkout")
-        (missingField raw "hosts" "declare hosts = { } when this fleet registers no hosts")
-        (missingField raw "users" "declare users = { } when this fleet registers no users")
-        parsed.diagnostics
-      ];
-    in
-    validation.fromDiagnostics diagnostics (parsed.value or { });
 
   contextSchema = closed "context" "context" {
     host = required "context.host" "context-host" "host must be a non-empty name" nonEmpty;
@@ -282,6 +264,34 @@ let
   };
 in
 {
-  declaration = raw: finish (declarationResult raw);
+  declaration =
+    raw:
+    let
+      inherit (krisis.effects)
+        native
+        fromAxiom
+        fromDiagnostics
+        accept
+        ;
+    in
+    finishComputation (
+      native.validation.andThen (values: accept (builtins.elemAt values 4)) (
+        native.validation.all [
+          (fromDiagnostics (missingField raw "root"
+            "root is the Nix path holding this configuration's source"
+          ) null)
+          (fromDiagnostics (missingField raw "runtimeRoot"
+            "set runtimeRoot = null when there is no live checkout"
+          ) null)
+          (fromDiagnostics (missingField raw "hosts"
+            "declare hosts = { } when this fleet registers no hosts"
+          ) null)
+          (fromDiagnostics (missingField raw "users"
+            "declare users = { } when this fleet registers no users"
+          ) null)
+          (fromAxiom (declarationSchema raw))
+        ]
+      )
+    );
   context = raw: finish (contextSchema raw);
 }

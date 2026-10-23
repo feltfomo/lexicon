@@ -44,7 +44,135 @@ let
       strict = true;
     };
 
-  cases = [
+  rawNarrowing = [
+    {
+      name = "include meet compares aliases and canonical names before observation";
+      parent.hosts = [
+        "khion"
+        "lumi"
+        "khion"
+      ];
+      child.hosts = [
+        "standalone/khion"
+        "lumi"
+      ];
+      claim = axes.include [ "lumi" ];
+      members = [ "standalone/lumi" ];
+      selected = false;
+    }
+    {
+      name = "canonical exclusion does not erase a raw alias include";
+      parent.hosts = [
+        "khion"
+        "lumi"
+        "khion"
+      ];
+      child.exceptHosts = [ "standalone/khion" ];
+      claim = axes.include [
+        "khion"
+        "lumi"
+        "khion"
+      ];
+      members = [
+        "standalone/khion"
+        "standalone/lumi"
+      ];
+      selected = true;
+    }
+    {
+      name = "parent canonical exclusion retains child alias duplicates and order";
+      parent.exceptHosts = [ "standalone/khion" ];
+      child.hosts = [
+        "khion"
+        "khion"
+        "lumi"
+      ];
+      claim = axes.include [
+        "khion"
+        "khion"
+        "lumi"
+      ];
+      members = [
+        "standalone/khion"
+        "standalone/lumi"
+      ];
+      selected = true;
+    }
+    {
+      name = "exclude meet retains authored duplicates before alias observation";
+      parent.exceptHosts = [
+        "khion"
+        "khion"
+      ];
+      child.exceptHosts = [
+        "khion"
+        "standalone/khion"
+        "standalone/khion"
+      ];
+      claim = axes.exclude [
+        "khion"
+        "khion"
+        "standalone/khion"
+        "standalone/khion"
+      ];
+      members = [
+        "standalone/lumi"
+        "standalone/server"
+      ];
+      selected = false;
+    }
+  ];
+
+  narrowingCases = map (expected: {
+    inherit (expected) name;
+    pass =
+      let
+        observed = ownerships.mkResolveSystemTrace roster [
+          (
+            expected.parent
+            // {
+              children = [ (expected.child // { value.selected = true; }) ];
+            }
+          )
+        ] { host.name = "khion"; };
+        leaf = builtins.head observed.trace;
+      in
+      leaf.effectiveClaim.host == expected.claim
+      &&
+        builtins.attrNames leaf.effectiveClaim.host == [
+          "set"
+          "tag"
+        ]
+      && leaf.axisResults.host.details.materializedMembers == expected.members
+      && leaf.selected == expected.selected
+      && observed.value == (if expected.selected then { selected = true; } else { });
+  }) rawNarrowing;
+
+  cases = narrowingCases ++ [
+    {
+      name = "canonical membership takes precedence over a colliding alias";
+      pass =
+        ownerships.mkResolveSystem
+          (
+            roster
+            // {
+              aliases = roster.aliases // {
+                host = roster.aliases.host // {
+                  "standalone/khion" = [ "standalone/lumi" ];
+                };
+              };
+            }
+          )
+          [
+            {
+              hosts = [ "standalone/khion" ];
+              value.selected = true;
+            }
+          ]
+          { host.name = "khion"; } == {
+          selected = true;
+        };
+    }
     {
       name = "strict system resolution accepts a canonical host id without a display name";
       pass = strict "system" [ { value.x = 1; } ] { host.id = "standalone/khion"; } == { x = 1; };

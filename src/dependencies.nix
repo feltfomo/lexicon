@@ -11,6 +11,12 @@ let
   effects = bridge // {
     reporter =
       if krisis != null && krisis ? mkReporter then krisis.mkReporter else diagnostics.mkReporter;
+    finishWithReporter =
+      reporter: computation:
+      if krisis != null && krisis ? mkReporter then
+        reporter.finish (bridge.resultOf computation)
+      else
+        bridge.finishComputation reporter.fail computation;
   };
   diagnostics = import ./diagnostic-compatibility.nix {
     inherit lib;

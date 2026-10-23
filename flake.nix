@@ -445,6 +445,12 @@
               ownershipsTest ./tests/ownerships/descriptors.nix
             );
             ownerships-matrix = gate "ownerships-matrix-tests" (ownershipsTest ./tests/ownerships/matrix.nix);
+            ownerships-observations = import ./tests/ownerships/observations-check.nix {
+              inherit pkgs;
+              nixpkgsSource = inputs.nixpkgs;
+              axiomSource = inputs.axiom;
+              krisisSource = inputs.krisis;
+            };
           };
 
           devShells.default = pkgs.mkShell {

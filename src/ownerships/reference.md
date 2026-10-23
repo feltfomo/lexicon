@@ -51,6 +51,11 @@ to `users` and `exceptUsers`. Empty includes own nothing. Unknown names,
 ambiguous aliases and impossible ownership claims are errors in ordinary
 resolution. Known host-user membership rejects incompatible claims.
 
+Set claims meet on their authored names before aliases are observed. An alias
+and its canonical ID can therefore be disjoint in nested includes. Includes
+retain their authored order and duplicates; narrowing does not canonicalize the
+public claim. Canonical member names take precedence over colliding aliases.
+
 `value` cannot coexist with inline configuration keys. It permits configuration
 paths named `users`, `hosts` or other reserved keys. Metadata is stripped before
 merge. A metadata-only unit without configuration or children is invalid.
@@ -77,6 +82,19 @@ System scope binds no user and rejects `users`/`exceptUsers` anywhere in the tre
 Top-level `resolverFor` accepts the same fields plus required `roster` and
 optional `base` (compiled engine arguments). `scope` is `"user"` or `"system"`.
 `projection` is `"value"`, `"trace"`, `"prepared"` or `"matrix"`.
+
+Stage registration is shared by the doors bound through `mkResolvers`. A supplied
+`base` still accepts raw stage lists. Registration errors are demanded with the
+first requested pipeline view, including an empty leaf view. Internal prepared
+registrations have a checked carrier shape; callers do not construct them.
+Ordinary resolution retains per-context translation and checks. Prepared
+resolution shares its context-independent translation, leaf checks and tree
+checks; selection and survivor callbacks still run per context.
+
+Leaf diagnostics in resolution are ordered by stage, then leaf. Matrix
+classification retains its per-leaf stage callback order. Both projections share
+registration and the engine's checks and selection contract. Matrix never merges
+configuration values.
 
 Standalone aliases take `roster` first, then the corresponding arguments:
 `mkResolve`, `mkResolveSystem`, `mkResolveTrace`, `mkResolveSystemTrace`,
@@ -146,6 +164,12 @@ requires `name`, `authorKeys`, `roster` (attribute set or null), `allowedScopes`
 `valid = value: bool`, and `shapeError = value: string`. Descriptor and author
 key names must be unique. Non-null roster projections require `define` and
 `project`; `mkRoster` exposes those definitions and runs projections in order.
+
+Callbacks keep their existing plain values and failures. Author-key shape errors
+and scope errors remain plain strings. Native reporting transports them alongside
+diagnostic records and restores the original values at terminal presentation.
+No callback receives a required effect argument. Unit author-key failures suppress
+dependent unit-schema work; independent schema failures retain their order.
 
 Supplying `relations` replaces the default relation list. Each relation requires
 unique `name`, registered `leftAxis` and `rightAxis`, and callbacks `unknownFor`,

@@ -1,10 +1,3 @@
-# tests/ownerships/engine.nix
-#
-# pure test gate for the engine. nothing else consumes the engine yet, so this is
-# what proves it works, the three outcomes, a nested resolve, a throwaway third
-# axis composing with no core edit, an opt-in merge strategy registering with no
-# core edit, and the top identity law per axis. checks/ownerships.nix forces `ok`
-# under `nix flake check`.
 {
   lib,
   krisis,
@@ -393,6 +386,20 @@ let
   ];
 
   cases = [
+    {
+      name = "prepared stage registrations reject malformed carriers and unregistered records";
+      pass =
+        throws (engine.check { _ownershipStages = 1; } registry [ ])
+        && throws (engine.check { for = _: [ ]; } registry [ ])
+        && throws (
+          engine.check {
+            _ownershipStages = _: [ ];
+            extra = throw "unused extra registration";
+          } registry [ ]
+        )
+        && throws (engine.check 1 registry [ ])
+        && engine.check (engine.prepareStages [ ]) registry [ ] == [ ];
+    }
     {
       name = "registered host/user relation is byte-identical to the frozen membership check";
       pass =
