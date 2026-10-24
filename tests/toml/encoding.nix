@@ -10,6 +10,14 @@ let
     krisis
     ;
   encoder = import ../../src/toml/encode.nix { inherit lib axiom krisis; };
+  injectedEncoder = import ../../src/toml/encode.nix {
+    inherit lib axiom;
+    krisis = krisis // {
+      mkDiagnosticFactory =
+        options: args: (krisis.mkDiagnosticFactory options args) // { notes = [ "injected" ]; };
+      renderPath = path: "injected " + krisis.renderPath path;
+    };
+  };
   toml = lexicon.lib.toml { inherit pkgs; };
   diagnostics =
     value:
@@ -27,6 +35,18 @@ let
       source = ./palette.toml;
     }).value;
   fields = contextual.value;
+  transported = krisis.effects.finishComputation (_: throw "unexpected transport rejection") (
+    krisis.effects.native.validation.all [
+      (krisis.effects.accept {
+        safe = true;
+        opaque = throw "forced opaque input";
+      })
+      (krisis.effects.accept {
+        value = "${pkgs.coreutils}/bin/true";
+        opaque = throw "forced opaque output";
+      })
+    ]
+  );
   invalid = {
     nested = [
       {
@@ -36,6 +56,40 @@ let
     ];
   };
   tests = {
+    diagnostic-construction-and-path-injection-survive-effects =
+      map
+        (d: {
+          inherit (d) notes;
+          path = d.primary.label;
+        })
+        (injectedEncoder.document {
+          a = null;
+          b = null;
+        }).diagnostics == [
+        {
+          notes = [ "injected" ];
+          path = "injected $.a";
+        }
+        {
+          notes = [ "injected" ];
+          path = "injected $.b";
+        }
+      ];
+    native-transport-keeps-opaque-fields-and-context =
+      (builtins.elemAt transported 0).safe
+      &&
+        builtins.getContext (builtins.elemAt transported 1).value
+        == builtins.getContext "${pkgs.coreutils}/bin/true";
+    invalid-result-has-no-value = !(encoder.document { bad = null; } ? value);
+    raw-syntax-is-deferred =
+      (encoder.document (toml.document "invalid = [")).diagnostics == [ ]
+      && (encoder.document { raw = toml.literal "true\ninjected=1"; }).diagnostics == [ ];
+    source-identity-and-context-pass-through =
+      toml.source "path" ./palette.toml == ./palette.toml
+      &&
+        builtins.getContext (toml.source "string" "${pkgs.coreutils}/bin/true")
+        == builtins.getContext "${pkgs.coreutils}/bin/true"
+      && (toml.source "derivation" pkgs.hello).drvPath == pkgs.hello.drvPath;
     errors-accumulate-with-structured-paths =
       diagnostics invalid == [
         {

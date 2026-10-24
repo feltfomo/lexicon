@@ -85,7 +85,7 @@ the native inspector. Native reports still obtain their summaries from Krisis.
 | Capability | Production owners | Disposition |
 | --- | --- | --- |
 | `schema.compile` | Declaration reports/definitions, Ownerships axes/surface/merge, Registry fields, Furnish core, TOML encoding, theme, Praxis fields | Retain the public field interpreter and its result bridge |
-| `validation` | Retained schema/parse callbacks, compatibility result envelopes and unmigrated TOML/Praxis orchestration | Keep callback result construction at its boundary; registered compiler, resource plans, directory expansion, theme preparation, Furnish, Ownerships and Registry orchestration use native `all`/`andThen` and Fx |
+| `validation` | Retained schema/parse callbacks, compatibility result envelopes and unmigrated Praxis orchestration | Keep callback result construction at its boundary; registered compiler, resource plans, directory expansion, theme preparation, Furnish, Ownerships, Registry and TOML encoder orchestration use native `all`/`andThen` and Fx |
 | `types` | Praxis schemas and fields | Retain Axiom type objects and `validateType` adaptation |
 | `registry.compile` | Declaration registration, Ownerships descriptors/relations, Registry core, directory reservations, Furnish collisions/executors, theme renderers, Praxis ownership | Retain collision validation before indexing; migrated owners adapt each result once at their operation boundary |
 | `phases.compile` | Ownerships engine | Retain closed view/callback validation and registration order; share one prepared registration |
@@ -125,3 +125,9 @@ before. Theme file groups use `checked diagnostics []` only on failure; successf
 groups call no terminal. Matugen calls `finishWithReporter` for each group's
 registration result and demands that return before constructing declarations.
 Group concatenation preserves the first throwing terminal and later-group laziness.
+
+TOML encoding adapts constructor field schemas once, then composes recursive
+checks through native `all` and `andThen`. Its public `document` projection retains
+the Axiom result envelope; generation uses the computation directly and preserves
+injected reporter `finish` recovery. The pure renderer consumes the typed result
+without effects. Raw TOML validation and retained-syntax merge remain native.

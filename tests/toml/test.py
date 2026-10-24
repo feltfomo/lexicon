@@ -37,15 +37,9 @@ assert "# retained comment" in retained.read_text()
 assert "negative = -0.0" in retained.read_text()
 assert tomlkit.parse(replacement.read_text())["array"] == [2]
 
-try:
-    runtime.generate({"kind": "table", "value": {"nested": {"kind": "document", "value": "x=1\n"}}})
-except runtime.Error as error:
-    assert "$.nested" in str(error) and "whole input" in str(error)
-else:
-    raise AssertionError("nested document accepted")
 for text in ["9223372036854775808", "true\ninjected = 1"]:
     try:
-        runtime.construct({"kind": "literal", "value": text})
+        runtime.literal(text, "$.probe")
     except runtime.Error:
         pass
     else:
@@ -82,8 +76,7 @@ assert matugen["output_path"].startswith("/build/home/.local/state/lexicon/toml/
 assert "lexicon-toml publish" in noctalia["post_hook"] and "lexicon-toml publish" in matugen["post_hook"]
 assert ".local/state/lexicon/toml/" in Path(fixture["caelestia"]).read_text()
 
-# Execute emitted entrypoints under their declared principal home. HOME is
-# inherited unchanged; composed hooks carry their bound absolute paths.
+# composed hooks carry their principal home as an absolute path
 service_command = shlex.split(fixture["ExecStart"])
 installed_descriptor = Path(service_command[-1])
 installed_descriptor.parent.mkdir(parents=True, exist_ok=True)
@@ -107,7 +100,7 @@ current_descriptor["base"] = str(new_base)
 installed_descriptor.write_text(json.dumps(current_descriptor))
 subprocess.run(service_command, check=True, timeout=20)
 assert tomlkit.parse(published.read_text())["operational"] is False
-# An old renderer hook must still use the new installed base.
+# old hooks resolve the current installed base
 run_hook(noctalia["post_hook"])
 assert tomlkit.parse(published.read_text())["operational"] is False
 matugen_staging = Path(matugen["output_path"])
@@ -178,7 +171,7 @@ with tempfile.TemporaryDirectory() as temporary:
     finally:
         runtime.os.getuid = old_getuid
     assert environment_file.read_text().splitlines() == ["/run/user/12345", "unix:path=/run/user/12345/bus"]
-    # Accepted theme state is the recovery authority after an interrupted final write.
+    # accepted theme state recovers an interrupted final write
     output.write_text("stale=true\n")
     invoke()
     assert tomlkit.parse(output.read_text())["operational"] == 4

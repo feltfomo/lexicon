@@ -9,15 +9,20 @@ let
     assert lib.assertMsg (lib.versionAtLeast pkgs.python3Packages.tomlkit.version "0.15.0")
       "toml: TOML Kit >= 0.15.0 is required";
     pkgs.python3.withPackages (p: [ p.tomlkit ]);
+  cliRenderer = pkgs.writeText "lexicon-toml-render.nix" ''
+    { input }:
+    (import ${./render.nix}) (builtins.fromJSON (builtins.readFile input))
+  '';
   package = pkgs.writeShellApplication {
     name = "lexicon-toml";
-    text = ''exec ${python}/bin/python ${./runtime.py} "$@"'';
+    text = ''exec ${python}/bin/python ${./runtime.py} ${pkgs.nix}/bin/nix-instantiate ${cliRenderer} "$@"'';
   };
   tagged = kind: value: {
     __lexiconToml = x: x;
     inherit kind value;
   };
   encoder = import ./encode.nix { inherit lib axiom krisis; };
+  render = import ./render.nix;
   reporter = krisis.mkReporter {
     formatHeader = count: "toml: ${toString count} validation error(s)";
     formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
@@ -25,9 +30,10 @@ let
   generate =
     name: attrs:
     let
-      input = pkgs.writeText "${name}.json" (builtins.toJSON (reporter.finish (encoder.document attrs)));
+      encoded = krisis.effects.finishWithReporter reporter (encoder.compile attrs);
+      input = pkgs.writeText "${name}.json" (builtins.toJSON (render encoded));
     in
-    pkgs.runCommand name { } ''${package}/bin/lexicon-toml generate ${input} "$out"'';
+    pkgs.runCommand name { } ''${python}/bin/python ${./runtime.py} "" "" validate ${input} "$out"'';
   source =
     name: value:
     if encoder.isTagged value then

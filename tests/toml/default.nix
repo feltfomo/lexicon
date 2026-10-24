@@ -6,6 +6,87 @@
 let
   inherit (pkgs) lib;
   toml = lexicon.lib.toml { inherit pkgs; };
+  rendering = import ./rendering.nix {
+    inherit lib;
+    context = "${pkgs.coreutils}/bin/true";
+  };
+  rendererFixtures = pkgs.writeText "toml-rendering.json" (builtins.toJSON rendering.fixtures);
+  failure =
+    name: value: expected:
+    pkgs.testers.testBuildFailure' {
+      drv = toml.generate name value;
+      expectedBuilderExitCode = 1;
+      expectedBuilderLogEntries = [ expected ];
+    };
+  deferredFailures = [
+    (failure "invalid-document.toml" (toml.document "broken=[") "Unexpected end of file")
+    (failure "injected-literal.toml" {
+      x = toml.literal "true\ninjected=1";
+    } "literal must contain exactly one value")
+    (failure "overflow-literal.toml" {
+      x = toml.literal "9223372036854775808";
+    } "integer outside signed 64-bit range")
+  ];
+  evaluatorSentinel = pkgs.writeShellScriptBin "nix-instantiate" ''
+    echo evaluator-sentinel >&2
+    exit 73
+  '';
+  sentinelToml = lexicon.lib.toml {
+    pkgs = pkgs // {
+      nix = evaluatorSentinel;
+    };
+  };
+  homeEvaluator = pkgs.writeShellScriptBin "nix-instantiate" ''
+    test "$HOME" = "$LEXICON_EXPECTED_HOME"
+    exec ${pkgs.nix}/bin/nix-instantiate "$@"
+  '';
+  homeToml = lexicon.lib.toml {
+    pkgs = pkgs // {
+      nix = homeEvaluator;
+    };
+  };
+  contextToml = lexicon.lib.toml {
+    pkgs = pkgs // {
+      writeText =
+        name: text:
+        assert
+          name != "context-packaging.toml.json"
+          || builtins.getContext text == builtins.getContext "${pkgs.coreutils}/bin/true";
+        pkgs.writeText name text;
+    };
+  };
+  recoveringToml = lexicon.lib.toml {
+    inherit pkgs;
+    krisis.mkReporter = _: {
+      fail = _: throw "toml called an injected reporter fail";
+      finish =
+        result:
+        assert map (d: d.primary.label) result.diagnostics == [ "$.bad" ];
+        {
+          kind = "table";
+          value.recovered = {
+            kind = "scalar";
+            value = true;
+          };
+        };
+    };
+  };
+  finishingToml = lexicon.lib.toml {
+    inherit pkgs;
+    krisis.mkReporter = _: {
+      fail = _: throw "toml called an injected reporter fail";
+      finish =
+        result:
+        assert result.diagnostics == [ ];
+        result.value
+        // {
+          value.finished = {
+            kind = "scalar";
+            value = true;
+          };
+        };
+    };
+  };
   generated = toml.generate "all-values.toml" {
     "" = "empty key";
     "a.b" = "quoted key";
@@ -139,6 +220,20 @@ let
   fixture = pkgs.writeText "composition-fixture.json" (
     builtins.toJSON {
       inherit boundaries;
+      inherit deferredFailures;
+      sentinelCli = "${sentinelToml.package}/bin/lexicon-toml";
+      homeCli = "${homeToml.package}/bin/lexicon-toml";
+      packagedContext = contextToml.generate "context-packaging.toml" {
+        executable = "${pkgs.coreutils}/bin/true";
+      };
+      recovered = recoveringToml.generate "recovered.toml" { bad = null; };
+      finished = finishingToml.generate "finished.toml" { ignored = 1; };
+      opaqueSource = toml.merge "generated-source.toml" {
+        sources = [
+          (pkgs.runCommand "opaque-input.toml" { } ''printf 'generated = true\n' > "$out"'')
+          { extra = true; }
+        ];
+      };
       example =
         assert builtins.length (builtins.attrNames exampleServices) == 1;
         example.packages.x86_64-linux.default;
@@ -162,6 +257,7 @@ let
   python = pkgs.python3.withPackages (p: [ p.tomlkit ]);
 in
 assert import ./encoding.nix { inherit pkgs lexicon; };
+assert rendering.ok;
 pkgs.runCommand "toml-composition-tests"
   {
     nativeBuildInputs = [
@@ -174,5 +270,6 @@ pkgs.runCommand "toml-composition-tests"
     export LEXICON_TOML=${../../src/toml/runtime.py}
     export TOML_CLI=${toml.package}/bin/lexicon-toml
     python ${./test.py} ${generated} ${retained} ${conflict} ${fixture}
+    python ${./protocol.py} ${rendererFixtures} ${fixture}
     touch "$out"
   ''

@@ -148,3 +148,37 @@ complete diagnostic records and terminal text come from baseline characterizatio
 Callback events are checked in order, including zero calls to unused methods.
 `--reference` also compares terminal text with retained baseline stderr.
 `furnish-observations` runs this family alongside resource transport probes.
+
+`toml.py` measures TOML with `--baseline`, `--candidate` and `--output`. Run it
+inside the development shell, first for controls and then with `--primary` in a
+distinct directory. Use absolute paths and identical dependencies/evaluator.
+
+The fixed sizes are 4, 16 and 64 records. Each contains an integer, precise
+float, contextual executable string, heterogeneous array and hexadecimal literal.
+Public evaluation demands the generated derivation path and context. Build
+samples realize the complete file, using `--rebuild` after warm-up. CLI samples
+invoke each installed package on the same prepared encoding. Every rendered
+file is parsed and compared with the finite fixture, including its executable
+path.
+
+Candidate-only pure samples demand text, literal metadata and context. Prepared
+JSON is decoded and executable fields receive the original context before
+rendering. These samples include decoding and context attachment, exclude encoder
+application validation, and have no baseline renderer comparison. Public generate
+evaluation includes both encoding and rendering.
+
+Comparable cells use one warm-up per side and three alternating pairs, with the
+wall/RSS bounds above. Wall time covers launch through reaping. CLI RSS uses
+Linux wait4 process-family accounting. Nix statistics are enabled for both sides;
+candidate CLI child statistics establish its evaluator invocation. Observer cost
+is included, never subtracted. Daemon/builder RSS is excluded. Closure records
+retain all paths, NAR sizes, shared bytes and bytes exclusive to either side.
+
+Controls cover valid/invalid application input, generated-file opacity with IFD
+disabled, installed generation, contextual pure output, a missing source and a
+forced timeout. Expected failures remain in their directories. Stop on invalid
+controls, output/context/identity mismatch, unreleased processes or regression.
+The controls and primary schedule use at most 122 evaluator/CLI launch units,
+including package setup and each candidate CLI's child. Closure queries are
+recorded separately. The schedule is expected to take minutes; thirty minutes
+or more requires readiness review.
