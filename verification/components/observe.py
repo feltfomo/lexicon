@@ -62,11 +62,30 @@ def compiler_expected(component, size):
     return home(0)
 
 
+def resource_expected(component, size):
+    def directory(principal):
+        return [{"destination": f".tree/item{i}/default.nix", "representation": "writable", "principal": principal}
+                for i in range(size)]
+    return {
+        "resource-directory": lambda: directory("user"),
+        "resource-shared": lambda: [directory(f"user{i}") for i in range(size)],
+        "resource-grouped": lambda: [".ordinary"] + [f".{root}/item{i}" for root in ("a", "b") for i in range(size)],
+        "resource-theme": lambda: {
+            "destinations": [f".config/matugen/dms/templates/item{i}/safe-render.nix" for i in reversed(range(size))] + [".config/matugen/config.toml"],
+            "templates": {f"item{i}": {"output_path": f"/home/user/.output/item{i}"} for i in range(size)}},
+        "resource-furnish": lambda: [{"destination": f"/home/user/.files/item{i}",
+                                      "target": {"kind": "external", "path": f"/external/item{i}"},
+                                      "executor": {"identity": "component/executor", "protocolVersion": 1}}
+                                     for i in sorted(range(size), key=lambda i: f"item{i}")],
+        "resource-index": lambda: sorted(f"x86_64-linux/host:/home/user/.files/item{i}" for i in range(size)),
+    }[component]()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--component", choices=["ownerships", "registry", "declaration", "resource", "toml", "praxis", "fleet-resolve", "fleet-prepared", "fleet-custom", "fleet-trace", "fleet-matrix", "registry-queries", "compiler-wide", "compiler-deep", "compiler-prepared", "compiler-dynamic", "compiler-single", "compiler-combined"], required=True)
+    parser.add_argument("--component", choices=["ownerships", "registry", "declaration", "resource", "toml", "praxis", "fleet-resolve", "fleet-prepared", "fleet-custom", "fleet-trace", "fleet-matrix", "registry-queries", "compiler-wide", "compiler-deep", "compiler-prepared", "compiler-dynamic", "compiler-single", "compiler-combined", "resource-directory", "resource-shared", "resource-grouped", "resource-theme", "resource-furnish", "resource-index"], required=True)
     parser.add_argument("--size", type=int, choices=[4, 16, 64], required=True)
     parser.add_argument("--bad", action="store_true")
     parser.add_argument("--initialize-report", action="store_true")
@@ -75,8 +94,8 @@ def main():
     parser.add_argument("--timeout-seconds", type=float, default=60)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
-    if args.output_projection != "default" and not args.component.startswith("compiler-"):
-        parser.error("output projection controls require a registered compiler workload")
+    if args.output_projection != "default" and not args.component.startswith(("compiler-", "resource-")):
+        parser.error("output projection controls require a compiler or resource workload")
     expression = 'import ' + str(Path(__file__).with_name("workload.nix")) + ' ' + '{ source = ' + json.dumps(args.source) + '; component = ' + json.dumps(args.component) + '; size = ' + str(args.size) + '; bad = ' + str(args.bad).lower() + '; initializeReport = ' + str(args.initialize_report).lower() + '; outputProjection = ' + json.dumps(args.output_projection) + '; }'
     command = ["nix", "eval", "--impure", "--json", "--option", "allow-import-from-derivation", "false", "--extra-experimental-features", "pipe-operators", "--expr", expression]
     if args.phase == "render":
@@ -146,7 +165,9 @@ def main():
                 "fleet-matrix": lambda: validate_matrix(value, args.size),
             }
             try:
-                if args.output_projection == "missing":
+                if args.component.startswith("resource-"):
+                    projection_valid = value == resource_expected(args.component, args.size)
+                elif args.output_projection == "missing":
                     projection_valid = value == {"nixos": [], "homeManager": [], "resources": []}
                 else:
                     projection_valid = value == compiler_expected(args.component, args.size) if args.component.startswith("compiler-") else validators[args.component]()

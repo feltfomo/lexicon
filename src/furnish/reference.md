@@ -23,6 +23,14 @@ provider ? defaultOwnershipProvider }` returns:
 Empty declarations emit an empty manifest without forcing executors, context
 or ownership provider. Compilation validates shapes, selects ownership,
 normalizes destinations, rejects collisions and materializes selected entries.
+Preparation composes native Checked validation through the shared dependency owner.
+Executor registrations are prepared once when needed. Shape, registry and artifact
+validation retain their original `fail` terminals; individual capability,
+materializer-type and external-target failures retain `failOne`. Furnish doesn't
+call an injected reporter's `finish`. Recovery returns are consumed at the original
+operation before dependent work continues. Shape and host-index projections don't
+demand source values, generators or materializers. Public helpers retain ordinary
+values and diagnostic lists; callers don't supply Fx.
 
 ## Declarations
 

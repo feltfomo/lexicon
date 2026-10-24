@@ -109,3 +109,42 @@ preparation alignment. `--reference` compares the complete callback trace order
 and terminal exception text with the baseline. Callback, preparation and lowering
 exceptions also require their authored demand-site context. The
 `declarations-observations` check embeds the pinned sources in an isolated store.
+
+Resource workloads select `resource-directory`, `resource-shared`,
+`resource-grouped`, `resource-theme`, `resource-furnish` and `resource-index`.
+Sizes count directories, grouped names, theme declarations or Furnish declarations.
+The directory source is each admitted snapshot's tracked
+`tests/program/fixtures/sample-tree`. Every directory excludes `safe-render.nix`,
+reserves inactive `diagnostics.nix`, and selects writable `default.nix`.
+Shared demand compiles the same static declaration in N user contexts. Grouped
+demand expands two destination roots and includes an opaque ordinary file source.
+Theme demand combines N public declaration modules and demands the generated
+Matugen registration map. Its generator captures the adapter's input as JSON with
+`builtins.toFile`; this measures pure aggregation without a TOML build. Source
+paths are omitted from the equal projection, while every destination and output
+registration is checked. Furnish demands every compiled identity, target and
+executor. Index demand keeps source values, generators and context throwing.
+These workloads include evaluation and filesystem inventory reads, excluding
+runtime reconciliation, package builds and renderer execution.
+
+Resource output controls reject missing and unsupported projections. Use
+`compare.py --stop-on-regression` to stop after the first cell exceeding either
+fixed bound. All launched samples remain in its output directory.
+
+`contracts.py --family resources` checks the complete selected resource poison
+transport, one real static inventory preparation across two principals, one
+materializer across repeated demand, and original provider/materializer exception
+text with their Furnish contexts. `--reference` compares terminal exceptions with
+retained baseline evidence. The `furnish-observations` flake check runs the same
+probes with embedded pinned dependencies and the dummy store. Its retained target
+is a supplied plain store string, so callback observation needs no store writes.
+The normal `furnish-pure` evaluation separately demands retained string context. Real NixOS module
+evaluation in `tests/furnish/runtime.nix` checks disabled, enabled-empty and
+nonempty behavior, generated source retention, activation and mount dependencies.
+
+`contracts.py --family terminals` checks public Furnish reporter dispatch and
+recovery, theme file group terminals and Matugen group demand. Expected values,
+complete diagnostic records and terminal text come from baseline characterization.
+Callback events are checked in order, including zero calls to unused methods.
+`--reference` also compares terminal text with retained baseline stderr.
+`furnish-observations` runs this family alongside resource transport probes.

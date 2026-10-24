@@ -4,6 +4,8 @@
   krisis,
 }:
 let
+  inherit (krisis) effects;
+  inherit (effects.native) validation;
   report = import ../declarations/report.nix { inherit lib axiom krisis; };
   legacyReport = import ../program/report.nix { inherit lib axiom krisis; };
   contract = import ../furnish/contract.nix { inherit lib axiom; };
@@ -87,7 +89,12 @@ let
     directoryRuleErrors = _: [ ];
   };
   theme = import ../program/theme {
-    inherit lib axiom contract;
+    inherit
+      lib
+      axiom
+      krisis
+      contract
+      ;
     inherit (fields)
       unknownFields
       validRelativePath
@@ -114,7 +121,7 @@ let
       );
     };
   };
-  validatePlan =
+  validatePlanComputation =
     plan:
     let
       ruleOrigin =
@@ -129,47 +136,58 @@ let
           ];
       payload =
         if plan.kind == "theme" then
-          axiom.validation.andThen
+          validation.andThen
             (
               value:
-              axiom.validation.map (entry: value // { inherit entry; }) (
-                (theme.themeEntrySchema (krisis.renderPath plan.origin) (
-                  lib.mapAttrs (_: krisis.renderPath) (plan.prepared.fieldOrigins or { })
-                ))
-                  value.entry
-              )
-            )
-            (
-              (report.schema plan.origin {
-                renderer = required (name: builtins.elem name theme.themeBackends);
-                blockId = required fields.validBaseName;
-                entry = required builtins.isAttrs;
-              })
-                plan.value
-            )
-        else if plan.kind == "directory" then
-          axiom.validation.andThen
-            (
-              value:
-              axiom.validation.map (rules: value // lib.optionalAttrs (value ? files) { files = rules; }) (
-                axiom.validation.sequence (
-                  lib.imap0 (index: rule: (report.schema (ruleOrigin index) schemas.rule) rule) (value.files or [ ])
+              validation.andThen (entry: effects.accept (value // { inherit entry; })) (
+                effects.fromAxiom (
+                  (theme.themeEntrySchema (krisis.renderPath plan.origin) (
+                    lib.mapAttrs (_: krisis.renderPath) (plan.prepared.fieldOrigins or { })
+                  ))
+                    value.entry
                 )
               )
             )
             (
-              (report.schema plan.origin (schemas.directory // { files = optional builtins.isList; })) plan.value
+              effects.fromAxiom (
+                (report.schema plan.origin {
+                  renderer = required (name: builtins.elem name theme.themeBackends);
+                  blockId = required fields.validBaseName;
+                  entry = required builtins.isAttrs;
+                })
+                  plan.value
+              )
+            )
+        else if plan.kind == "directory" then
+          validation.andThen
+            (
+              value:
+              validation.andThen
+                (rules: effects.accept (value // lib.optionalAttrs (value ? files) { files = rules; }))
+                (
+                  validation.all (
+                    lib.imap0 (index: rule: effects.fromAxiom ((report.schema (ruleOrigin index) schemas.rule) rule)) (
+                      value.files or [ ]
+                    )
+                  )
+                )
+            )
+            (
+              effects.fromAxiom (
+                (report.schema plan.origin (schemas.directory // { files = optional builtins.isList; })) plan.value
+              )
             )
         else if plan.kind == "external-link" then
-          links.validate plan.origin plan.value
+          links.validateComputation plan.origin plan.value
         else
-          (report.schema plan.origin schemas.${plan.kind}) plan.value;
+          effects.fromAxiom ((report.schema plan.origin schemas.${plan.kind}) plan.value);
     in
-    axiom.validation.map (value: plan // { inherit value; }) payload;
+    validation.andThen (value: effects.accept (plan // { inherit value; })) payload;
+  validatePlan = plan: effects.resultOf (validatePlanComputation plan);
   compose =
     resources:
     let
-      plans = report.finish (axiom.validation.sequence (map validatePlan resources));
+      plans = report.finishComputation (validation.all (map validatePlanComputation resources));
       themePlans = builtins.filter (plan: plan.kind == "theme") plans;
       normalizedThemes = map (
         plan: theme.normalizeEntry plan.value // { inherit (plan) origin; }
@@ -186,14 +204,14 @@ let
           index = plan.origin;
           rules = map (entry: { inherit index entry; }) (plan.value.files or [ ]);
         in
-        directoryLib.expandDirectory {
+        directoryLib.expandComputation {
           inherit index;
           entry = legacy "directory" (removeAttrs plan.value [ "files" ]);
           inherit (preparation) reservedNames;
         } rules normalizedThemes preparation.inventory
       ) directoryPlans;
-      directoryFiles = report.checked (builtins.concatMap (result: result.errors) expanded) (
-        builtins.concatMap (result: result.files) expanded
+      directoryFiles = report.finishComputation (
+        validation.andThen (files: effects.accept (builtins.concatLists files)) (validation.all expanded)
       );
     in
     {

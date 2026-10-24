@@ -645,6 +645,16 @@ rec {
       krisis
       ;
   })
+  // (import ./directories.nix { inherit lib axiom krisis; }).tests
+  // (import ./theme-effects.nix {
+    inherit
+      lib
+      pkgs
+      axiom
+      krisis
+      lexicon
+      ;
+  }).cases
   // bindingTests
   // (import ./lucid.nix { inherit lib pkgs lexicon; })
   // (import ./serpantinum.nix { inherit lib pkgs lexicon; });

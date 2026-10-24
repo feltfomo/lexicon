@@ -387,17 +387,27 @@
               inherit (inputs) nixpkgs;
             };
             registry = gate "registry-tests" registryTests;
-            declarations-public = gate "declaration-public-tests" (
-              import ./tests/declarations/public.nix {
-                inherit
-                  lib
-                  pkgs
-                  axiom
-                  krisis
-                  ;
-                lexicon = inputs.self;
-              }
-            );
+            declarations-public = gate "declaration-public-tests" {
+              ok =
+                (import ./tests/declarations/public.nix {
+                  inherit
+                    lib
+                    pkgs
+                    axiom
+                    krisis
+                    ;
+                  lexicon = inputs.self;
+                }).ok
+                && (import ./tests/declarations/resource-effects.nix {
+                  inherit
+                    lib
+                    pkgs
+                    axiom
+                    krisis
+                    ;
+                  lexicon = inputs.self;
+                }).ok;
+            };
             declarations-observations = import ./tests/declarations/observations-check.nix {
               inherit pkgs;
               nixpkgsSource = inputs.nixpkgs;
@@ -448,7 +458,26 @@
               praxis = praxisCompiler;
             };
             praxis-runner = praxisCommands.runner;
-            furnish-pure = gate "furnish-pure-tests" furnishTests;
+            furnish-pure = gate "furnish-pure-tests" {
+              ok =
+                furnishTests.ok
+                && (import ./tests/furnish/effects.nix { inherit lib axiom krisis; }).ok
+                && (import ./tests/furnish/runtime.nix {
+                  inherit
+                    lib
+                    pkgs
+                    axiom
+                    krisis
+                    ;
+                  inherit (inputs) nixpkgs;
+                }).ok;
+            };
+            furnish-observations = import ./tests/furnish/observations-check.nix {
+              inherit pkgs;
+              nixpkgsSource = inputs.nixpkgs;
+              axiomSource = inputs.axiom;
+              krisisSource = inputs.krisis;
+            };
             program-boundary = gate "program-boundary-tests" programTests;
             ownerships-engine = gate "ownerships-engine-tests" (ownershipsTest ./tests/ownerships/engine.nix);
             ownerships-roster = gate "ownerships-roster-tests" (ownershipsTest ./tests/ownerships/roster.nix);

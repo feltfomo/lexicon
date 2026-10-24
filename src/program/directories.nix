@@ -9,6 +9,8 @@
 }:
 let
   inherit (fields) joinSource lifecycleKeysAttrs;
+  inherit (krisis) effects;
+  inherit (effects.native) validation;
 
   subjectAt =
     index:
@@ -134,7 +136,7 @@ let
       inherit shapeErrors sourceErrors walked;
     };
 
-  expandDirectory =
+  directoryExpansion =
     wrapped: rules: themeEntries: pw:
     let
       inherit (pw) shapeErrors sourceErrors walked;
@@ -145,18 +147,17 @@ let
       inventory = walked.files;
       reserved = wrapped.reservedNames;
       uniqueReserved = lib.unique reserved;
-      duplicateReserved =
-        (axiom.registry.compile {
-          registrations = reserved;
-          keyOf = name: name;
-          onDuplicate =
-            name: _duplicates:
-            problem {
-              code = "directory-file-duplicate";
-              message = "repeats override name ${name}";
-              primary.label = subjectAt wrapped.index;
-            };
-        }).diagnostics;
+      reservations = axiom.registry.compile {
+        registrations = reserved;
+        keyOf = name: name;
+        onDuplicate =
+          name: _duplicates:
+          problem {
+            code = "directory-file-duplicate";
+            message = "repeats override name ${name}";
+            primary.label = subjectAt wrapped.index;
+          };
+      };
       unknownExcluded = builtins.filter (name: !(builtins.elem name walked.members)) exclude;
       excludedOverrides = builtins.filter (excludedBy exclude) uniqueReserved;
       unknownReserved = builtins.filter (
@@ -168,8 +169,7 @@ let
       excludedThemes = builtins.filter (excludedBy exclude) themeNames;
       themeOverrides = builtins.filter (name: builtins.elem name themeNames) uniqueReserved;
       semanticErrors =
-        duplicateReserved
-        ++ lib.optional (unknownExcluded != [ ]) (problem {
+        lib.optional (unknownExcluded != [ ]) (problem {
           code = "directory-exclude-unknown";
           message = "excludes unknown names: ${lib.concatStringsSep ", " unknownExcluded}";
           primary.label = subjectAt wrapped.index;
@@ -214,12 +214,37 @@ let
         else
           [ ]
       ) selectedRules;
-      errors = shapeErrors ++ selectedRuleErrors ++ sourceErrors ++ walked.diagnostics ++ semanticErrors;
+      preparationErrors = shapeErrors ++ selectedRuleErrors ++ sourceErrors ++ walked.diagnostics;
+    in
+    {
+      inherit preparationErrors reservations semanticErrors;
+      files = map (fileFor { }) inheritedNames ++ selectedFiles;
+    };
+
+  expandDirectory =
+    wrapped: rules: themeEntries: preparation:
+    let
+      expansion = directoryExpansion wrapped rules themeEntries preparation;
+      errors =
+        expansion.preparationErrors ++ expansion.reservations.diagnostics ++ expansion.semanticErrors;
     in
     {
       inherit errors;
-      files = if errors == [ ] then map (fileFor { }) inheritedNames ++ selectedFiles else [ ];
+      files = if errors == [ ] then expansion.files else [ ];
     };
+
+  expandComputation =
+    wrapped: rules: themeEntries: preparation:
+    let
+      expansion = directoryExpansion wrapped rules themeEntries preparation;
+    in
+    validation.andThen (_: effects.accept expansion.files) (
+      validation.all [
+        (effects.fromDiagnostics expansion.preparationErrors null)
+        (effects.fromAxiom expansion.reservations)
+        (effects.fromDiagnostics expansion.semanticErrors null)
+      ]
+    );
 
   prewalkFor =
     prewalked: index:
@@ -248,6 +273,7 @@ in
     sourceRelativeTo
     prewalkDirectory
     expandDirectory
+    expandComputation
     expandDirectories
     prewalkFor
     ;

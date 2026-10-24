@@ -163,6 +163,13 @@ expansion; excluding or overriding those theme sources is an error.
 Normalized relative paths reject leading `/`, empty components, `.` and `..`.
 Empty or untracked directories may be absent from a git-backed flake source.
 
+Directory expansion keeps inventory preparation pure and shared by authored
+occurrence. The selected resource operation combines preparation diagnostics,
+reservation-registry validation and semantic diagnostics with native validation
+before constructing files. These checks retain their diagnostic order. Sources
+and lifecycle values in successful files cross the shared effects boundary in
+thunk carriers; checking reservations doesn't demand those values.
+
 ## Diagnostic API
 
 `inputs.lexicon.lib.report {}` returns:

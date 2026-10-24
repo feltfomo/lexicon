@@ -4,7 +4,7 @@
   ...
 }:
 let
-  reporter = krisis.mkReporter {
+  reporter = krisis.effects.reporter {
     formatHeader = count: "program: ${toString count} declaration error(s)";
     formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
   };

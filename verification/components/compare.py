@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--components", nargs="+", default=["ownerships", "registry", "declaration", "resource", "toml", "praxis"])
     parser.add_argument("--sizes", type=int, choices=[4, 16, 64], nargs="+", default=[4, 16, 64])
     parser.add_argument("--initialize-report", action="store_true")
+    parser.add_argument("--stop-on-regression", action="store_true")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     sources = {"baseline": args.baseline, "candidate": args.candidate}
@@ -61,6 +62,8 @@ def main():
             }
             comparisons.append(comparison)
             (args.output / "comparisons.json").write_text(json.dumps(comparisons, indent=2) + "\n")
+            if args.stop_on_regression and not (comparison["wall_within_noise"] and comparison["rss_within_noise"]):
+                raise RuntimeError(f"component regression {component} at size {size}")
 
 
 if __name__ == "__main__":

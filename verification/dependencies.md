@@ -12,8 +12,8 @@ order, and produces an explicit Checked value. Input values, diagnostic recovery
 data and successful results use public `fx.state.mkThunk` and `forceThunk`. The
 collector's continuation doesn't authorize dependent work. A failed result has no
 value even when it contains only warnings. Declaration reporting, Ownerships
-orchestration, registered compiler traversal and Registry orchestration select this
-owner. Resource composition retains its existing orchestration.
+orchestration, registered compiler traversal, Registry orchestration, selected
+resource composition, theme preparation and Furnish compilation select this owner.
 The bridge shares one collecting-handler configuration. Its initial state is
 immutable, so separate interpretations retain separate diagnostic histories.
 
@@ -85,9 +85,9 @@ the native inspector. Native reports still obtain their summaries from Krisis.
 | Capability | Production owners | Disposition |
 | --- | --- | --- |
 | `schema.compile` | Declaration reports/definitions, Ownerships axes/surface/merge, Registry fields, Furnish core, TOML encoding, theme, Praxis fields | Retain the public field interpreter and its result bridge |
-| `validation` | Retained schema/parse callbacks, compatibility result envelopes, resource stages and unmigrated subsystems | Keep callback result construction at its boundary; registered compiler, target/output validation, Ownerships and Registry orchestration use native `all`/`andThen` and Fx |
+| `validation` | Retained schema/parse callbacks, compatibility result envelopes and unmigrated TOML/Praxis orchestration | Keep callback result construction at its boundary; registered compiler, resource plans, directory expansion, theme preparation, Furnish, Ownerships and Registry orchestration use native `all`/`andThen` and Fx |
 | `types` | Praxis schemas and fields | Retain Axiom type objects and `validateType` adaptation |
-| `registry.compile` | Declaration registration, Ownerships descriptors/relations, Registry core, directory reservations, Furnish collisions/executors, theme renderers, Praxis ownership | Retain collision validation before indexing; each owner needs a later capability-specific decision |
+| `registry.compile` | Declaration registration, Ownerships descriptors/relations, Registry core, directory reservations, Furnish collisions/executors, theme renderers, Praxis ownership | Retain collision validation before indexing; migrated owners adapt each result once at their operation boundary |
 | `phases.compile` | Ownerships engine | Retain closed view/callback validation and registration order; share one prepared registration |
 | `requirements.evaluate`, `requirements.observe` | Ownerships context requirements and relations, Furnish executors, theme capabilities and runtime | Retain requirement evaluation; no diagnostic substitution |
 | `canonical.qualified`, `canonical.path`, `canonical.join` | Ownerships axes/matrix/import/merge, Registry identities, program fields, Furnish identities, theme identities and diagnostic code qualification | Retain canonical encoding contracts |
@@ -99,7 +99,17 @@ interpretation, Checked/Outcome elimination, scope behavior and the shared effec
 transport boundary. Compiler preparation creates validated entries in one native
 structural computation. Selected domain and metadata schemas adapt once, then
 lowering and contribution validation compose within the context computation.
-Resource collision algorithms remain with their current owner.
+Resource schemas and grouped-link parse callbacks retain Axiom result contracts.
+Selected plans adapt once before native composition. Directory expansion adapts its
+reservation registry once and retains pure inventory and expansion algorithms.
+Theme files validate per-block groups before adapter construction; Matugen validates
+cross-declaration groups at their original per-group module boundary. Furnish uses
+native shape, registry and artifact validation at their original terminal
+boundaries. Its registries,
+requirements and canonical identities retain their domain owners.
+Interpretation follows demanded operations. Resource payload validation doesn't walk
+directories, theme diagnostics don't generate sources, and Furnish preparation doesn't
+run materializers. Static directory inventories remain shared per authored occurrence.
 
 Ownerships set operations and roster projection remain pure. Set indexing would
 force member tails that current short-circuit queries leave opaque. Its public
@@ -107,3 +117,11 @@ suggestion helpers retain their existing thresholds, ties and malformed-input
 exceptions. Den roster/principal projection also stays pure, with no host
 instantiation or Den user-body evaluation. Den's `drop` retains its injected
 terminal diagnostic operation.
+
+Furnish eliminates native Checked results with `finishComputation reporter.fail`.
+Individual domain guards retain `failOne`, including its recovery return. Shape,
+registry and artifact recovery values enter the same downstream operations as
+before. Theme file groups use `checked diagnostics []` only on failure; successful
+groups call no terminal. Matugen calls `finishWithReporter` for each group's
+registration result and demands that return before constructing declarations.
+Group concatenation preserves the first throwing terminal and later-group laziness.

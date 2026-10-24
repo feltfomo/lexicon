@@ -117,6 +117,16 @@ else
               outputProjection
               ;
           }
+        else if lib.hasPrefix "resource-" component then
+          import ./resources.nix {
+            inherit
+              project
+              component
+              size
+              bad
+              outputProjection
+              ;
+          }
         else if component == "toml" then
           toString workloads.toml
         else

@@ -35,3 +35,17 @@ Its continuation trace must occur once. The Boolean suite also checks diagnostic
 replay order, dependent suppression and opaque successful values. The public
 structural-terminal fixture returns a sentinel from an injected reporter's
 successful boolean check; that return must not replace the prepared entry.
+
+Resource transport and callback observations are maintained by
+`tests/furnish/observations.nix` and `contracts.py --family resources`.
+`furnish-pure` also checks real NixOS module evaluation. Program boundary checks
+include directory Checked expansion and theme file/Matugen preparation. These
+projections demand identities and diagnostics while leaving unrelated source,
+generator and executor payloads opaque.
+
+The terminals family checks explicit reporter recovery separately from collecting
+handler continuation. Furnish uses `fail` and `failOne` at their original return
+positions. Theme file groups use `checked` on failure; Matugen demands each
+registration `finish` return before constructing that group's declarations.
+Public group probes preserve the first thrown diagnostic and leave later payloads
+opaque when that terminal throws.

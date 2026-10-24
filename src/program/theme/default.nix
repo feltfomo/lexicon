@@ -1,6 +1,7 @@
 {
   lib,
   axiom,
+  krisis,
   contract,
   unknownFields,
   validRelativePath,
@@ -12,6 +13,8 @@
 }:
 let
   capability = import ./capabilities.nix;
+  inherit (krisis) effects;
+  inherit (effects.native) validation;
 
   declares = name: adapter: (axiom.requirements.evaluate [ name ] adapter.capabilities).satisfied;
 
@@ -362,23 +365,22 @@ let
       runtime = adapters.${renderer}.runtime or null;
     };
 
-  themeGroupFiles =
+  themeGroupComputation =
     pkgs: entries:
     let
       inherit ((builtins.head entries)) blockId renderer;
       adapter = adapters.${renderer};
-      duplicateIds =
-        (axiom.registry.compile {
-          registrations = entries;
-          keyOf = entry: entry.registrationId;
-          onDuplicate =
-            id: _duplicates:
-            problem {
-              code = "theme-registration-duplicate";
-              message = "has duplicate registration id ${id}";
-              primary.label = "theme.${renderer}.${blockId}";
-            };
-        }).diagnostics;
+      registrations = axiom.registry.compile {
+        registrations = entries;
+        keyOf = entry: entry.registrationId;
+        onDuplicate =
+          id: _duplicates:
+          problem {
+            code = "theme-registration-duplicate";
+            message = "has duplicate registration id ${id}";
+            primary.label = "theme.${renderer}.${blockId}";
+          };
+      };
       unsupportedNativeIds = map (entry: entry.registrationId) (
         builtins.filter (entry: !(declares capability.nativeBlocks adapter) && entry.native != { }) entries
       );
@@ -391,28 +393,37 @@ let
         provenance = "lexicon/program/theme/default.nix";
       };
     in
-    if duplicateIds != [ ] then
-      reporter.checked duplicateIds [ ]
-    else if unsupportedNativeIds != [ ] then
-      reporter.checked
-        [
-          (problem {
+    validation.andThen (
+      _:
+      validation.andThen
+        (
+          _:
+          effects.accept (
+            map seedFileOf entries
+            ++ adapter.filesFor {
+              inherit
+                pkgs
+                blockId
+                entries
+                templateNameOf
+                ;
+            }
+          )
+        )
+        (
+          effects.fromDiagnostics (lib.optional (unsupportedNativeIds != [ ]) (problem {
             code = "theme-native-unsupported";
             message = "cannot use native registration fields: ${lib.concatStringsSep ", " unsupportedNativeIds}";
             primary.label = "theme.${renderer}.${blockId}";
-          })
-        ]
-        [ ]
-    else
-      map seedFileOf entries
-      ++ adapter.filesFor {
-        inherit
-          pkgs
-          blockId
-          entries
-          templateNameOf
-          ;
-      };
+          })) null
+        )
+    ) (effects.fromAxiom registrations);
+
+  themeGroupFiles =
+    pkgs: entries:
+    effects.finishComputation (diagnostics: reporter.checked diagnostics [ ]) (
+      themeGroupComputation pkgs entries
+    );
 
   aggregatedThemeFiles =
     entries: pkgs:
@@ -420,35 +431,39 @@ let
       renderer:
       let
         adapter = adapters.${renderer};
+        rendererEntries = builtins.filter (entry: entry.renderer == renderer) entries;
+        computation =
+          validation.andThen
+            (
+              _:
+              effects.accept (
+                adapter.aggregateFilesFor {
+                  inherit pkgs;
+                  entries = rendererEntries;
+                  registrationOf = adapter.registrationOf or (entry: entry.native);
+                }
+              )
+            )
+            (
+              effects.fromAxiom (
+                axiom.registry.compile {
+                  registrations = rendererEntries;
+                  keyOf = entry: entry.registrationId;
+                  onDuplicate =
+                    id: _duplicates:
+                    problem {
+                      code = "theme-registration-duplicate";
+                      message = "has duplicate registration id ${id} across blocks";
+                      primary.label = "theme.${renderer}";
+                    };
+                }
+              )
+            );
       in
-      if !(declares capability.aggregateFiles adapter) then
+      if !(declares capability.aggregateFiles adapter) || rendererEntries == [ ] then
         [ ]
       else
-        let
-          rendererEntries = builtins.filter (entry: entry.renderer == renderer) entries;
-          duplicateIds =
-            (axiom.registry.compile {
-              registrations = rendererEntries;
-              keyOf = entry: entry.registrationId;
-              onDuplicate =
-                id: _duplicates:
-                problem {
-                  code = "theme-registration-duplicate";
-                  message = "has duplicate registration id ${id} across blocks";
-                  primary.label = "theme.${renderer}";
-                };
-            }).diagnostics;
-        in
-        if rendererEntries == [ ] then
-          [ ]
-        else if duplicateIds != [ ] then
-          reporter.checked duplicateIds [ ]
-        else
-          adapter.aggregateFilesFor {
-            inherit pkgs;
-            entries = rendererEntries;
-            registrationOf = adapter.registrationOf or (entry: entry.native);
-          }
+        effects.finishComputation (diagnostics: reporter.checked diagnostics [ ]) computation
     ) themeBackends;
 
   themeFiles =

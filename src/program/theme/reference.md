@@ -63,6 +63,15 @@ registrations use absolute home paths and combine templates into one config per
 renderer and principal. These APIs register templates; they do not install,
 enable or invoke the desktop shell or renderer.
 
+Theme file preparation uses the shared native Checked computation. Registration
+collisions and unsupported native fields are checked before adapter output is
+constructed. Each demanded file group retains its own `checked` failure terminal.
+A throwing terminal stops demand before later groups; a recovering terminal's file
+list participates in concatenation. Successful groups don't call `checked` or
+`finish`. Generated sources stay lazy until a file source is demanded. Matugen
+keeps one `finish` call per renderer/principal group and demands its return before
+constructing declarations, preserving each entry's original principal.
+
 ## Composed TOML outputs
 
 A template or renderer can opt into explicit composition:

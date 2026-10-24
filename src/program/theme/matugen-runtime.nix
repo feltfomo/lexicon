@@ -16,14 +16,14 @@ let
   contract = import ../../furnish/contract.nix { inherit lib axiom; };
   furnishFiles = import ../../furnish/files.nix { inherit lib contract; };
   capability = import ./capabilities.nix;
-  inherit (import ../report.nix { inherit lib krisis axiom; }) problem finish;
+  inherit (import ../report.nix { inherit lib krisis axiom; }) problem reporter;
+  inherit (krisis) effects;
 
   candidates = lib.mapAttrsToList (name: adapter: { inherit name adapter; }) (
     import ./adapters { inherit lib; }
   );
 
-  # the matugen-backed renderers are the ones whose adapter says it needs the
-  # runtime, not a second hand-kept list that drifts from the adapters
+  # adapter capabilities select runtime participation
   observation = axiom.requirements.observe {
     required = [ capability.matugenRuntime ];
     inherit candidates;
@@ -54,18 +54,20 @@ let
     let
       first = builtins.head entries;
       adapter = adapters.${first.renderer};
-      keyed = finish (
-        axiom.registry.compile {
-          registrations = entries;
-          keyOf = entry: entry.registrationId;
-          onDuplicate =
-            id: _duplicates:
-            problem {
-              code = "theme-registration-duplicate";
-              message = "has duplicate registration id ${id} for ${first.filesystemNamespace} (${first.principal.authority.identity})";
-              primary.label = "theme.${first.renderer}";
-            };
-        }
+      keyed = effects.finishWithReporter reporter (
+        effects.fromAxiom (
+          axiom.registry.compile {
+            registrations = entries;
+            keyOf = entry: entry.registrationId;
+            onDuplicate =
+              id: _duplicates:
+              problem {
+                code = "theme-registration-duplicate";
+                message = "has duplicate registration id ${id} for ${first.filesystemNamespace} (${first.principal.authority.identity})";
+                primary.label = "theme.${first.renderer}";
+              };
+          }
+        )
       );
     in
     builtins.seq keyed (
@@ -91,8 +93,7 @@ let
     );
 in
 {
-  # same reason as the furnish runtime: imported by value, so it needs an
-  # explicit identity to be deduped across the slices that pull it in.
+  # imported values need a stable identity across declaration slices
   key = "lexicon/program/theme/matugen-runtime.nix";
 
   options.lexicon.theme.matugen.entries = lib.mkOption {

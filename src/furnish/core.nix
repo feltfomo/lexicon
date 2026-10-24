@@ -8,10 +8,13 @@
   resolveSystem,
 }:
 let
+  inherit (krisis) effects;
+  inherit (effects.native) validation;
+  finish = effects.finishComputation reporter.fail;
   targets = import ./target.nix { inherit lib; };
   claimAttrs = lib.genAttrs claimKeys (_: null);
 
-  reporter = krisis.mkReporter {
+  reporter = effects.reporter {
     formatDiagnostic =
       diagnostic:
       "furnish: ${diagnostic.code}: ${diagnostic.primary.label or "unlabeled"}: ${diagnostic.message}";
@@ -19,7 +22,6 @@ let
 
   renderDiagnostics = reporter.render;
   renderDiagnostic = reporter.renderOne;
-  failAll = reporter.fail;
   fail = reporter.failOne;
 
   diagnostic =
@@ -37,8 +39,6 @@ let
       primary.label = entry;
     };
 
-  # per-stage factories bound once. the curried `diagnostic` stays the exported
-  # door; hot paths inside this file call these.
   shapeDiagnostic = diagnostic "shape-validation";
   selectionDiagnostic = diagnostic "ownership-selection";
   destinationDiagnostic = diagnostic "destination-validation";
@@ -180,14 +180,14 @@ let
       };
     };
 
-  shapeDiagnostics =
+  shapeComputation =
     declaration:
     if !builtins.isAttrs declaration then
-      [
+      effects.fromDiagnostics [
         (shapeDiagnostic "declaration-type" "unlabeled declaration"
           "a declaration must be an attribute set"
         )
-      ]
+      ] declaration
     else
       let
         name = entryName declaration;
@@ -199,31 +199,31 @@ let
         source =
           if declaration ? source && builtins.isAttrs declaration.source then declaration.source else { };
       in
-      axiom.validation.collect [
-        (declarationSchema declaration).diagnostics
-        (authoritySchema name authority).diagnostics
-        (axiom.validation.optional
-          (
-            authority ? scope
-            && builtins.isString authority.scope
-            && authority.scope == "system"
-            && authority ? identity
-            && builtins.isString authority.identity
-            && !lib.hasInfix "/" authority.identity
-          )
-          (
-            shapeDiagnostic "system-authority-identity" name
-              "a system authority identity must be the canonical '<system>/<name>' id"
-          )
-        )
-        (sourceSchema name source).diagnostics
-      ];
+      validation.andThen (_: effects.accept declaration) (
+        validation.all [
+          (effects.fromAxiom (declarationSchema declaration))
+          (effects.fromAxiom (authoritySchema name authority))
+          (effects.fromDiagnostics (lib.optional
+            (
+              authority ? scope
+              && builtins.isString authority.scope
+              && authority.scope == "system"
+              && authority ? identity
+              && builtins.isString authority.identity
+              && !lib.hasInfix "/" authority.identity
+            )
+            (
+              shapeDiagnostic "system-authority-identity" name
+                "a system authority identity must be the canonical '<system>/<name>' id"
+            )
+          ) null)
+          (effects.fromAxiom (sourceSchema name source))
+        ]
+      );
 
-  validateShapes =
-    declarations:
-    axiom.validation.finish failAll (
-      axiom.validation.fromDiagnostics (builtins.concatMap shapeDiagnostics declarations) declarations
-    );
+  shapeDiagnostics = declaration: (effects.resultOf (shapeComputation declaration)).diagnostics;
+  shapesComputation = declarations: validation.all (map shapeComputation declarations);
+  validateShapes = declarations: finish (shapesComputation declarations);
 
   validateShape = declaration: builtins.head (validateShapes [ declaration ]);
 
@@ -235,20 +235,13 @@ let
       value.entries = [ (removeAttrs declaration claimKeys) ];
     };
 
-  # off mode leans on this staying pure and roster-free, so it must never
-  # resolve or touch the payload -- just read the claim vocabulary.
+  # off mode reads only the claim vocabulary and stays roster-free
   isOwnerTagged = declaration: builtins.intersectAttrs claimAttrs declaration != { };
 
-  # a surviving declaration keeps only its own fields; its claim keys are the
-  # ownership vocabulary and never ride into a manifest entry.
   applyEntry = declaration: removeAttrs declaration claimKeys;
 
-  # enabled selection runs its scope's declarations through the ownerships
-  # public surface in one batched resolve per scope, with each declaration split
-  # onto its own index key so an active declaration contributes its own value
-  # and an inactive one simply leaves that key out. reading present-vs-empty
-  # keeps selection from being a shared merge boundary and never forces a
-  # dropped declaration's payload.
+  # distinct keys keep ownership selection from merging declaration payloads
+  # absent keys discard inactive entries without demanding their sources
   mkEnabledProvider =
     {
       resolve,
@@ -297,9 +290,7 @@ let
         );
     };
 
-  # off mode has no roster to select against, so an untagged (globally owned)
-  # declaration passes untouched while an owner-tagged one is a loud author
-  # error -- never a silent identity pass.
+  # off mode rejects claims without consulting a roster
   offProvider = {
     inherit isOwnerTagged;
     selectApplicable =
@@ -407,8 +398,6 @@ let
       ) " at ${claimant.provenance.source}"
     })";
 
-  # the filesystem identity is the index key, so collision detection is just
-  # duplicate keying over the projections
   collisionIndex =
     projections:
     axiom.registry.compile {
@@ -433,7 +422,8 @@ let
 
   collisionDiagnostics = projections: (collisionIndex projections).diagnostics;
 
-  buildIndex = projections: (axiom.validation.finish failAll (collisionIndex projections)).byKey;
+  indexComputation = projections: effects.fromAxiom (collisionIndex projections);
+  buildIndex = projections: (finish (indexComputation projections)).byKey;
 
   projectValidatedPrincipal =
     {
@@ -572,9 +562,9 @@ let
     else
       builtins.lessThan a.priority b.priority;
 
-  compileExecutorRegistry =
+  executorRegistryComputation =
     executors:
-    axiom.validation.finish failAll (
+    effects.fromAxiom (
       axiom.registry.compile {
         registrations = executors;
         keyOf = executor: executor.identity;
@@ -586,6 +576,7 @@ let
       }
     );
 
+  compileExecutorRegistry = executors: finish (executorRegistryComputation executors);
   validateExecutors = executors: (compileExecutorRegistry executors).registrations;
 
   selectValidatedExecutor =
@@ -662,7 +653,7 @@ let
 
   validateArtifact =
     selected: declaration: artifact:
-    axiom.validation.finish failAll (artifactSchema selected (entryName declaration) artifact);
+    finish (effects.fromAxiom (artifactSchema selected (entryName declaration) artifact));
 
   materialize =
     executorSet: declaration:
@@ -702,8 +693,6 @@ let
           managedRoot
           representation
           ;
-        # a declaration that names no policy still lands one in the manifest, so
-        # nothing reading the entry has to know what an absent field would mean.
         onConflict = declaration.onConflict or contract.conflictPolicies.error;
         inherit target;
         executor = {
