@@ -73,5 +73,7 @@ in
     registry
     ;
   inherit (reporter) checked finish;
+  finishComputation = krisis.effects.finishWithReporter reporter;
+  checkComputation = krisis.effects.checkWithReporter reporter;
   nonempty = value: builtins.isString value && value != "";
 }

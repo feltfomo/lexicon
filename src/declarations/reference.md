@@ -16,6 +16,17 @@ and `metadata`. Metadata registrations are `{ name, field }`, with an Axiom fiel
 specification. Descriptor and relation contracts are Ownerships' contracts.
 Registration errors precede declaration traversal and lowering.
 
+Extension, metadata and block-shape batches compose with native
+`validation.all`. Each retained Axiom schema result crosses the shared adapter
+once. A rejected batch suppresses dependent registry and node work. Collision
+registries retain authored order before lookup tables are constructed.
+
+Recursive definitions validate one finite body. A reference validates its binder
+name without inspecting its target. Productive bodies consume a record,
+collection, record-map, value or native node before returning to a reference;
+projection/contextual wrappers alone cannot make a body productive. Domain field
+defaults, preparation callbacks and lowering callbacks stay opaque at registration.
+
 A block defines `name`, `scope`, `outputs`, `node`, `lower` and an optional
 `resourceIntent`. Scope is `user`, `system` or `split`; output kinds are `nixos`,
 `homeManager` and `resources`. Resource intent receives the authored structure and
@@ -45,16 +56,19 @@ selects every declaration and rejects registered ownership keys. This internal
 binding takes already-constructed context; public adapters own context enrichment.
 
 The bound `prepare declaration` returns `{ compile, validate, structure }`.
-`validate` returns an Axiom result; `compile` finishes it through the shared native
-Krisis bridge. `src/dependencies.nix` supplies the compatible extension view and
-native instance. The reporting boundary retains Axiom's field interpreter and
-converts its result into a computation yielding `Valid` or `Invalid`. Invalid
-results have no value. Successful values cross effect boundaries in public thunk
-carriers. Invoke
+`validate` projects the retained Axiom result envelope; `compile` interprets the
+native computation through the shared Krisis boundary. `src/dependencies.nix`
+supplies the compatible extension view and native instance. Field schemas keep
+Axiom's interpreter and adapt their results once to native `Valid` or `Invalid`
+computations. Invalid results have no value. Successful values cross effect
+boundaries in public thunk carriers. Invoke
 `compile { scope = "user"; context = ...; }` repeatedly for the same declaration.
 Static record preparation and prepared Ownerships selectors are retained across
 contexts. Records and collections produced by callbacks prepare within their selected context.
 Independent validation failures accumulate in declared order before lowering.
+Structural preparation yields validated prepared entries before selection.
+Selected values, metadata, origins and preparation retain their aligned product
+through the native computation; interpreting it does not inspect opaque fields.
 Contextual wrappers add no annotation boundary. Their callbacks run after ancestor
 selection and output projection, then validate the returned data at the same path.
 Returned claims narrow descendants; a returned function fails without invocation.

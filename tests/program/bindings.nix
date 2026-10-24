@@ -422,8 +422,175 @@ let
   } sharedSpec;
   reboundDeclaration = builtins.head (declarationsOf rebound);
   emptyDirect = direct { };
+
+  bridgeOptions = {
+    options =
+      lib.genAttrs
+        [
+          "bridgeMarker"
+          "bridgeChoice"
+          "bridgeIdentity"
+          "bridgeObservedConfig"
+          "bridgeNestedArgument"
+        ]
+        (
+          _:
+          lib.mkOption {
+            type = lib.types.str;
+            default = "";
+          }
+        )
+      // {
+        bridgeOrder = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+        };
+      };
+    config.bridgeMarker = "home-manager-config";
+  };
+  outerBridgeImport = { lib, ... }: {
+    bridgeChoice = lib.mkDefault "import-default";
+    bridgeOrder = lib.mkBefore [ "outer" ];
+  };
+  innerBridgeImport = { lib, bridgeArgument, ... }: {
+    bridgeNestedArgument = bridgeArgument;
+    bridgeOrder = lib.mkBefore [ "inner" ];
+  };
+  bridgeBody =
+    imports:
+    {
+      lib,
+      config,
+      host,
+      user,
+      bridgeArgument,
+      ...
+    }:
+    {
+      inherit imports;
+      bridgeChoice = lib.mkForce "body-force";
+      bridgeOrder = [ "body" ];
+      bridgeIdentity = "${host.name}/${user.name}/${bridgeArgument}";
+      bridgeObservedConfig = config.bridgeMarker;
+    };
+  legacyBridges = direct {
+    imports = [ outerBridgeImport ];
+    homeManager = bridgeBody [ innerBridgeImport ];
+    files = { config, ... }: [
+      {
+        dest = ".config/${config.bridgeMarker}";
+        src = ../../src/program.nix;
+      }
+    ];
+  };
+  canonicalBridges = (lexicon.lib.lexicon.forTarget { inherit target; }) {
+    homeManager = bridgeBody [
+      outerBridgeImport
+      innerBridgeImport
+    ];
+    furnish.files = { config, ... }: [
+      {
+        destination = ".config/${config.bridgeMarker}";
+        source = ../../src/program.nix;
+      }
+    ];
+  };
+  evaluateBridge =
+    module:
+    (lib.evalModules {
+      specialArgs = {
+        inherit pkgs;
+        bridgeArgument = "requested-native-argument";
+        host = throw "native bridge forced the runtime host";
+        user = throw "native bridge forced the runtime user";
+      };
+      modules = [
+        bridgeOptions
+        module
+      ];
+    }).config;
+  legacyBridgeConfig = evaluateBridge legacyBridges.homeManager;
+  canonicalBridgeConfig = evaluateBridge canonicalBridges.homeManager;
+  bridgeProjection = config: {
+    inherit (config)
+      bridgeChoice
+      bridgeOrder
+      bridgeIdentity
+      bridgeObservedConfig
+      bridgeNestedArgument
+      ;
+  };
+  resourceBridgeArgs = moduleArgs // {
+    config = moduleArgs.config // {
+      bridgeMarker = "nixos-resource-config";
+    };
+  };
+  recoveringProvider = {
+    mkDiagnosticFactory =
+      defaults: raw:
+      (krisis.mkDiagnosticFactory defaults raw) // { message = "injected target diagnostic"; };
+    mkReporter =
+      options:
+      let
+        original = krisis.mkReporter options;
+      in
+      original
+      // {
+        finish =
+          result:
+          if result.diagnostics == [ ] then
+            original.finish result
+          else
+            {
+              host = {
+                name = "recovered";
+                inherit system;
+                marker = (builtins.head result.diagnostics).message;
+              };
+              user = null;
+            };
+      };
+  };
+  recoveredDirect = lexicon.lib.programDirect {
+    krisis = recoveringProvider;
+    mkCoordinator = throw "native target recovery forced file machinery";
+    target.host = {
+      name = 1;
+      inherit system;
+    };
+  };
+  recoveredConfig =
+    evaluateBridge
+      (recoveredDirect {
+        homeManager = { host, ... }: { bridgeIdentity = host.marker; };
+      }).homeManager;
 in
 {
+  native-bridge-preserves-imports-priorities-and-requested-arguments =
+    bridgeProjection legacyBridgeConfig == {
+      bridgeChoice = "body-force";
+      bridgeOrder = [
+        "inner"
+        "outer"
+        "body"
+      ];
+      bridgeIdentity = "workstation/alice/requested-native-argument";
+      bridgeObservedConfig = "home-manager-config";
+      bridgeNestedArgument = "requested-native-argument";
+    };
+  canonical-and-legacy-native-bridges-evaluate-equally =
+    bridgeProjection canonicalBridgeConfig == bridgeProjection legacyBridgeConfig;
+  native-and-resource-bridges-keep-separate-configurations =
+    legacyBridgeConfig.bridgeObservedConfig == "home-manager-config"
+    && canonicalBridgeConfig.bridgeObservedConfig == "home-manager-config"
+    &&
+      (builtins.head (declarationsOfWith resourceBridgeArgs legacyBridges)).destination
+      == ".config/nixos-resource-config"
+    &&
+      (builtins.head (declarationsOfWith resourceBridgeArgs canonicalBridges)).destination
+      == ".config/nixos-resource-config";
+  public-target-normalization-honors-injected-diagnostics-and-terminal-recovery =
+    recoveredConfig.bridgeIdentity == "injected target diagnostic";
   public-program-export-remains-a-function = builtins.isFunction lexicon.lib.program;
   public-direct-export-exists = builtins.isFunction lexicon.lib.programDirect;
   public-ownerships-export-exists = builtins.isFunction lexicon.lib.programOwnerships;

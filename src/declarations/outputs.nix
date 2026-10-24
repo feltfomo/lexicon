@@ -6,7 +6,14 @@
 let
   report = import ./report.nix { inherit lib axiom krisis; };
   inherit (report) schema field at;
-  inherit (axiom) validation;
+  inherit (krisis.effects)
+    native
+    accept
+    fromAxiom
+    fromDiagnostics
+    resultOf
+    ;
+  inherit (native) validation;
   origin =
     value:
     builtins.isList value
@@ -35,7 +42,7 @@ let
       origin = field path "origin" origin;
       prepared = { };
     };
-  validate =
+  validateComputation =
     {
       definition,
       scope,
@@ -88,7 +95,7 @@ let
           );
         validateList =
           name: parser:
-          validation.sequence (
+          validation.all (
             lib.imap0 (
               index: value:
               (parser (
@@ -105,7 +112,7 @@ let
           path: value:
           validation.andThen (
             plan:
-            validation.fromDiagnostics (map (
+            fromDiagnostics (map (
               name:
               at (
                 path
@@ -115,16 +122,30 @@ let
                 ]
               ) "output-annotation" "lowering cannot introduce ownership or metadata annotations"
             ) (builtins.filter (name: builtins.elem name annotationNames) (builtins.attrNames plan.value))) plan
-          ) ((resourceSchema path) value);
-        items = validation.map2 (native: resources: native // { inherit resources; }) (validation.map2
-          (nixos: homeManager: { inherit nixos homeManager; })
-          (validateList "nixos" nativeSchema)
-          (validateList "homeManager" nativeSchema)
-        ) (validateList "resources" resource);
+          ) (fromAxiom ((resourceSchema path) value));
+        parseNative = path: value: fromAxiom ((nativeSchema path) value);
+        items =
+          validation.andThen
+            (
+              values:
+              accept {
+                nixos = builtins.elemAt values 0;
+                homeManager = builtins.elemAt values 1;
+                resources = builtins.elemAt values 2;
+              }
+            )
+            (
+              validation.all [
+                (validateList "nixos" parseNative)
+                (validateList "homeManager" parseNative)
+                (validateList "resources" resource)
+              ]
+            );
       in
-      validation.andThen (_: items) (validation.fromDiagnostics errors true)
-    ) shaped;
+      validation.andThen (_: items) (fromDiagnostics errors true)
+    ) (fromAxiom shaped);
+  validate = args: resultOf (validateComputation args);
 in
 {
-  inherit validate origin;
+  inherit validate validateComputation origin;
 }

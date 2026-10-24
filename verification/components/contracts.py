@@ -1,4 +1,4 @@
-"""check ownership callbacks, demand and original exceptions with a real evaluator"""
+"""check component callbacks, demand and original exceptions with a real evaluator"""
 
 import argparse
 import json
@@ -14,16 +14,23 @@ def main():
     inputs = parser.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--source")
     inputs.add_argument("--setup", type=Path)
+    parser.add_argument("--family", choices=["ownerships", "compiler"], default="ownerships")
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     if args.source:
-        fixture = Path(__file__).resolve().parents[2] / "tests/ownerships/observations.nix"
+        fixture = Path(__file__).resolve().parents[2] / ("tests/declarations/observations.nix" if args.family == "compiler" else "tests/ownerships/observations.nix")
         setup = ('let p = builtins.getFlake ' + json.dumps(args.source) + '; lib = p.inputs.nixpkgs.lib; '
                  'axiom = p.inputs.axiom.lib.axiom { inherit lib; }; in import ' + str(fixture)
                  + ' { inherit lib axiom; ownerships = p.lib.ownerships; }')
+        if args.family == "compiler":
+            setup = ('let p = builtins.getFlake ' + json.dumps(args.source) + '; lib = p.inputs.nixpkgs.lib; '
+                     'axiom = p.inputs.axiom.lib.axiom { inherit lib; }; deps = import (p.outPath + "/src/dependencies.nix") '
+                     '{ inherit lib axiom; krisisSource = p.inputs.krisis; }; compiler = import (p.outPath + "/src/declarations") '
+                     '{ inherit lib axiom; inherit (deps) krisis; }; in import ' + str(fixture)
+                     + ' { inherit lib axiom compiler; }')
     else:
         setup = "import " + str(args.setup.resolve())
     expected = {
@@ -51,6 +58,17 @@ def main():
     exception_markers = {name: f"fleet {name} exception" for name in ["selector", "scalar", "list", "stage", "shape", "scope", "import"]}
     exception_markers.update({"static": "claim can never be satisfied", "scopeFirst": "a system-scope (host-only) unit sets 'users'",
                               "shapeFirst": "'hosts' must be a list of names", "registration": 'ownerships: unknown stage view "bad"'})
+    if args.family == "compiler":
+        entries = [{"id": i + 1, "defaulted": 7, "tag": i + 10,
+                    "origin": ["sample", "entries", i + 1], "prepared": i} for i in range(2)]
+        expected = {cell: {name: {"entries": entries, "marker": i, "root": True}
+                          for i, name in enumerate(["first", "second"])} for cell in ["static", "dynamic"]}
+        callbacks = {cell: {"parse 0": 2, "parse 1": 2, "normalize": 4, "metadata": 7,
+                            "preparation root": 1, "preparation 0": 1 if cell == "static" else 2,
+                            "preparation 1": 1 if cell == "static" else 2, "lowering": 2,
+                            "callback": 0 if cell == "static" else 2} for cell in expected}
+        exception_markers = {name: f"compiler {name} exception" for name in
+                             ["parse", "normalize", "preparation", "lowering", "callback"]}
     records = []
     for cell in list(expected) + ["exceptions." + name for name in exception_markers]:
         command = ["nix", "eval", "--impure", "--json", "--show-trace", "--extra-experimental-features", "nix-command flakes pipe-operators",
@@ -69,7 +87,7 @@ def main():
         (args.output / (cell + ".stdout")).write_bytes(stdout)
         (args.output / (cell + ".stderr")).write_bytes(raw_stderr)
         stderr = raw_stderr.decode()
-        events = re.findall(r"^trace: fleet (.*)$", stderr, re.MULTILINE)
+        events = re.findall(r"^trace: " + ("compiler" if args.family == "compiler" else "fleet") + r" (.*)$", stderr, re.MULTILINE)
         if cell in expected:
             try:
                 admitted = exit_code == 0 and json.loads(stdout) == expected[cell]
@@ -83,6 +101,9 @@ def main():
                     admitted = admitted and order == ["one a", "one b", "two a", "two b"]
                 if cell == "matrix":
                     admitted = admitted and order == ["one a", "two a", "one b", "two b"]
+                if args.family == "compiler" and args.reference:
+                    reference_events = re.findall(r"^trace: compiler (.*)$", (args.reference / (cell + ".stderr")).read_text(), re.MULTILINE)
+                    admitted = admitted and events == reference_events
         else:
             marker = exception_markers[cell.split(".")[1]]
             terminal = stderr.rsplit("error: ", 1)[-1]
@@ -90,6 +111,11 @@ def main():
             if args.reference:
                 reference = (args.reference / (cell + ".stderr")).read_text().rsplit("error: ", 1)[-1]
                 admitted = admitted and terminal == reference
+            if args.family == "compiler" and cell in ["exceptions.callback", "exceptions.preparation", "exceptions.lowering"]:
+                context = {"exceptions.callback": "lexicon callback at $.sample",
+                           "exceptions.preparation": "lexicon preparation at $.sample",
+                           "exceptions.lowering": "lexicon lowering block sample"}[cell]
+                admitted = admitted and context in stderr
             if cell == "exceptions.selector":
                 admitted = admitted and "while evaluating 'when' predicate" in stderr
             if cell == "exceptions.import":
@@ -100,7 +126,7 @@ def main():
         (args.output / "records.json").write_text(json.dumps(records, indent=2) + "\n")
         if not admitted:
             print("\n".join(stderr.splitlines()[-30:]), file=sys.stderr)
-            raise RuntimeError(f"ownership contract failed {cell}; see {args.output}")
+            raise RuntimeError(f"{args.family} contract failed {cell}; see {args.output}")
     print(json.dumps({"checks": len(records), "all_admitted": True}))
 
 

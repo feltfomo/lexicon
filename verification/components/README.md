@@ -84,3 +84,28 @@ sources and a dummy store, retaining stdout, stderr and exits in its output.
 `--reference /absolute/baseline/contracts` also compares the complete terminal
 error text with retained baseline stderr. Callback stack context is checked
 separately from that terminal text.
+
+Registered compiler workloads select `compiler-wide`, `compiler-deep`,
+`compiler-prepared`, `compiler-dynamic`, `compiler-single` and `compiler-combined`.
+Each uses 4, 16 and 64 structural entries or recursive levels. They use an ordinary
+registered extension with an Axiom parse callback, a defaulted field, local
+metadata and lazy record preparation. Projections check every selected value,
+default, metadata value, authored origin and prepared value. Inactive entries
+contain throwing payloads; an inactive declared branch contains a throwing callback.
+
+Wide trees compile one collection. Deep trees compile N recursive levels with
+an inactive sibling at each nonterminal level. Prepared trees compile N static
+entries across N contexts. Dynamic trees produce their collection through a
+selected context callback. Single-output demand reads only Home Manager from a
+mixed-output block while its resource callback throws. Combined demand reads
+Home Manager and NixOS resource bridges with distinct configuration markers.
+The observer checks complete finite projections, including external-link sources
+and destinations for combined demand. The existing schedule and bounds apply.
+
+`contracts.py --family compiler` checks static and callback-produced registered
+trees across two contexts. It counts parse, normalization, metadata, preparation,
+collection and lowering callbacks, and checks filtered value/metadata/origin/
+preparation alignment. `--reference` compares the complete callback trace order
+and terminal exception text with the baseline. Callback, preparation and lowering
+exceptions also require their authored demand-site context. The
+`declarations-observations` check embeds the pinned sources in an isolated store.

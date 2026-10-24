@@ -7,6 +7,11 @@ where the former compiler used config; evaluate them through their module system
 All constructors return `spec: aspect`. Optional aspect attributes are
 `homeManager` and `nixos`.
 
+Registered compilation uses shared native reporting internally. Legacy field
+callbacks and native modules retain their ordinary Nix return values; callers do
+not supply an effect argument. Dependency overrides still participate in target
+diagnostics and terminal normalization.
+
 | Constructor | Required arguments | Selection |
 | --- | --- | --- |
 | `inputs.lexicon.lib.program` | `resolve`, `resolveSystem`, `resolvePrepared`, `filePrincipals`, `hostUserNames` | Caller-supplied ownership resolvers and principals |

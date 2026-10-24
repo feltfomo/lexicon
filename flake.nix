@@ -398,7 +398,21 @@
                 lexicon = inputs.self;
               }
             );
-            declarations = gate "declaration-tests" (import ./tests/declarations { inherit lib axiom krisis; });
+            declarations-observations = import ./tests/declarations/observations-check.nix {
+              inherit pkgs;
+              nixpkgsSource = inputs.nixpkgs;
+              axiomSource = inputs.axiom;
+              krisisSource = inputs.krisis;
+            };
+            declarations =
+              let
+                existing = import ./tests/declarations { inherit lib axiom krisis; };
+                registration = import ./tests/declarations/registration.nix { inherit lib axiom krisis; };
+                outputs = import ./tests/declarations/outputs.nix { inherit lib axiom krisis; };
+              in
+              gate "declaration-tests" {
+                ok = existing.ok && registration.ok && outputs.ok;
+              };
             consumers =
               let
                 existing = import ./tests/consumers.nix {

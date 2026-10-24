@@ -5,6 +5,7 @@
   bad ? false,
   artifact ? false,
   initializeReport ? false,
+  outputProjection ? "default",
 }:
 let
   project = builtins.getFlake source;
@@ -104,6 +105,16 @@ else
               component
               size
               bad
+              ;
+          }
+        else if lib.hasPrefix "compiler-" component then
+          import ./compiler.nix {
+            inherit
+              project
+              component
+              size
+              bad
+              outputProjection
               ;
           }
         else if component == "toml" then

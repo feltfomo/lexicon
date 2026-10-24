@@ -17,6 +17,16 @@ let
         reporter.finish (bridge.resultOf computation)
       else
         bridge.finishComputation reporter.fail computation;
+    checkWithReporter =
+      reporter: project: computation:
+      let
+        report = bridge.interpret computation;
+        value = bridge.finishReport reporter.fail report;
+      in
+      if krisis != null && krisis ? mkReporter then
+        builtins.seq (reporter.finish (axiom.validation.map project (bridge.resultFromReport report))) value
+      else
+        value;
   };
   diagnostics = import ./diagnostic-compatibility.nix {
     inherit lib;

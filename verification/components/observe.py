@@ -47,19 +47,37 @@ def validate_matrix(value, size):
                                                "paths": {"values": contexts}}}}
 
 
+def compiler_expected(component, size):
+    field = "hm" if component in ("compiler-single", "compiler-combined") else "entries"
+    def home(marker):
+        entries = []
+        for i in range(size):
+            origin = ["sample"] + [part for _ in range(i) for part in ("next", 1)] if component == "compiler-deep" else ["sample", field, i + 1]
+            entries.append({"n": i + 1, "defaulted": 7, "tag": i + 10, "origin": origin, "prepared": i})
+        return {"entries": entries, "context": marker, "output": "homeManager"}
+    if component == "compiler-prepared":
+        return [home(i) for i in range(size)]
+    if component == "compiler-combined":
+        return {"home": home("home"), "resources": [{"destination": f".sample/{i+1}", "source": f"/external/{i+1}"} for i in range(size)]}
+    return home(0)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--component", choices=["ownerships", "registry", "declaration", "resource", "toml", "praxis", "fleet-resolve", "fleet-prepared", "fleet-custom", "fleet-trace", "fleet-matrix", "registry-queries"], required=True)
+    parser.add_argument("--component", choices=["ownerships", "registry", "declaration", "resource", "toml", "praxis", "fleet-resolve", "fleet-prepared", "fleet-custom", "fleet-trace", "fleet-matrix", "registry-queries", "compiler-wide", "compiler-deep", "compiler-prepared", "compiler-dynamic", "compiler-single", "compiler-combined"], required=True)
     parser.add_argument("--size", type=int, choices=[4, 16, 64], required=True)
     parser.add_argument("--bad", action="store_true")
     parser.add_argument("--initialize-report", action="store_true")
+    parser.add_argument("--output-projection", choices=["default", "missing", "unsupported"], default="default")
     parser.add_argument("--phase", choices=["evaluation", "render"], default="evaluation")
     parser.add_argument("--timeout-seconds", type=float, default=60)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
-    expression = 'import ' + str(Path(__file__).with_name("workload.nix")) + ' ' + '{ source = ' + json.dumps(args.source) + '; component = ' + json.dumps(args.component) + '; size = ' + str(args.size) + '; bad = ' + str(args.bad).lower() + '; initializeReport = ' + str(args.initialize_report).lower() + '; }'
+    if args.output_projection != "default" and not args.component.startswith("compiler-"):
+        parser.error("output projection controls require a registered compiler workload")
+    expression = 'import ' + str(Path(__file__).with_name("workload.nix")) + ' ' + '{ source = ' + json.dumps(args.source) + '; component = ' + json.dumps(args.component) + '; size = ' + str(args.size) + '; bad = ' + str(args.bad).lower() + '; initializeReport = ' + str(args.initialize_report).lower() + '; outputProjection = ' + json.dumps(args.output_projection) + '; }'
     command = ["nix", "eval", "--impure", "--json", "--option", "allow-import-from-derivation", "false", "--extra-experimental-features", "pipe-operators", "--expr", expression]
     if args.phase == "render":
         if args.component != "toml":
@@ -128,7 +146,11 @@ def main():
                 "fleet-matrix": lambda: validate_matrix(value, args.size),
             }
             try:
-                valid = decoded["component"] == args.component and decoded["size"] == args.size and validators[args.component]()
+                if args.output_projection == "missing":
+                    projection_valid = value == {"nixos": [], "homeManager": [], "resources": []}
+                else:
+                    projection_valid = value == compiler_expected(args.component, args.size) if args.component.startswith("compiler-") else validators[args.component]()
+                valid = decoded["component"] == args.component and decoded["size"] == args.size and projection_valid
             except (KeyError, TypeError):
                 valid = False
     except (ValueError, KeyError, TypeError, OSError, subprocess.CalledProcessError) as error:
@@ -142,6 +164,7 @@ def main():
         "sha256": hashlib.sha256(payload).hexdigest(),
         "component": args.component, "structural_count": args.size,
         "initialize_report": args.initialize_report,
+        "output_projection": args.output_projection,
         "phase": args.phase, "rendered_bytes": rendered_bytes, "closure_bytes": closure_bytes,
         "admitted": valid and process.returncode == 0 and not timed_out,
         "timed_out": timed_out,

@@ -99,8 +99,32 @@ let
     else
       throw "lexicon: unknown outcome constructor";
   finishComputation = fail: computation: eliminate fail (value: value) (interpret computation);
-  resultOf =
-    computation: eliminate axiom.validation.failure axiom.validation.success (interpret computation);
+  # static checked validations emit diagnostics without aborting
+  share =
+    computation:
+    let
+      report = interpret computation;
+      checked =
+        if report.outcome._con == "Failure" then
+          { _con = "Invalid"; }
+        else if report.outcome._con == "Success" then
+          let
+            value = forceThunk report.outcome.value;
+          in
+          if value._con == "Valid" || value._con == "Invalid" then
+            value
+          else
+            throw "lexicon: unknown checked constructor"
+        else
+          throw "lexicon: unknown outcome constructor";
+      emissions = builtins.foldl' (
+        previous: diagnostic: fx.bind previous (_: native.report.emit diagnostic)
+      ) (fx.pure null) report.diagnostics;
+    in
+    fx.bind emissions (_: fx.pure checked);
+  resultOf = computation: resultFromReport (interpret computation);
+  resultFromReport = eliminate axiom.validation.failure axiom.validation.success;
+  finishReport = fail: eliminate fail (value: value);
   finish = fail: result: finishComputation fail (fromAxiom result);
 in
 {
@@ -115,6 +139,9 @@ in
     fromDiagnostics
     interpret
     resultOf
+    resultFromReport
+    finishReport
     finishComputation
+    share
     ;
 }

@@ -7,8 +7,21 @@ let
   registration = import ./definitions.nix { inherit lib axiom krisis; };
   report = import ./report.nix { inherit lib axiom krisis; };
   outputCompiler = import ./outputs.nix { inherit lib axiom krisis; };
-  inherit (report) at checked finish;
-  inherit (axiom) validation;
+  inherit (report)
+    at
+    checked
+    finishComputation
+    checkComputation
+    ;
+  inherit (krisis.effects)
+    native
+    accept
+    fromAxiom
+    fromDiagnostics
+    resultOf
+    share
+    ;
+  inherit (native) validation;
   empty = {
     nixos = [ ];
     homeManager = [ ];
@@ -64,10 +77,10 @@ let
           prepare =
             declaration:
             let
-              tree = traversal.prepare rootNode [ ] declaration;
+              tree = checkComputation (_: true) (traversal.prepare rootNode [ ] declaration);
               rootClaims = traversal.claimsOf declaration;
-              rootMetadata = (report.schema [ "metadata" ] environment.metadataFields) (
-                declaration.metadata or { }
+              rootMetadata = fromAxiom (
+                (report.schema [ "metadata" ] environment.metadataFields) (declaration.metadata or { })
               );
               forScope =
                 scope: requested:
@@ -105,7 +118,7 @@ let
                       intent = krisis.withErrorContext "lexicon resource intent for ${block.name}" (
                         block.resourceIntent declaration.${block.name}
                       );
-                      intentResult = validation.fromDiagnostics (lib.optional (!builtins.isBool intent) (
+                      intentResult = fromDiagnostics (lib.optional (!builtins.isBool intent) (
                         at [ block.name ] "resource-intent-shape" "resource intent must be a boolean"
                       )) intent;
                     in
@@ -114,16 +127,16 @@ let
                         if declaration ? ${block.name} && (block.scope == scope || block.scope == "split") then
                           child.scopeResult selectionArgs
                         else
-                          validation.success true;
+                          accept true;
                       compile =
                         context:
                         if !active then
-                          validation.success empty
+                          accept empty
                         else
                           validation.andThen (
                             selected:
                             if !selected.selected then
-                              validation.success empty
+                              accept empty
                             else
                               validation.andThen (
                                 resourceIntent:
@@ -131,26 +144,27 @@ let
                                   (
                                     _:
                                     krisis.withErrorContext "lexicon lowering block ${block.name}" (
-                                      outputCompiler.validate {
+                                      outputCompiler.validateComputation {
                                         definition = block;
                                         inherit (environment) annotationNames;
                                         inherit scope resourceIntent requested;
                                         path = [ block.name ];
-                                        output = block.lower {
-                                          inherit (selected)
-                                            value
-                                            metadata
-                                            origins
-                                            prepared
-                                            ;
-                                          inherit context;
-                                        };
+                                        output = krisis.withErrorContext "lexicon lowering block ${block.name}" (
+                                          block.lower {
+                                            inherit (selected)
+                                              value
+                                              metadata
+                                              origins
+                                              prepared
+                                              ;
+                                            inherit context;
+                                          }
+                                        );
                                       }
                                     )
                                   )
                                   (
-                                    validation.fromDiagnostics (lib.optional
-                                      (scope == "user" && resourceIntent && (context.user or null) == null)
+                                    fromDiagnostics (lib.optional (scope == "user" && resourceIntent && (context.user or null) == null)
                                       (at [ block.name ] "resource-user" "resource-producing declarations require a concrete user target")
                                     ) true
                                   )
@@ -158,7 +172,7 @@ let
                           ) (select context);
                     }
                   ) environment.blocks.registrations;
-                  scoped = validation.sequence (map (block: block.scopeResult) blocks);
+                  scoped = share (validation.all (map (block: block.scopeResult) blocks));
                 in
                 rawContext:
                 let
@@ -169,12 +183,16 @@ let
                 validation.andThen (
                   _:
                   if !((rootSelection context).lexiconSelected or false) then
-                    validation.success empty
+                    accept empty
                   else
-                    validation.map2 (
-                      _: results:
-                      lib.genAttrs (builtins.attrNames empty) (name: builtins.concatMap (result: result.${name}) results)
-                    ) rootMetadata (validation.sequence (map (block: block.compile context) blocks))
+                    validation.andThen (
+                      results:
+                      accept (
+                        lib.genAttrs (builtins.attrNames empty) (
+                          name: builtins.concatMap (result: result.${name}) (lib.tail results)
+                        )
+                      )
+                    ) (validation.all ([ rootMetadata ] ++ map (block: block.compile context) blocks))
                 ) scoped;
 
               outputNames = [
@@ -192,7 +210,7 @@ let
                   }) outputSets
                 )
               );
-              validate =
+              validateComputation =
                 {
                   scope,
                   context,
@@ -209,7 +227,7 @@ let
                       context
                   )
                   (
-                    validation.fromDiagnostics (
+                    fromDiagnostics (
                       lib.optional (
                         !builtins.elem scope [
                           "user"
@@ -227,10 +245,10 @@ let
                 ) tree.claimPaths
               )) true;
             in
-            builtins.seq (finish tree.structural) (
+            builtins.seq tree (
               builtins.seq directCheck {
-                inherit validate;
-                compile = args: finish (validate args);
+                validate = args: resultOf (validateComputation args);
+                compile = args: finishComputation (validateComputation args);
                 structure = declaration;
               }
             );

@@ -29,3 +29,9 @@ public lowering failures separately. Demand each relevant result projection and
 retain the evaluator error text. Each must preserve its
 `effects contract ... exception` message. A caught failure alone doesn't establish
 exception-text preservation.
+
+`sharedProbe` demands one cached Checked computation through two interpretations.
+Its continuation trace must occur once. The Boolean suite also checks diagnostic
+replay order, dependent suppression and opaque successful values. The public
+structural-terminal fixture returns a sentinel from an injected reporter's
+successful boolean check; that return must not replace the prepared entry.

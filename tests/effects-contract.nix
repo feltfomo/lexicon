@@ -253,6 +253,26 @@ let
     mkReporter = options: (krisis.mkReporter options) // { finish = _: "injected finish"; };
   };
   publicReport = lexicon.lib.report { krisis = injectedReporter; };
+  projectedReporter = {
+    mkReporter =
+      options:
+      let
+        original = krisis.mkReporter options;
+      in
+      original
+      // {
+        finish =
+          result:
+          if result.diagnostics == [ ] && builtins.isBool result.value then
+            "ignored structural terminal value"
+          else
+            original.finish result;
+      };
+  };
+  projectedDeclaration = lexicon.lib.lexicon.forTarget {
+    inherit target;
+    krisis = projectedReporter;
+  } { homeManager.safe = true; };
   identityAxiom = axiom // {
     identity = axiom.identity // {
       render = _: "injected identity";
@@ -298,6 +318,23 @@ let
       first = value;
       second = value;
     };
+  sharedProbe =
+    let
+      computation = krisis.effects.share (
+        native.validation.andThen
+          (value: builtins.trace "effects-contract shared continuation" (krisis.effects.accept value))
+          (
+            krisis.effects.accept {
+              safe = true;
+              opaque = poison;
+            }
+          )
+      );
+    in
+    {
+      first = (krisis.effects.finishComputation (_: poison) computation).safe;
+      second = (krisis.effects.finishComputation (_: poison) computation).safe;
+    };
   callbackExceptions = {
     parse = (schema { value.parse = _: throw "effects contract parse exception"; }) { value = 1; };
     normalize = (schema { value.normalize = _: throw "effects contract normalize exception"; }) {
@@ -337,6 +374,29 @@ let
       (declaration.homeManager args).imports;
   };
   tests = {
+    structural-terminal-projection-does-not-replace-prepared-entry =
+      (builtins.head (projectedDeclaration.homeManager args).imports).safe;
+    shared-validation-retains-diagnostics-and-suppresses-dependent-work =
+      let
+        computation = krisis.effects.share (
+          native.validation.all [
+            (krisis.effects.fromDiagnostics [ first ] poison)
+            (krisis.effects.fromDiagnostics [ second ] poison)
+          ]
+        );
+      in
+      krisis.effects.finishComputation (items: map (item: item.code) items) (
+        native.validation.andThen (_: poison) computation
+      ) == [
+        first.code
+        second.code
+      ];
+    shared-validation-transports-opaque-successes =
+      let
+        computation = krisis.effects.share (krisis.effects.accept opaque);
+      in
+      (krisis.effects.finishComputation (_: poison) computation).safe
+      && (krisis.effects.finishComputation (_: poison) computation).safe;
     string-and-record-diagnostics-recover-in-order =
       krisis.effects.finishComputation
         (items: [
@@ -649,6 +709,7 @@ in
     tests
     ok
     callbackProbe
+    sharedProbe
     callbackExceptions
     controlExceptions
     ;

@@ -10,8 +10,10 @@ let
     field
     schema
     finish
+    finishComputation
     checked
     ;
+  inherit (krisis.effects) native fromAxiom fromDiagnostics;
   axes = import ../ownerships/axes.nix { inherit lib axiom krisis; };
   constructors = {
     record = args: args // { kind = "record"; };
@@ -284,8 +286,8 @@ let
       checkedExtensions = checked (lib.optional (!builtins.isList extensions) (
         at [ ] "extensions" "extensions must be a list"
       )) extensions;
-      instances = finish (
-        axiom.validation.sequence (
+      instances = finishComputation (
+        native.validation.all (
           lib.imap0 (
             index: extension:
             let
@@ -295,13 +297,15 @@ let
               ];
             in
             if !builtins.isFunction extension then
-              axiom.validation.failure [ (at path "extension" "extension must be a function") ]
+              fromDiagnostics [ (at path "extension" "extension must be a function") ] null
             else
               krisis.withErrorContext "lexicon extension at ${krisis.renderPath path}" (
-                (extensionSchema path) (extension {
-                  inherit lib axiom krisis;
-                  definitions = constructors;
-                })
+                fromAxiom (
+                  (extensionSchema path) (extension {
+                    inherit lib axiom krisis;
+                    definitions = constructors;
+                  })
+                )
               )
           ) checkedExtensions
         )
@@ -324,15 +328,17 @@ let
           ;
       };
       metadataEntries = builtins.concatMap (extension: extension.metadata) instances;
-      metadataShapes = finish (
-        axiom.validation.sequence (
+      metadataShapes = finishComputation (
+        native.validation.all (
           lib.imap0 (
             index: entry:
-            (schema [ "metadata" index ] {
-              name = field [ "metadata" index ] "name" report.nonempty;
-              field = field [ "metadata" index ] "field" builtins.isAttrs;
-            })
-              entry
+            fromAxiom (
+              (schema [ "metadata" index ] {
+                name = field [ "metadata" index ] "name" report.nonempty;
+                field = field [ "metadata" index ] "field" builtins.isAttrs;
+              })
+                entry
+            )
           ) metadataEntries
         )
       );
@@ -381,15 +387,17 @@ let
           resourceIntent = optional builtins.isFunction;
         };
       rawBlocks = blocks ++ builtins.concatMap (extension: extension.blocks) instances;
-      shapedBlocks = finish (
-        axiom.validation.sequence (
+      shapedBlocks = finishComputation (
+        native.validation.all (
           lib.imap0 (
             index: block:
-            (blockSchema [
-              "blocks"
-              index
-            ])
-              block
+            fromAxiom (
+              (blockSchema [
+                "blocks"
+                index
+              ])
+                block
+            )
           ) rawBlocks
         )
       );
