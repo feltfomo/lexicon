@@ -108,7 +108,40 @@ TOML subsystem is pure.
 Final integration must reconcile every residual Axiom/old-facing operation with
 its actual protected capability owner, preserve the failure and forcing contracts
 above, and qualify the final immutable dependency graph. Immediate diagnostic
-size 4 is still a wall/RSS failure. Diagnostic 16/64 and all assembled primaries
-are absent. A sensitivity result cannot substitute for raw acceptance or approve
-a cost exception. See [capabilities](capabilities.md) for exact observations and
-[efforts](efforts.md) for the diagnostic prerequisite and gates.
+size 4 is still a wall/RSS failure. Raw diagnostic 16, a complete raw-64 primary
+comparison and all assembled primaries are absent. A sensitivity result cannot
+substitute for raw acceptance or approve a cost exception. See
+[capabilities](capabilities.md) for exact observations and [efforts](efforts.md)
+for the profiling prerequisite and gates.
+
+## Diagnostic attribution amendment
+
+The [initialization report](../praxis-diagnostic-cost.md) is merged. Both
+initialized cells exceeded the unchanged wall/RSS bounds; the raw-64 experiment
+was interrupted. The bounded report phase is complete, attribution remains open
+and migration acceptance is incomplete. Do not complete or repeat initialization
+sensitivity. Observe where the unchanged complete workload performs work.
+
+The next proposed evidence asks whether additional candidate work lies in
+repeated configuration construction, native checking/failure handling, Praxis
+blame adaptation or retained-diagnostic transport/re-emission, and which source
+owner controls demonstrated repetition. Use the exact frozen candidate and
+archived immediate baseline with unchanged locks, Nix 2.34.8 and the maintained
+`praxis-diagnostics` fixture at sizes 4 and 64. Demand complete codes, paths and
+summary, all `2*N` diagnostics and the existing unrelated poison. Initialization
+stays disabled.
+
+Each source/size combination has separate ordinary capture, supported flamegraph
+sampling at 1000 Hz, and source-position counting with `NIX_COUNT_CALLS` and
+`NIX_SHOW_STATS` and a unique statistics destination. Never combine sampling and
+counting in one evaluator. Retain original source positions and map attributed
+frames to exact source bytes. The [architecture](architecture.md#diagnostic-attribution-boundary)
+defines attribution limits; [efforts](efforts.md#source-position-and-sampled-stack-evidence-effort)
+defines finite qualification, ownership and stop rules.
+
+This amendment grants no evaluator, version query, qualification, functional gate,
+worktree creation, correction, integration, cleanup or adoption authority.
+Instrumented wall/RSS is recorded cost, not primary acceptance, an exact overhead
+estimate or a quantity to subtract from raw results. Unchanged bounds and complete
+demand remain protected; no production priming or setup subtraction substitutes
+for acceptance. New cost exceptions need explicit user approval.

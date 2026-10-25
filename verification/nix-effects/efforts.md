@@ -1,133 +1,188 @@
 # Remaining migration efforts and custody
 
-Publication lands first on main. No effort worktree starts before this
-[spec](spec.md), [architecture](architecture.md) and ownership page are published.
-The diagnostic report then merges and receives an architectural ruling before
-integration starts. The architect owns contract amendments and merge order; the
-orchestrator routes and reviews; one implementer owns each whole phase through
-its verified commit. The user gives commit go and separately authorizes other
-Git operations. Preserve the user-selected model/tool route.
+The contract publication at `b370ee14c7d272c7b11106210dd2ee4b16034576` preceded
+the completed diagnostic report. Report commit
+`7eb71ae503537ce844de8ac4c4c96ff797fe9380` is merged on main by
+`cc3db2b5b88f308bb7cd2b283d33314db60c9a97`. The architect reviewed its suitability
+and ruled on the next method. Integration remains unstarted and still requires
+resolved correction ownership. The architect owns contract amendments and merge
+order; the orchestrator routes and reviews; one implementer owns each whole phase
+through its verified commit. Preserve the user-selected model/tool route.
 
-Every closure opener must name its role, branch/worktree, owned paths, published
-contract commit, applicable authority and first action.
+Every closure opener must name its role, branch/worktree, exact owned paths,
+published amendment commit, actual authority and first action.
 
 ## Publication and preserved candidate
 
-The administrative publication checkout already exists at
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-publication` on `main`, based
-on `11204c6592fdf4693075d08f44115751c3cc7881`. It owns exactly these documentation
-paths:
+The existing publication checkout is
+`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-publication` on `main`.
+This amendment owns exactly:
 
 - `verification/nix-effects/spec.md`
 - `verification/nix-effects/architecture.md`
 - `verification/nix-effects/efforts.md`
 - `verification/nix-effects/capabilities.md`
-- `verification/dependencies.md`, navigation only against committed main
 
-The original checkout at `/home/feltfomo/Projects/lexicon` is attached to
-`preserve/nix-effects-candidate` at the same base commit. It retains the thirty
-unstaged paths below and an empty index. These two worktrees already exist; do not
-repeat the custody transition. The user executed both exact operations.
-Independent verification after both operations passed. No between-operation
-verification was observed.
+The approved report merge has ordered parents, the published contract commit then
+the report commit, full message `docs: merge Praxis diagnostic initialization report`
+with no body, and a tree equal to the report commit. Its sole addition relative
+to old main is `verification/praxis-diagnostic-cost.md`. The report stays unchanged.
+`verification/dependencies.md` and navigation are outside amendment ownership.
 
-Publication does not import the candidate's dependency pin, inventory revisions
-or Praxis-boundary prose into `verification/dependencies.md`. That path's overlap
-is deliberate navigation only. Original candidate bytes/modes, exact dirty paths,
-empty index, frozen source and historical evidence remain read-only inputs.
-Publisher scratch belongs under the publication checkout's own `.runtime`.
+The original checkout at `/home/feltfomo/Projects/lexicon` remains on
+`preserve/nix-effects-candidate` at
+`11204c6592fdf4693075d08f44115751c3cc7881`, with the thirty unstaged paths below
+and an empty index. Preserve all three existing worktrees, original candidate
+bytes/full modes, frozen source and historical evidence. Import no candidate
+production paths. Scratch and administrative evidence belong under the
+publication checkout's `.runtime/profile-publication`. No cleanup is authorized.
 
-The publication gate checks links, contracts, status, exact ownership, handoff
-completeness, path/content scope and preservation identities. It runs no product
-evaluator, formatter, functional gate, measurement or cleanup and makes no
-functional/performance claim. One complete draft goes through orchestrator
-read-only review with an independent quality pass and architect contract review,
-then one complete corrective pass and affected administrative checks. Only a
-complete reviewed subject/body and five-path preview followed by explicit user
-go relayed through the orchestrator permits staging and commit. Verify staged
-and committed bytes/modes, parent, full message, paths and both checkout/index
-states. No merge, push, rebase or cleanup follows implicitly.
+The documentation-only gate checks links/anchors, contracts, scope/handoff,
+exact diff, bytes/modes, Git state and custody. It runs no formatter, evaluator,
+version query, instrumentation workload or functional gate. Deliver all four
+pages together with merge verification, exact diff and manifest, administrative
+results and custody proof. One orchestrator read-only review includes an
+independent quality pass and architect contract review, followed by one
+consolidated corrective response in this same implementer chat. Requalify affected
+administrative evidence and return the complete four-path subject/body preview.
+Stage and commit only after separate explicit user go relayed by the orchestrator.
+Independent landing verification closes the chat. No push, rebase, new worktree
+or cleanup is implied.
 
-Publication closes at the independently verified main documentation commit.
-That implementer chat ends there. The orchestrator updates the baton and supplies
-the next diagnostic orchestrator opener, naming the published commit, proposed
-branch/worktree, report ownership, frozen read-only inputs and fresh-readiness
-first action. No old sensitivity session resumes.
+After verified publication the orchestrator owes a fresh evidence-phase opener
+with concrete branch/worktree, exact ownership, published amendment commit,
+actual authority and identity-bound readiness as its first action. Do not resume
+the completed diagnostic implementer or previous publication chat. No further
+phase or launch opens automatically.
 
 ## Diagnostic evidence effort
 
-Goal: classify the observed diagnostic regression before choosing a correction or
-requesting a product tradeoff. This report-only effort does not adopt production
-candidate paths.
+The bounded [initialization report](../praxis-diagnostic-cost.md) is complete and
+merged. Both initialized cells exceeded unchanged wall/RSS bounds. Raw size 64
+stopped at attempt 21's environmental release on foreign `nix` PID `947128`.
+Twenty samples were campaign-admitted. Attempt 21 had valid complete output and
+process release but was excluded from comparisons; all its costs remain counted.
+Three launches were unattempted. There is no raw-64 median.
 
-| Item | Contract |
+The experiment was interrupted, attribution remains open and migration acceptance
+is incomplete. Retained totals are 186 workloads, 107.51610190801512 evaluator
+seconds, 164.20457031099068 recorded runner seconds and 147 separate version
+queries. Functional accounting stays separate. The historical report and its
+sealed evidence remain unchanged. Unused sensitivity capacity grants no retry.
+The report worktree remains
+`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree` on
+`effort/nix-effects-diagnostic`. Do not complete or repeat that sensitivity.
+
+## Source-position and sampled-stack evidence effort
+
+Goal: observe where the unchanged complete workload performs work and identify
+the source owner of any demonstrated repetition under the
+[attribution rules](architecture.md#diagnostic-attribution-boundary).
+
+| Item | Proposed contract |
 | --- | --- |
-| Branch | `effort/nix-effects-diagnostic` |
-| Worktree | `/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree` |
-| Initial ownership | Proposed `verification/praxis-diagnostic-cost.md` and worktree-local scratch |
-| Prerequisite | Verified publication on main, separately authorized worktree creation, fresh identity-bound readiness and launch authority |
-| Read-only inputs | Frozen candidate, archived immediate baseline, maintained observers, earlier evidence and dependency sources |
-| Interface | Durable report of methods, identities, complete outcomes, costs, attribution limits and evidence locations |
-| Scope amendment | An explicit published amendment is required for any maintained-tool correction or other owned path |
-| Merge order | Report commit, architectural review and separately authorized merge before integration |
+| Branch | `effort/nix-effects-diagnostic-profile` |
+| Worktree | `/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree` |
+| Exact ownership | `verification/components/observe.py`, `verification/components/README.md`, `verification/components/profile-contracts.py`, `verification/praxis-diagnostic-profile.md` and effort-local scratch |
+| Prerequisite | Verified amendment publication, fresh branch/worktree collision checks, separate creation authority, fresh identity-bound readiness and explicit execution authority |
+| Read-only inputs | Exact frozen candidate, archived immediate baseline, frozen dispatcher/fixture, production sources, locks, dependency sources and historical evidence |
+| Interface | Instrumentation-qualified maintained capture and a durable report of complete outcomes, costs, release and source-grounded attribution limits |
+| Join | Report merged, architect ruling and resolved correction ownership before integration; dependency correction publication precedes Lexicon pin/lock refresh |
 
-The approved plan recommends initialized diagnostics at sizes 4 and 64, then raw
-diagnostics at 64. Each cell has one warmup per side and three alternating pairs,
-at most 24 launches total. Warmups count as launches but not medians. The earlier
-sensitivity launched zero workloads and its old resume authority is suspended.
-This page grants no launch permission.
+The branch and worktree names had no collision at amendment preparation. They
+remain proposals requiring fresh checks and separate creation authority.
+Publication creates neither. The maintained observer retains evaluator capture,
+complete-output validation and release ownership; add instrumentation there
+rather than a second timing/lifecycle implementation. The new qualification file
+owns instrumentation assertions. The future owner chooses implementation.
 
-Fresh readiness must bind source/lock/tool/observer identities, projection demand,
-control reuse and release checks. The retained evaluator is Nix 2.34.8, binary
-SHA-256 `f7eaf4e186b1a1baa9ac5f5c21dfc3226436e703e7e92b830ca62758ded9e84b`.
-Reuse the 22 controls only after exact identity/applicability review; stale
-controls stop before workloads and require a revised finite packet. Correct the
-stale raw-bound-abort wording in a new readiness record while retaining the
-stopped original. Initialized/raw complete outputs must agree where available;
-size 64 keeps the maintained `2*N` diagnostic projection and unrelated poison.
+Bind the exact frozen 356-file candidate and lock in
+[custody](#retained-evidence-custody), and archived immediate baseline
+`/home/feltfomo/Projects/lexicon/.runtime/praxis-final/immediate` at
+`11204c6592fdf4693075d08f44115751c3cc7881`, lock SHA-256
+`0becfd8dc0e64bd9269e44198379e6affb1c2610f155e0d5076b35838b02d2e1`.
+Use Nix 2.34.8 and maintained `praxis-diagnostics` at sizes 4 and 64.
+Frozen `verification/components/workload.nix` has SHA-256
+`80373f43e545962798cd49553f69284e5da64c917f04c67ecc9495202cfc0244`;
+frozen `verification/components/praxis.nix` has SHA-256
+`3fa7155e9a8a53731f19fb1120665c44ceab5d9c19931d442aa91c41e407a98f`.
+They stay read-only. Demand complete codes, paths and summary, all `2*N`
+diagnostics and existing unrelated poison, with initialization disabled.
+The observer/README overlap with the thirty-path preserved candidate is
+deliberate. Later integration must reconcile the instrumentation changes with
+that candidate; this effort imports none of its thirty production paths.
 
-Only one measured job owns the host. Multiple worktrees do not permit concurrent
-measurements. Announce the quiet interval, check quiescence immediately before
-launch and use an existing repository lock if available. A foreign workload
-causes a retained hold, without signaling, polling or automatic retry. Expected
-cost is under ten minutes; each evaluator is bounded at 60 seconds and the runner
-at 600 seconds. Record every attempt, exit, output admission and process release
-before admitting metrics. Semantic, control, identity, metric, release and time
-failures stop the batch. Raw bound misses are diagnostic outcomes for this
-sensitivity only. No additional controls or retries fit implicitly inside the cap.
+Each source/size has three separate evaluator modes:
 
-Start from 165 workloads, 84.76011121302872 evaluator seconds,
-127.14589780299139 recorded runner seconds and 126 separate version queries.
-At most 24 new launches would reach 189 workloads. Metadata is separately bounded
-at 25 queries, with reuse preferred. Functional accounting stays separate; do not
-reconstruct setup or waits.
+- Ordinary capture.
+- Supported flamegraph sampling at 1000 Hz.
+- Source-position call counting using `NIX_COUNT_CALLS` and `NIX_SHOW_STATS`,
+  with a unique statistics destination.
 
-The observation tests sensitivity to public report initialization. It cannot
-identify an individual native allocation, accept raw cost or replace primary
-acceptance. Both initialized sizes passing while raw 64 fails supports bounded
-first-use classification. Initialized 64 still failing makes fixed initialization
-insufficient. Raw 64 passing does not erase raw 4's failure. Mixed results remain
-inconclusive; cross-campaign raw-4 contrasts cannot establish exact causal cost.
-No outcome automatically authorizes a correction, exception or primary campaign.
+Never combine sampling and counting in one evaluator. Retain original source
+locations and map attributed frames to exact source bytes.
 
-Gate the report through maintained observer/output contracts and offline review of
-all finite comparisons, identities, arithmetic and release evidence. An unchanged
-tool/report-only change needs evidence review, not a repeated product build. A
-maintained-tool correction requires actual-component qualification, affected
-focused checks and the full Lexicon gate. Retain all failed packets and account
-for probes as maintained, replaced or disposable. A durable reviewed report commit
-is required even if attribution is inconclusive. Inconclusive attribution leaves
-production integration unstarted pending the architect's ruling.
+### Finite qualification and observations
 
-Diagnostic closure supplies a decision packet while attribution or product cost
-remains open. After the required architectural ruling, the orchestrator supplies
-the integration opener, or dependency and held-integration openers when a
-demonstrated dependency cause establishes a split. The integration join requires
-the diagnostic report merged, the architect's ruling, and any required dependency
-correction qualified, committed and verified portably published before Lexicon
-refreshes its immutable pin/lock and requalifies affected evidence. Any new cost
-exception also requires explicit user approval. Inconclusive attribution keeps
-integration unstarted pending a ruling on the next observation method.
+Precede observations with six actual-component qualification launches on candidate
+size 4, one complete-output case retaining poison and one deliberately malformed
+fixture case per mode. Verify the malformed case's exact expected rejection;
+never admit it as successful workload evidence. Then propose twelve observations,
+two sources times two sizes times three modes. These are diagnostic observations,
+not primary medians.
+
+Fresh readiness must predeclare exact order and every destination. The proposed
+total is eighteen evaluator launches, with metadata separately capped at nineteen
+version queries and verified reuse preferred. There are no retries or
+discretionary warmups. This ruling grants no execution allowance. The future
+opener/readiness must state actual execution authority explicitly, including
+qualification, observations and any required functional checks.
+
+Qualify absent, stale, malformed and unsupported instrumentation records offline.
+Reuse existing timeout/release controls only after explicit applicability review.
+Stale evidence stops preparation and requires a revised finite packet. Successful
+observations require complete output equality with the retained projection at
+their size. Retain full stdout/stderr, counters or folded stacks, commands and
+environment, identities, exits, costs and release evidence. Missing instrumentation
+is a failed observation, never an empty profile.
+
+Expected elapsed cost is under ten minutes, subject to instrumentation-overhead
+qualification. Keep sixty-second evaluator and six-hundred-second invocation
+deadlines. A deadline can stop the schedule, not shrink demand or increase limits.
+Require serial execution, the existing machine lock and fresh host admission and
+release. Stop on foreign work, identity/output/control/instrumentation failure,
+missing metrics, failed release or deadline. No foreign signaling, quiet polling,
+retry, frequency change or extra launch follows a stop.
+
+Instrumented wall/RSS is recorded cost, not primary acceptance, an exact overhead
+estimate or a quantity to subtract from raw results. Maintained-tool changes need
+instrumentation qualification, affected focused checks and the full repository
+gate. Those are future execution requirements, not publication authority.
+Account for every attempted launch and metadata query separately from functional
+accounting. Keep failed evidence. Bounded inconclusive closure grants no automatic
+repetition, correction, integration or cost exception.
+
+A durable reviewed profile report must distinguish demonstrated repetition,
+source-grounded ownership and unresolved alternatives. While attribution or
+product cost remains unresolved, the orchestrator supplies an architect decision
+packet identifying the evidence and unresolved architectural, scope or product
+decision. Inconclusive closure keeps integration unstarted and grants no
+repetition or further execution.
+
+After the required ruling, the orchestrator supplies the applicable integration
+opener, or dependency plus held-integration openers when demonstrated dependency
+ownership establishes that split. Every opener names role, branch/worktree,
+exact ownership, published contract commit, actual authority and first action.
+Explicit successor closure responsibility is a standing requirement; the
+orchestrator carries the applicable obligations into the baton at publication
+closure.
+
+Integration requires the profiling report merged, the applicable architectural
+ruling and resolved correction ownership. Any necessary dependency correction
+requires amended published Krisis contracts first, qualification, an immutable
+commit and verified portable publication before Lexicon's pin/lock refresh and
+affected qualification. New cost exceptions require explicit user approval.
+No correction, phase, worktree or launch opens automatically.
 
 ## Integration effort
 
@@ -139,7 +194,7 @@ whole-tree acceptance for the final immutable dependency graph.
 | Branch | `effort/nix-effects-integration` |
 | Worktree | `/home/feltfomo/Projects/lexicon/.runtime/nix-effects-integration-worktree` |
 | Initial ownership | Exactly the thirty candidate paths below, plus final updates to this page and [capabilities](capabilities.md) |
-| Prerequisite | Diagnostic report merged and architect ruling settles attribution/correction ownership or the next observation method; any cost exception needs explicit user approval |
+| Prerequisite | Report merged, architect ruling and resolved correction ownership; profiling publication alone does not satisfy the join; any cost exception needs explicit user approval |
 | Interfaces | Existing public declarations/factories, selected result/diagnostic projections, schema callback boundary, generic assembly and immutable dependency join |
 | Outside ownership | Existing dependency/effects/compatibility source and diagnostic report remain read-only absent a named scope amendment |
 | Merge order | Any justified dependency correction qualifies and publishes first, then Lexicon joins its immutable pin, qualifies combined source and receives architectural merge review |
@@ -147,9 +202,11 @@ whole-tree acceptance for the final immutable dependency graph.
 Import only the owned candidate paths from frozen source, preserving kinds and
 executable modes. Preserve newly published documents. Reconcile
 `verification/dependencies.md` deliberately so the candidate inventory and new
-navigation both survive. Verify the thirty imported payloads before intentional
-integration changes. The original 356-file manifest keeps its original identity;
-additional published files produce a different full manifest. Record both a full
+navigation both survive. Reconcile the deliberate observer/README overlap with
+any separately published profiling effort before qualifying combined source.
+Verify the thirty imported payloads before intentional integration changes. The
+original 356-file manifest keeps its original identity; additional published files
+produce a different full manifest. Record both a full
 admitted manifest and a path-specific applicability map. Matching thirty paths
 alone does not prove whole-source, dependency or tool applicability.
 

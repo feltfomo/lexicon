@@ -47,13 +47,38 @@ Immediate diagnostics size 4 fails with matching complete 384-byte outputs.
 | Evaluator wall seconds | 0.17363151199970162 | 0.34825753800032544 | 0.26440254119959716 |
 | Evaluator peak RSS KiB | 64100 | 122628 | 88317 |
 
-Diagnostic sizes 16/64 and every assembled primary remain unlaunched. No inherited
-exception accepts this failure. The next bounded sensitivity has launched zero
-workloads. Its public report pre-demand can observe initialization sensitivity;
-it cannot identify an individual native allocation, prove unavoidable cost,
-approve raw cost or replace primary acceptance. Report-policy/handler setup,
-first-emission initialization and workload-dependent checking/adaptation/re-emission
-remain competing explanations. Remedy ownership is unresolved.
+Raw diagnostic size 16, a complete raw-64 primary comparison and every assembled
+primary remain absent. No inherited exception accepts the raw-4 failure.
+The bounded [initialization report](../praxis-diagnostic-cost.md) is complete and
+merged, while the experiment was interrupted and attribution remains open.
+
+| Initialized size | Wall median baseline/candidate seconds | Wall bound seconds | Peak RSS median baseline/candidate KiB | RSS bound KiB | Outcome |
+| --- | --- | --- | --- | --- | --- |
+| 4 | 0.1724750489993312 / 0.3440998709993437 | 0.2628413161490971 | 66604 / 125100 | 91447 | Both exceeded |
+| 64 | 0.21975096299865982 / 2.74212385699866 | 0.32666380004819073 | 86604 / 491728 | 116447 | Both exceeded |
+
+Raw size 64 stopped at attempt 21's environmental release on foreign `nix` PID
+`947128`. Twenty samples were campaign-admitted. Attempt 21 had valid complete
+output and process release but was excluded from comparisons; its costs remain
+counted. Three launches were unattempted. There is no raw-64 median. Size-4 output
+was 384 bytes with SHA-256
+`546aa0de311d8d1948fb5fdd5ef6950f8583bb594200350f7d0fb6755e4df8f0`;
+size-64 output was 3271 bytes with SHA-256
+`9d7f29a88907fd79da7c9f5d28125c4d5f6a47257d9c9240d218ccc9b688fba3`.
+These complete projections remain the size-specific equality targets.
+
+Fixed public empty-success report initialization was insufficient. This result
+does not establish individual native allocation cost, unavoidable overhead or a
+correction owner. Do not complete or repeat initialization sensitivity. The next
+proposed method observes source-position counts and sampled evaluator stacks
+under [finite qualification and observation rules](efforts.md#finite-qualification-and-observations).
+There is no profiling evidence yet. Counts identify demanded applications at
+source positions, not closure instances. Samples locate observed execution, not
+exact initialization cost or temporal first emission. Neither gives per-component
+peak RSS. Counter-mode final collection and instrumentation allocations must be
+disclosed. Instrumented costs cannot replace primary acceptance or be subtracted
+from raw results. Source-grounded ownership and unresolved alternatives follow the
+[attribution boundary](architecture.md#diagnostic-attribution-boundary).
 
 Unchanged wall bounds are baseline median times 1.35 plus 0.03 seconds; RSS bounds
 are baseline median times 1.25 plus 8192 KiB. The immediate baseline is
@@ -62,11 +87,11 @@ are baseline median times 1.25 plus 8192 KiB. The immediate baseline is
 results stay missing. A report-only diagnostic conclusion, including an
 inconclusive one, does not close migration acceptance.
 
-Retained cumulative accounting is 165 workloads, 84.76011121302872 evaluator
-seconds, 127.14589780299139 recorded runner seconds and 126 separate version
+Retained cumulative accounting is 186 workloads, 107.51610190801512 evaluator
+seconds, 164.20457031099068 recorded runner seconds and 147 separate version
 queries. Functional accounting is separate. Publication launches none and
 reconstructs no setup or waits. Fresh readiness and authority are required for
-the [next effort](efforts.md#diagnostic-evidence-effort).
+the [proposed evidence effort](efforts.md#source-position-and-sampled-stack-evidence-effort).
 
 ## Scoped accepted tradeoffs
 
@@ -107,7 +132,7 @@ regression. Preserve raw failures and original bounds.
 | Parser feasibility and TOML closure | Approved fallback and exact standalone tradeoff above; parser research is closed in remaining scope. |
 | Expected-type prototype | Restricted controls passed without demonstrated wall improvement. Rejected as sufficient correction; retained Krisis evidence does not imply production adoption. |
 | Configured-checker sharing | Published dependency correction and reviewed Lexicon functional integration resolve selected cost for the frozen source. Per-value validation remains intact; diagnostic/assembled cost stays open. |
-| Missing primary evidence | Diagnostic 16/64 and all assembled cells remain integration acceptance after diagnostic disposition. No formal limit replaces these gaps. |
+| Missing primary evidence | Raw diagnostic 16, complete raw-64 primary comparison and all assembled cells remain integration acceptance after attribution disposition. No formal limit replaces these gaps. |
 
 The [committed dependency inventory](../dependencies.md) describes main. Its
 candidate counterpart separately records Praxis native type/check/result owners.
@@ -183,3 +208,16 @@ Stopped sensitivity records remain under the original checkout's
 records. Krisis's expected-type and configured-checker evidence and the 23,957-entry
 preservation inventory are named in [custody](efforts.md#retained-evidence-custody).
 Portable dependency publication is retained user evidence, not a new remote query.
+
+The merged diagnostic report is commit
+`7eb71ae503537ce844de8ac4c4c96ff797fe9380`; main merge
+`cc3db2b5b88f308bb7cd2b283d33314db60c9a97` preserves its exact tree.
+Its local packet/results remain under
+`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree/.runtime/praxis-diagnostic-cost`.
+The 194-file sealed results manifest SHA-256 remains
+`786fc1d8fa2ea55f6ff6dd1f8bcf86caf742a74a7d1b6b0e05c7e82bf75f2a3d`.
+The architect's retained ruling is
+`/home/feltfomo/.runtime/lexicon-nix-effects/profiling-ruling.md`.
+Publication administrative evidence is under the publication checkout's
+`.runtime/profile-publication`. These records grant no new execution, cleanup or
+adoption authority. Integration remains unstarted.

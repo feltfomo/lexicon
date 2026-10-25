@@ -123,10 +123,48 @@ and TOML publisher retain live lifecycle ownership. TOML's pure renderer joins
 fragments over typed values and preserves store context; TOML Kit retains parsing
 and concrete syntax. A renderer does not establish parser or publication parity.
 
-The diagnostic cost could involve report-policy/handler initialization, first
-emission or workload-dependent checking/adaptation/re-emission. Current evidence
-does not establish individual allocation cost or correction ownership. The
-[diagnostic effort](efforts.md#diagnostic-evidence-effort) observes public report
-initialization sensitivity before any architectural remedy. A demonstrated
-dependency cause requires amended published Krisis contracts before dependency
-work, then a qualified immutable publication before Lexicon's pin join.
+The completed [initialization report](../praxis-diagnostic-cost.md) leaves
+correction ownership unresolved. Fixed public empty-success report initialization
+was insufficient for the frozen candidate. The next observation method is
+source-position counting and sampled evaluator stacks, with initialization
+disabled. No architectural remedy follows from the interrupted experiment.
+
+## Diagnostic attribution boundary
+
+The maintained `verification/components/observe.py` owns evaluator capture,
+complete-output validation and release. Future instrumentation capture belongs
+there, preserving one timing and lifecycle implementation. The new
+`verification/components/profile-contracts.py` owns instrumentation assertions;
+`verification/components/README.md` documents the maintained interface and
+`verification/praxis-diagnostic-profile.md` records the evidence. Implementation
+choices belong to that future owner. [Effort ownership](efforts.md#source-position-and-sampled-stack-evidence-effort)
+binds the frozen dispatcher/fixture identities and read-only source boundary.
+The observer/README overlap with the preserved candidate is deliberate and must
+be reconciled during later integration.
+
+Separate setup/checker construction, checker application, report emission and
+collection, Praxis adaptation, and graph/result transport. Preserve unclassified
+stacks. Do not attribute all interpreter descendants to an ancestor caller.
+Counts identify demanded source-position applications, not individual closure
+instances. Samples locate observed execution, not exact initialization cost or
+temporal first emission. Neither provides per-component peak RSS. Disclose
+counter-mode final collection and instrumentation allocations.
+
+Growing setup counts with matching repeated-construction stacks require tracing
+the responsible caller. Lexicon assembly and dependency-internal rebuilding are
+different owners. Bounded setup with native checking/failure work requires source
+inspection separating required per-input checking from avoidable repeated work.
+Required checking alone establishes no defect or exception.
+
+Adaptation/transport evidence needs a source-grounded explanation connecting
+repetition to the actual Lexicon boundary owner. Bounded setup demanded beneath
+emission supports only that narrower first-demand claim. Dominant stacks alone
+do not prove correction ownership. Keep mixed ownership explicit. Disagreeing
+counters/stacks, changed results, ambiguous frames or insufficient sampling leave
+attribution unresolved. Bounded inconclusive closure grants no automatic
+repetition, correction, integration or cost exception.
+
+A demonstrated dependency correction requires amended published Krisis contracts
+first, then qualification, an immutable commit and verified portable publication
+before Lexicon's pin/lock refresh and affected qualification. No Krisis correction
+scope is granted here.
