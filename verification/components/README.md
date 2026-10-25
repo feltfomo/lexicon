@@ -67,6 +67,115 @@ reporter, then demands the unchanged workload. This sensitivity control exposes
 reporter initialization cost. It doesn't replace the uninitialized baseline or
 authorize subtracting startup from acceptance measurements.
 
+`praxis-selected` demands the selected `gate` manifest and `praxis-diagnostics`
+demands every `2*N` diagnostic code, authored path and the complete summary.
+Both need a dispatcher with the `praxis.nix` fixture. This tree's `workload.nix`
+doesn't have it, so pass a frozen dispatcher explicitly with
+`--dispatcher /absolute/workload.nix` and one `--bind NAME=SHA256` for the
+dispatcher and for each file it imports. Names are relative to the dispatcher's
+directory. A mismatch, a relative dispatcher or an unbound dispatcher exits 2
+before any evaluator starts. The bindings are hashed again after release, and a
+change rejects the sample. The default dispatcher is still the sibling
+`workload.nix`, with an unchanged command. The preserved Praxis candidate adds
+the same two validators to its own observer, so integration has to reconcile
+this file and this page with that candidate.
+
+`--instrumentation` selects one evaluator mode per process. `none` is ordinary
+capture. `flamegraph` adds `--option eval-profiler flamegraph`, a fixed
+`eval-profiler-frequency` of 1000 and `eval-profile-file` set to
+`<output>/profile.folded`. `counts` sets `NIX_SHOW_STATS=1`, `NIX_COUNT_CALLS=1` and
+`NIX_SHOW_STATS_PATH=<output>/stats.json` for the evaluator alone, and passes
+`--option eval-profiler disabled`. Sampling and counting never share a process.
+In `flamegraph` and `counts`, an inherited `NIX_SHOW_STATS`, `NIX_COUNT_CALLS`,
+`NIX_SHOW_STATS_PATH` or `NIX_SHOW_SYMBOLS`, even set to `0`, or a `NIX_CONFIG`
+naming the profiler or call tracing exits 2 before launch. Ordinary capture
+doesn't check, and passes the caller's environment to the evaluator as it always
+has. A caller that needs a clean ordinary sample, such as a profile campaign,
+has to clear those variables itself. Instrumentation is refused for the render
+phase. The version query after the evaluator never sees the counting variables.
+
+An instrumented sample is admitted only after the ordinary output and exit checks
+and a valid record. `profile-contracts.py` owns that decision. The record must be
+absent before launch, present afterwards, a regular file owned by this user and
+no older than the output directory at launch. It must also parse under the
+evaluator's 2.34.8 grammar. Any other evaluator version is unsupported. The
+record's `instrumentation` field names the failure as `absent`, `stale`,
+`malformed` or `unsupported`. A missing record, an empty profile or statistics
+with no counted applications are failures, never an empty result. Wall time and
+peak RSS are recorded exactly as for ordinary capture. They aren't primary
+acceptance, and they don't estimate overhead to subtract from ordinary samples.
+
+The flamegraph record is folded stacks, one `frame;frame count` line per stack.
+Frames print a position as `origin:line:column`, followed by the lambda name,
+`functor`, `primop NAME` or `primop derivationStrict:NAME`. The position is
+normally the call site, but it isn't always. When the call site's origin doesn't
+resolve, a lambda frame prints the lambda's definition and a functor frame
+prints its `__functor` attribute. A primop then prints only its name, so a
+positioned primop frame is always a call site. The record can't tell the two
+lambda cases apart, and `map` labels each frame's `provenance` as `call-site`,
+`call-site-or-lambda-definition`, `call-site-or-functor-attribute` or
+`unpositioned`. The evaluator only samples when a function is entered and
+at least a millisecond has passed since its last sample. Time spent in a primop
+or a forced thunk that enters no function is credited to the next stack entered.
+The sample map is flushed and cleared every two seconds and again when the
+evaluator is destroyed, so a stack can appear on several lines. Their counts are
+summed. Samples locate observed execution, not exact cost or the time of first
+emission.
+
+`--timeout-seconds` bounds the evaluator with `SIGKILL`, in every mode. `SIGTERM`
+wouldn't. Nix turns it into an interrupt flag, and 2.34.8 checks that flag in
+I/O, store operations and value printing, never in the evaluation loop, so a
+terminated evaluator can keep running and then spend more time unwinding. After
+a kill, nothing from teardown is written. A profile keeps only the lines its
+two-second flushes wrote before the limit, and statistics are absent. The record
+shows `timed_out` and exit `-9`, and the sample is rejected. The observer itself
+isn't bounded after the evaluator, for example during the version query, so a
+caller with its own deadline bounds the observer's whole process group.
+
+The counts record is the evaluator's statistics JSON. `functions` counts lambda
+applications by the lambda's definition position, one per applied argument, and
+`primops` counts calls by name. They identify demanded applications at source
+positions, not closure instances. Their sums must equal `nrFunctionCalls` and
+`nrPrimOpCalls`. The entries must match the writer exactly. Counters and counts
+are non-boolean integers, `name` is always present, and `line` and `column`
+appear together, with `line` at least 1, only for a positioned lambda. `file` is
+added only for a path origin. A positioned entry without `file` and an entry
+with no position stay valid. A folded position must print its line and column as
+plain integers, never a zero column, because the profiler omits a zero column.
+In 2.34.8 `attributes` is always null, because the evaluator
+fills a copy of the list, so attribute selection counts aren't available. A
+populated list is rejected as a different evaluator. The evaluator runs a full
+collection before writing statistics, and the call maps allocate, so counter-mode
+wall time and RSS include both. Neither mode gives per-component peak RSS.
+
+`profile-contracts.py qualify --output /absolute/scratch/qualify` runs offline. It
+puts a fake `nix` first and only on `PATH`, so no real evaluator starts. It drives
+`observe.py` through valid, absent, stale, malformed and unsupported records in
+both modes. It also covers a malformed fixture rejected with a valid record, a
+timeout, an evaluator that ignores or defers termination in each mode, binding
+drift during a run, each pre-launch refusal, the unchanged ordinary command and
+ordinary capture with inherited counting or profiler settings. Grammar cases
+reject boolean counters, invalid or partial positions and non-canonical frames.
+The same command checks source mapping and frame provenance.
+`profile-contracts.py map --observation /absolute/sample --roots /absolute/roots.json --output /absolute/frames.json`
+maps every positioned frame or counted function to its file, line, byte offset
+and line text. Roots are `{"name", "tree", "manifest"?}` directories or
+`{"name", "git", "revision"}` repository revisions. A path under a root belongs to
+the innermost root. A store-displayed file belongs to the single root whose file
+at the same relative path has identical bytes. A fetched input displayed as
+`«reference»/path` belongs to the root whose revision or tree that reference
+names. Its bytes come from that root, because the display isn't a readable file.
+Each mapped position carries `content_sha256`, the hash of the bytes its line
+was read from. Line ranges for classification belong to those bytes, never to a
+path alone, because the same path holds different code at another revision.
+Each origin is read and split once, and every position on it is looked up from
+that index. A column of 0 in statistics means none was recorded, so the position
+maps to its line start with `column_recorded` false. Line 0, as in `«none»:0`,
+is `position-unresolved`. Other outcomes are kept as `unbound`, `ambiguous`,
+`stale`, `unreadable`, `unmapped-origin` or a position outside its file or line. Mapping reads displayed
+files and Git objects and never writes them. The record has to match its captured
+hash first.
+
 `snapshot.py --root /absolute/repo --output /absolute/scratch/snapshot` copies
 Git-admitted working files, including untracked nonignored files. It verifies
 content, file kinds and executable modes against the source before and after
