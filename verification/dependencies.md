@@ -1,5 +1,12 @@
 # Dependency boundary
 
+The remaining migration contracts are published as the
+[spec](nix-effects/spec.md), [architecture](nix-effects/architecture.md),
+[effort ownership and candidate custody](nix-effects/efforts.md), and
+[capabilities and acceptance evidence](nix-effects/capabilities.md).
+They distinguish delivered behavior from uncommitted Praxis work and blocked
+acceptance.
+
 `src/dependencies.nix` initializes one corrected nix-effects value with the selected
 library, then native Krisis with `{ lib, fx }`. The public factories, fixture
 assembly and installed generic evaluator use this owner. The generic evaluator
