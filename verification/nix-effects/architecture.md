@@ -44,7 +44,7 @@ lazy. No report initialization step belongs in production.
 | Owner | Domain responsibility | Composition and boundary |
 | --- | --- | --- |
 | Dependency assembly | Selected library, qualified source, native Krisis and compatible view | Supplies dependencies to factories and generic evaluation; consumers need no Fx argument |
-| Compatibility bridge | Retained result and diagnostic projections, terminal recovery and old provider participation | Adapt Axiom results once to native Checked; interpret and eliminate reports at existing terminal boundaries |
+| Compatibility bridge | Safe report elimination, retained result projections, compatibility envelope demand, terminal recovery and old provider participation | Adapt Axiom results once to native Checked; share constructor elimination between existing recovery and the designed mapped-report projection |
 | Ownerships | Descriptor/relation registration, claim algebra, selection, preparation, merge and coverage | Native context/validation orchestration around pure algorithms |
 | Registry and Den | Canonical fleet records, membership, checked lookups and roster/principal projection | Interpret requested validation only; do not instantiate hosts or evaluate Den user bodies |
 | Definitions and declarations | Registration, structural preparation, output/scope projection, selection and lowering | One registered traversal, native dependent validation, ordinary pure extension callbacks |
@@ -103,12 +103,68 @@ reporters eliminate native Checked/Outcome values. Explicit old providers retain
 their factory, formatting, summary, error-context and recovery operations at this
 same boundary.
 
-Praxis's candidate adapts native blame once before returning retained schema parse
-results. Scalar/list/nullable/reference checks preserve codes, paths, reasons and
-ordered union failures. Malformed reference names fail before `param` payload
+Praxis owns the finite type/reason vocabulary, authored blame adaptation and
+retained schema callbacks. Krisis remains validation owner. The designed
+correction below projects completed native reports before returning retained
+schema parse results. Scalar/list/nullable/reference checks preserve codes, paths,
+reasons and ordered union failures. Malformed reference names fail before `param` payload
 demand. An untagged string-or-reference choice remains a Praxis operation, not a
 native tagged Either substitution. Each demanded command's lazy interpreted
 result is shared by namespace lookup, reachability, manifests and summaries.
+
+## Callback projection boundary
+
+This design is unimplemented and unqualified. Fixed type/code checkers stay outside
+value applications, with unused configuration lazy. Every demanded application
+keeps its own input, predicate execution, native failure state and authored blame.
+The collecting-handler configuration remains shared and immutable; each native
+interpretation produces its own report. A completed report and the retained
+projection have that application's lifetime, with no input/result cache.
+
+Scalar, choices, default and environment callbacks run configured native checking
+under the existing collecting interpretation. The bridge then purely projects the
+completed native Checked report using Praxis's diagnostic mapper. A distinct
+bridge operation takes that report and mapper; its name is left to the owner.
+The bridge shares Outcome/Checked elimination rules with its existing operations,
+while `resultFromReport` still recovers original diagnostics from thunked context.
+Only known constructors and qualified `forceThunk` recovery permit a value.
+Invalid or failed outcomes without usable failure evidence and impossible
+constructors are rejected. Failure results contain diagnostics and no value.
+
+Mapped diagnostics pass through the existing compatibility mapping. Demand code
+then severity, in their existing order, before public native `diagnostic.make`
+validates the envelope. Settle each diagnostic/check's required envelope before
+the next check. Keep message, locations, related entries, notes, help and arbitrary
+context deferred. Preserve original mapper and factory exceptions as well as
+input, predicate and code/severity exceptions. Do not deeply force the diagnostic
+list, manufacture a Report or interpret an adapted-diagnostic computation merely
+to obtain a callback result. This boundary needs no new handler state, report
+format, diagnostic runtime, generic framework or cache.
+
+References keep native shape and dependent body checking composed with
+`validation.andThen` before interpretation and projection. Shape rejection leaves
+`param` and extra values opaque. Project that native failure once. Arguments first
+validate the outer list. String members retain their fast path. Probe a nonstring
+reference once and share the projected result; success retains the original
+argument. On rejection, settle the reference probe and adapted envelope before
+evaluating the string fallback. Output remains string diagnostics then reference
+diagnostics. Accumulate independent member fragments in authored index order and
+concatenate once, keeping accepted values and opaque children intact.
+
+This finite callback operation projects completed observations. Native computation
+composition still belongs to enclosing schema-to-native work, shared command
+interpretations, graph selections and terminals. It isn't generic Axiom-based
+sequencing. Remove the callback's adapted-report `fromDiagnostics`/`resultOf` path
+and the reference `resultOf`/`fromAxiom` probe/replay cycle. Keep general bridge
+operations for other consumers and introduce no switch or parallel implementation.
+Existing qualified carriers protect arbitrary inputs, results and recovery data
+across the complete transport path. Preserve old-reporter recovery and factory
+participation, command/selection sharing and reached-only normalization.
+
+Krisis stays at `c48e40834fe90299096d2988433b17f650c30c8a` and qualified Fx stays
+unchanged. Existing dependency and compatibility source outside the explicit
+[correction overlay](efforts.md#correction-ownership-and-qualification) is read-only.
+No private API or dependency correction is opened.
 
 ## Preserved algorithm and runtime boundaries
 
@@ -123,21 +179,20 @@ and TOML publisher retain live lifecycle ownership. TOML's pure renderer joins
 fragments over typed values and preserves store context; TOML Kit retains parsing
 and concrete syntax. A renderer does not establish parser or publication parity.
 
-The completed [initialization report](../praxis-diagnostic-cost.md) leaves
-correction ownership unresolved. Fixed public empty-success report initialization
-was insufficient for the frozen candidate. The next observation method is
-source-position counting and sampled evaluator stacks, with initialization
-disabled. No architectural remedy follows from the interrupted experiment.
+The completed [initialization report](../praxis-diagnostic-cost.md) found public
+empty-success report initialization insufficient. The later
+[profiling report](../praxis-diagnostic-profile.md) establishes the callback
+round-trip source boundary. The correction above is the supported Lexicon design;
+it doesn't assign total cost between Krisis and Lexicon or prove cost acceptance.
 
 ## Diagnostic attribution boundary
 
 The maintained `verification/components/observe.py` owns evaluator capture,
-complete-output validation and release. Future instrumentation capture belongs
-there, preserving one timing and lifecycle implementation. The new
-`verification/components/profile-contracts.py` owns instrumentation assertions;
+complete-output validation and release, including merged instrumentation capture.
+The merged `verification/components/profile-contracts.py` owns instrumentation assertions;
 `verification/components/README.md` documents the maintained interface and
-`verification/praxis-diagnostic-profile.md` records the evidence. Implementation
-choices belong to that future owner. [Effort ownership](efforts.md#source-position-and-sampled-stack-evidence-effort)
+`verification/praxis-diagnostic-profile.md` records the immutable evidence.
+[Effort ownership](efforts.md#source-position-and-sampled-stack-evidence-effort)
 binds the frozen dispatcher/fixture identities and read-only source boundary.
 The observer/README overlap with the preserved candidate is deliberate and must
 be reconciled during later integration.
@@ -164,7 +219,7 @@ counters/stacks, changed results, ambiguous frames or insufficient sampling leav
 attribution unresolved. Bounded inconclusive closure grants no automatic
 repetition, correction, integration or cost exception.
 
-A demonstrated dependency correction requires amended published Krisis contracts
-first, then qualification, an immutable commit and verified portable publication
+A future demonstrated dependency correction requires amended published Krisis
+contracts first, then qualification, an immutable commit and verified portable publication
 before Lexicon's pin/lock refresh and affected qualification. No Krisis correction
 scope is granted here.

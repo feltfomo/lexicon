@@ -12,6 +12,13 @@ The [spec](spec.md) defines the accepted behavior,
 the remaining sequence and exact custody manifest. Published documents add no
 new functional or performance observation.
 
+The [callback projection correction](spec.md#callback-report-projection-correction)
+is designed, unimplemented and unqualified. It retains native checking and the
+collecting interpretation, then purely projects completed reports through Praxis
+blame adaptation. The bridge owns shared safe elimination and compatibility
+envelope demand. Krisis `c48e40834fe90299096d2988433b17f650c30c8a` and qualified Fx
+remain unchanged. Historical evidence below doesn't establish corrected acceptance.
+
 ## Delivered and reviewed support
 
 | Outcome | Landed identity or candidate status | Evidence disposition |
@@ -50,7 +57,8 @@ Immediate diagnostics size 4 fails with matching complete 384-byte outputs.
 Raw diagnostic size 16, a complete raw-64 primary comparison and every assembled
 primary remain absent. No inherited exception accepts the raw-4 failure.
 The bounded [initialization report](../praxis-diagnostic-cost.md) is complete and
-merged, while the experiment was interrupted and attribution remains open.
+merged. That experiment was interrupted and left attribution open; the later
+profile supports the correction design without assigning total cost.
 
 | Initialized size | Wall median baseline/candidate seconds | Wall bound seconds | Peak RSS median baseline/candidate KiB | RSS bound KiB | Outcome |
 | --- | --- | --- | --- | --- | --- |
@@ -67,18 +75,29 @@ size-64 output was 3271 bytes with SHA-256
 `9d7f29a88907fd79da7c9f5d28125c4d5f6a47257d9c9240d218ccc9b688fba3`.
 These complete projections remain the size-specific equality targets.
 
-Fixed public empty-success report initialization was insufficient. This result
-does not establish individual native allocation cost, unavoidable overhead or a
-correction owner. Do not complete or repeat initialization sensitivity. The next
-proposed method observes source-position counts and sampled evaluator stacks
-under [finite qualification and observation rules](efforts.md#finite-qualification-and-observations).
-There is no profiling evidence yet. Counts identify demanded applications at
-source positions, not closure instances. Samples locate observed execution, not
-exact initialization cost or temporal first emission. Neither gives per-component
-peak RSS. Counter-mode final collection and instrumentation allocations must be
-disclosed. Instrumented costs cannot replace primary acceptance or be subtracted
-from raw results. Source-grounded ownership and unresolved alternatives follow the
-[attribution boundary](architecture.md#diagnostic-attribution-boundary).
+Fixed public empty-success report initialization was insufficient. Do not
+complete or repeat initialization sensitivity. The later immutable
+[profiling report](../praxis-diagnostic-profile.md) completed all eighteen launches,
+six qualification cases and twelve observations, with initialization disabled.
+The three malformed controls were expected rejections, not successful workload
+samples. All observations matched the complete size-specific output. No profiling
+repeat is authorized.
+
+At size 64 the frozen candidate recorded 576 emissions for 128 final diagnostics,
+an aggregate ratio of 4.5, not a per-diagnostic multiplicity or correction target.
+Exact counts and sampled stacks locate repeated diagnostic envelope validation
+beneath Krisis and the callback report round trips in Lexicon. The report leaves
+total cost attribution between those factors unresolved. The supported correction
+removes the callback's intermediate adapted report and reference probe/replay
+cycle. It claims neither a static speedup nor sufficient raw-bound performance.
+
+Counts identify applications by definition position, not closure instances.
+Samples locate execution, not exact initialization cost or temporal first
+emission. They give no per-component RSS. Unclassified positions remain
+unclassified. Instrumented wall/RSS includes profiling allocations or counter-mode
+final collection and call maps. It cannot replace primary acceptance or be
+subtracted from raw results. The [attribution boundary](architecture.md#diagnostic-attribution-boundary)
+retains those limits.
 
 Unchanged wall bounds are baseline median times 1.35 plus 0.03 seconds; RSS bounds
 are baseline median times 1.25 plus 8192 KiB. The immediate baseline is
@@ -87,11 +106,38 @@ are baseline median times 1.25 plus 8192 KiB. The immediate baseline is
 results stay missing. A report-only diagnostic conclusion, including an
 inconclusive one, does not close migration acceptance.
 
-Retained cumulative accounting is 186 workloads, 107.51610190801512 evaluator
-seconds, 164.20457031099068 recorded runner seconds and 147 separate version
-queries. Functional accounting is separate. Publication launches none and
-reconstructs no setup or waits. Fresh readiness and authority are required for
-the [proposed evidence effort](efforts.md#source-position-and-sampled-stack-evidence-effort).
+Retained cumulative accounting is 204 workloads, 120.80884601002981 evaluator
+seconds, 185.45918229100062 runner seconds and 165 separate version queries.
+The profiling continuation added eighteen workloads, 13.292744102014694 evaluator
+seconds, 20.14690248000261 runner seconds and eighteen queries. Its starting runner
+total of 165.312279810998 seconds includes the first invocation's admission stop,
+which added 1.1077095000073314 runner seconds and no workload or query.
+
+Development-shell accounting stays separate: 5.111972898 seconds with exit 1 and
+24.561125507 seconds with exit 0. Functional accounting also stays separate: the
+first gate failed with exit 1 in 51.048 seconds; log retrieval took about 4.42
+seconds with shell exit 0 and two log-query exits 0 and 1; the two independent
+clone gates passed with exit 0 in 309.824 and 444.323 seconds. The last gate
+qualified corrected tooling. Twelve retained instrumentation records replayed
+with byte-identical summaries; ten analyzed maps reproduced byte-identically.
+The report's closing prose followed that gate and was checked offline. Gate
+durations aren't timing comparisons. The
+foreign flake check during the last gate was retained and wasn't signalled.
+
+The observer now uses `SIGKILL` for evaluator deadlines in every mode. Historical
+real `SIGTERM` timeout controls don't qualify this changed path. Offline fake-
+evaluator checks qualified it against the actual observer; no campaign launch
+timed out. Reuse instrumentation proof only for identical tooling and applicable
+evaluator/deadline behavior. Old controls don't prove corrected output.
+
+Publication launches nothing. Corrected Praxis, installed consumers and affected
+bridge/compatibility/terminal observations require requalification against a
+complete distinct corrected manifest, lock/dependency identities and an explicit
+applicability map. Unchanged runtime/TOML evidence requires byte/dependency
+applicability and cannot replace the combined gate. Fresh identity-bound cost
+readiness follows functional qualification, with separately approved launches,
+complete demand and unchanged baselines/bounds. Frozen functional, selected and
+profiling evidence remains historical.
 
 ## Scoped accepted tradeoffs
 
@@ -221,3 +267,31 @@ The architect's retained ruling is
 Publication administrative evidence is under the publication checkout's
 `.runtime/profile-publication`. These records grant no new execution, cleanup or
 adoption authority. Integration remains unstarted.
+
+## Immutable profiling publication
+
+Profiling commit `76bac613fab6adce93bea5c6976e585924270430`, sole parent
+`a9b303293eb17c3d6f669b35acb0896eccc239e6`, is merged by
+`b7b5a43acfadd4bcb198fa6658dda185437fdedf`. Its ordered parents are the published
+basis then the profiling commit. Its message is
+`verification: merge Praxis diagnostic profiling evidence` with no body,
+and tree `4af30ada90fa4a4b4d8e20b3cc48201f49fb3da6`, equal to the source tree.
+The committed report SHA-256 is
+`0231ac57ee9e257f863f2bb636847b9d80af18c22d420e9325f4a97c97c58404`.
+Its historical open-decision and pre-commit wording records that phase's state;
+this amendment publishes the subsequent supported design without rewriting it.
+
+The merged scope is `verification/components/observe.py`,
+`verification/components/profile-contracts.py`, `verification/components/README.md`
+and `verification/praxis-diagnostic-profile.md`. All four stay unchanged during
+this amendment. The [report](../praxis-diagnostic-profile.md#costs-and-retained-evidence)
+catalogues the executed packet, every attempt, mapped frames, corrected-tool
+replay, failed gate diagnosis and both passing gate clones. Retain all named
+profiling evidence, helpers, superseded probes, upstream source and clones.
+
+Publication evidence is retained under the publication worktree's
+`.runtime/lexicon-boundary-publication`. The older `.runtime/profile-publication`
+artifacts also remain unchanged. Exactly four linked worktrees remain; integration
+branch/worktree creation and candidate import remain held until verified
+publication and a fresh opener carrying actual authority. No new dependency scope,
+phase or launch opens automatically.

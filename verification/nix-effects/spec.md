@@ -24,7 +24,7 @@ extension contracts.
 | Resources and Furnish | Native checked composition, common destination checks, original origins and terminal recovery boundaries | Delivered |
 | TOML | One pure generated-value renderer; TOML Kit owns parsing, validation and retained-syntax merge; publisher owns live writes | Delivered under the parser fallback and standalone closure tradeoff |
 | Praxis | Native Checked ownership, normalization, schema/parameter and graph-result composition; pure reached-only traversal | Uncommitted reviewed work |
-| Native type callbacks | Fixed checker configuration shared outside applications, native blame adapted once to retained schema results | Published Krisis correction; Lexicon candidate integration remains uncommitted |
+| Native type callbacks | Fixed checker configuration shared outside applications; completed native reports projected through blame adaptation to retained results | Lexicon callback correction designed, unimplemented and unqualified; Krisis unchanged |
 | Final cost acceptance | Unchanged immediate and assembled component bounds, or separately approved precise tradeoffs | Blocked by diagnostic size 4 and missing primary results |
 
 ## Public entry points
@@ -83,9 +83,9 @@ the first throwing terminal. Within-group independent checks still accumulate.
 Praxis's candidate type-check owner keeps fixed type/code configuration outside
 per-value calls. Subject, authored path, input, predicates, failure state and
 blame adaptation remain per application. There is no successful-input/result
-cache or primed production reporter. Qualified Fx is unchanged by the published
-configured-checker correction. Diagnostic correction ownership remains open until
-evidence establishes attribution.
+cache or primed production reporter. The callback correction below keeps Krisis
+at `c48e40834fe90299096d2988433b17f650c30c8a` and qualified Fx unchanged. No
+dependency correction or private API is in scope.
 
 ## TOML and runtime boundaries
 
@@ -112,36 +112,67 @@ size 4 is still a wall/RSS failure. Raw diagnostic 16, a complete raw-64 primary
 comparison and all assembled primaries are absent. A sensitivity result cannot
 substitute for raw acceptance or approve a cost exception. See
 [capabilities](capabilities.md) for exact observations and [efforts](efforts.md)
-for the profiling prerequisite and gates.
+for the correction ownership and future gates.
 
-## Diagnostic attribution amendment
+## Callback report projection correction
 
-The [initialization report](../praxis-diagnostic-cost.md) is merged. Both
-initialized cells exceeded the unchanged wall/RSS bounds; the raw-64 experiment
-was interrupted. The bounded report phase is complete, attribution remains open
-and migration acceptance is incomplete. Do not complete or repeat initialization
-sensitivity. Observe where the unchanged complete workload performs work.
+The merged [profiling report](../praxis-diagnostic-profile.md) supports removing
+the callback's intermediate adapted-diagnostic computation. This is a designed,
+unimplemented and unqualified correction. Keep configured native checking and its
+collecting interpretation. Purely project the completed native Checked report
+through Praxis blame adaptation into the retained callback result. Remove the
+`fromDiagnostics` computation and `resultOf` interpretation used solely to build
+that result. Keep enclosing schema-to-native composition, shared command
+interpretations, graph selections and terminals.
 
-The next proposed evidence asks whether additional candidate work lies in
-repeated configuration construction, native checking/failure handling, Praxis
-blame adaptation or retained-diagnostic transport/re-emission, and which source
-owner controls demonstrated repetition. Use the exact frozen candidate and
-archived immediate baseline with unchanged locks, Nix 2.34.8 and the maintained
-`praxis-diagnostics` fixture at sizes 4 and 64. Demand complete codes, paths and
-summary, all `2*N` diagnostics and the existing unrelated poison. Initialization
-stays disabled.
+The effects bridge owns a distinct projection operation taking a native Checked
+report and a diagnostic mapper. Its name belongs to the implementation owner.
+Share explicit Outcome/Checked constructor elimination with existing report
+operations. Recover carriers only with the qualified `forceThunk`. Existing
+`resultFromReport` continues recovering original diagnostics through thunked
+context. Reject unknown or impossible constructors and Invalid or failed outcomes
+without usable failure evidence. A retained failure has diagnostics and no value;
+a resumed collecting-handler value never proves success.
 
-Each source/size combination has separate ordinary capture, supported flamegraph
-sampling at 1000 Hz, and source-position counting with `NIX_COUNT_CALLS` and
-`NIX_SHOW_STATS` and a unique statistics destination. Never combine sampling and
-counting in one evaluator. Retain original source positions and map attributed
-frames to exact source bytes. The [architecture](architecture.md#diagnostic-attribution-boundary)
-defines attribution limits; [efforts](efforts.md#source-position-and-sampled-stack-evidence-effort)
-defines finite qualification, ownership and stop rules.
+For every mapped diagnostic, normalize through the existing compatibility mapping,
+demand code then severity in their existing order, and use public native
+`diagnostic.make` for required envelope validation. Preserve diagnostic/check order
+before proceeding to the next check. Presentation and arbitrary context stay
+deferred. Preserve factory participation and original input, predicate, mapper,
+code, severity and factory exceptions. Do not deeply force diagnostics or
+synthesize a native Report. Introduce no handler state, report format, diagnostic
+runtime, generic framework or cache.
 
-This amendment grants no evaluator, version query, qualification, functional gate,
-worktree creation, correction, integration, cleanup or adoption authority.
-Instrumented wall/RSS is recorded cost, not primary acceptance, an exact overhead
-estimate or a quantity to subtract from raw results. Unchanged bounds and complete
-demand remain protected; no production priming or setup subtraction substitutes
-for acceptance. New cost exceptions need explicit user approval.
+Scalar, choices, default and environment callbacks interpret native checking and
+project directly to retained results. References compose native shape and
+dependent body checking with `validation.andThen`; rejected shape suppresses
+`param` demand and failures are projected once. Argument callbacks validate the
+outer list before its members and preserve the string fast path. Probe each
+nonstring reference once and share its result, retaining the original accepted
+argument. On rejection, demand the reference probe and its adapted envelope before
+evaluating the string fallback, but output string diagnostics before reference
+diagnostics. Accumulate independent members in authored index order. Preserve
+original successful values and opaque children; build fragments and concatenate
+once. This is pure projection of completed observations, not generic Axiom-based
+computation sequencing. Do not catch callback exceptions.
+
+Preserve declarations, factories and overrides, extension/schema callbacks,
+diagnostic origins, content and summaries, terminal recovery, failure state,
+thunk transport and inactive/unrelated opacity. Command/selection sharing and
+reached-only normalization remain protected. General `fromDiagnostics`,
+`fromAxiom`, `resultOf` and `share` remain available to other consumers.
+
+Historical functional, selected and profiling evidence does not qualify corrected
+source. [Integration obligations](efforts.md#integration-effort) require a complete
+distinct corrected manifest, lock/dependency identities, applicability map,
+affected observations and combined gate before fresh cost readiness. Both reports
+remain immutable history. Do not repeat profiling or initialization sensitivity,
+set an emission-count target or claim a static speedup. Instrumented costs are
+neither primary acceptance nor quantities to subtract. No priming, setup
+subtraction, reduced demand or changed bounds is permitted. New cost exceptions
+need explicit user approval.
+
+This amendment grants no evaluator, version query, development shell, formatter,
+qualification, functional gate, workload, new checkout, candidate import,
+correction, integration, cleanup or adoption authority. Integration stays held
+until verified publication and a fresh opener with actual authority.
