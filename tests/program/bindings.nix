@@ -566,8 +566,9 @@ let
       }).homeManager;
 in
 {
-  native-bridge-preserves-imports-priorities-and-requested-arguments =
-    bridgeProjection legacyBridgeConfig == {
+  "test native bridge preserves imports priorities and requested arguments" = {
+    expr = bridgeProjection legacyBridgeConfig;
+    expected = {
       bridgeChoice = "body-force";
       bridgeOrder = [
         "inner"
@@ -578,125 +579,251 @@ in
       bridgeObservedConfig = "home-manager-config";
       bridgeNestedArgument = "requested-native-argument";
     };
-  canonical-and-legacy-native-bridges-evaluate-equally =
-    bridgeProjection canonicalBridgeConfig == bridgeProjection legacyBridgeConfig;
-  native-and-resource-bridges-keep-separate-configurations =
-    legacyBridgeConfig.bridgeObservedConfig == "home-manager-config"
-    && canonicalBridgeConfig.bridgeObservedConfig == "home-manager-config"
-    &&
-      (builtins.head (declarationsOfWith resourceBridgeArgs legacyBridges)).destination
-      == ".config/nixos-resource-config"
-    &&
-      (builtins.head (declarationsOfWith resourceBridgeArgs canonicalBridges)).destination
-      == ".config/nixos-resource-config";
-  public-target-normalization-honors-injected-diagnostics-and-terminal-recovery =
-    recoveredConfig.bridgeIdentity == "injected target diagnostic";
-  public-program-export-remains-a-function = builtins.isFunction lexicon.lib.program;
-  public-direct-export-exists = builtins.isFunction lexicon.lib.programDirect;
-  public-ownerships-export-exists = builtins.isFunction lexicon.lib.programOwnerships;
-  public-den-export-exists = builtins.isFunction lexicon.lib.programDen;
+  };
+  "test canonical and legacy native bridges evaluate equally" = {
+    expr = bridgeProjection canonicalBridgeConfig;
+    expected = bridgeProjection legacyBridgeConfig;
+  };
+  "test native and resource bridges keep separate configurations" = {
+    expr =
+      legacyBridgeConfig.bridgeObservedConfig == "home-manager-config"
+      && canonicalBridgeConfig.bridgeObservedConfig == "home-manager-config"
+      &&
+        (builtins.head (declarationsOfWith resourceBridgeArgs legacyBridges)).destination
+        == ".config/nixos-resource-config"
+      &&
+        (builtins.head (declarationsOfWith resourceBridgeArgs canonicalBridges)).destination
+        == ".config/nixos-resource-config";
+    expected = true;
+  };
+  "test public target normalization honors injected diagnostics and terminal recovery" = {
+    expr = recoveredConfig.bridgeIdentity;
+    expected = "injected target diagnostic";
+  };
+  "test public program export remains a function" = {
+    expr = builtins.isFunction lexicon.lib.program;
+    expected = true;
+  };
+  "test public direct export exists" = {
+    expr = builtins.isFunction lexicon.lib.programDirect;
+    expected = true;
+  };
+  "test public ownerships export exists" = {
+    expr = builtins.isFunction lexicon.lib.programOwnerships;
+    expected = true;
+  };
+  "test public den export exists" = {
+    expr = builtins.isFunction lexicon.lib.programDen;
+    expected = true;
+  };
 
-  direct-package-only-is-sparse =
-    builtins.attrNames packageOnly == [ "homeManager" ] && packageModule == [ pkgs.hello ];
-  direct-imports-only-is-sparse =
-    builtins.attrNames importsOnly == [ "homeManager" ] && importsModule.imports == [ importedModule ];
-  direct-nixos-only-is-sparse-and-ordinary =
-    builtins.attrNames nixosOnly == [ "nixos" ]
-    && nixosModule.imports == [ normalNixos ]
-    && (builtins.head nixosModule.imports).users.users.alice.isNormalUser
-    && !hasFurnishRuntime nixosOnly;
-  direct-package-only-has-no-furnish-runtime = !(packageOnly ? nixos);
-  direct-imports-only-has-no-furnish-runtime = !(importsOnly ? nixos);
-  direct-file-only-is-sparse =
-    builtins.attrNames fileOnly == [ "nixos" ] && hasFurnishRuntime fileOnly;
-  direct-combined-output-is-the-required-union =
-    builtins.attrNames combined == [
-      "homeManager"
-      "nixos"
-    ]
-    && hasFurnishRuntime combined;
-  constructing-direct-program-is-inert = emptyDirect == { };
-  package-only-direct-mode-leaves-file-machinery-lazy = lazyPackageResult.success;
+  "test direct package only is sparse" = {
+    expr = builtins.attrNames packageOnly == [ "homeManager" ] && packageModule == [ pkgs.hello ];
+    expected = true;
+  };
+  "test direct imports only is sparse" = {
+    expr =
+      builtins.attrNames importsOnly == [ "homeManager" ] && importsModule.imports == [ importedModule ];
+    expected = true;
+  };
+  "test direct nixos only is sparse and ordinary" = {
+    expr =
+      builtins.attrNames nixosOnly == [ "nixos" ]
+      && nixosModule.imports == [ normalNixos ]
+      && (builtins.head nixosModule.imports).users.users.alice.isNormalUser
+      && !hasFurnishRuntime nixosOnly;
+    expected = true;
+  };
+  "test direct package only has no furnish runtime" = {
+    expr = !(packageOnly ? nixos);
+    expected = true;
+  };
+  "test direct imports only has no furnish runtime" = {
+    expr = !(importsOnly ? nixos);
+    expected = true;
+  };
+  "test direct file only is sparse" = {
+    expr = builtins.attrNames fileOnly == [ "nixos" ] && hasFurnishRuntime fileOnly;
+    expected = true;
+  };
+  "test direct combined output is the required union" = {
+    expr =
+      builtins.attrNames combined == [
+        "homeManager"
+        "nixos"
+      ]
+      && hasFurnishRuntime combined;
+    expected = true;
+  };
+  "test constructing direct program is inert" = {
+    expr = emptyDirect;
+    expected = { };
+  };
+  "test package only direct mode leaves file machinery lazy" = {
+    expr = lazyPackageResult.success;
+    expected = true;
+  };
 
-  direct-file-lowers-to-one-furnish-declaration =
-    builtins.length fileDeclarations == 1
-    && fileDeclaration.destination == ".config/direct/example"
-    &&
-      fileDeclaration.source == {
-        kind = "path";
-        value = ../../src/program.nix;
-      };
-  direct-file-defaults-remain-symlink-and-error =
-    fileDeclaration.representation == "symlink"
-    && !(fileDeclaration ? onConflict)
-    && manifestEntry.representation == "symlink"
-    && manifestEntry.onConflict == "error";
-  direct-target-supplies-authority-root-and-namespace =
-    fileDeclaration.authority == {
-      scope = "user";
-      identity = "alice";
-    }
-    && fileDeclaration.managedRoot == "/srv/alice"
-    && fileDeclaration.filesystemNamespace == hostId
-    && manifestEntry.filesystemIdentity.destination == "/srv/alice/.config/direct/example";
-  direct-user-home-defaults-from-name = defaultHomeDeclaration.managedRoot == "/home/alice";
-  direct-specifications-can-be-rebound-to-another-target =
-    reboundDeclaration.authority.identity == "bob"
-    && reboundDeclaration.managedRoot == "/srv/bob"
-    && reboundDeclaration.filesystemNamespace == hostId;
-  direct-directory-expansion-is-preserved =
-    builtins.elem ".config/direct/tree/default.nix" directoryDestinations
-    && builtins.elem ".config/direct/tree/diagnostics.nix" directoryDestinations
-    && hasFurnishRuntime directoryOnly;
-  direct-theme-backend-still-lowers-files =
-    builtins.elem ".config/noctalia/templates/direct-theme/safe-render.nix" themeDestinations
-    && builtins.elem ".config/noctalia/direct-theme.toml" themeDestinations
-    && hasFurnishRuntime themeOnly;
-  direct-top-level-claims-are-rejected = topClaimFails;
-  direct-file-claims-are-rejected = fileClaimFails;
-  direct-directory-claims-are-rejected = directoryClaimFails;
-  direct-directory-rule-claims-are-rejected = directoryRuleClaimFails;
-  direct-theme-claims-are-rejected = themeClaimFails;
-  direct-files-require-a-user-target = missingUserFails;
-  invalid-direct-targets-are-rejected = invalidTargetFails;
-  direct-filesystem-target-needs-host-identity = missingHostIdentityFails;
+  "test direct file lowers to one furnish declaration" = {
+    expr =
+      builtins.length fileDeclarations == 1
+      && fileDeclaration.destination == ".config/direct/example"
+      &&
+        fileDeclaration.source == {
+          kind = "path";
+          value = ../../src/program.nix;
+        };
+    expected = true;
+  };
+  "test direct file defaults remain symlink and error" = {
+    expr =
+      fileDeclaration.representation == "symlink"
+      && !(fileDeclaration ? onConflict)
+      && manifestEntry.representation == "symlink"
+      && manifestEntry.onConflict == "error";
+    expected = true;
+  };
+  "test direct target supplies authority root and namespace" = {
+    expr =
+      fileDeclaration.authority == {
+        scope = "user";
+        identity = "alice";
+      }
+      && fileDeclaration.managedRoot == "/srv/alice"
+      && fileDeclaration.filesystemNamespace == hostId
+      && manifestEntry.filesystemIdentity.destination == "/srv/alice/.config/direct/example";
+    expected = true;
+  };
+  "test direct user home defaults from name" = {
+    expr = defaultHomeDeclaration.managedRoot;
+    expected = "/home/alice";
+  };
+  "test direct specifications can be rebound to another target" = {
+    expr =
+      reboundDeclaration.authority.identity == "bob"
+      && reboundDeclaration.managedRoot == "/srv/bob"
+      && reboundDeclaration.filesystemNamespace == hostId;
+    expected = true;
+  };
+  "test direct directory expansion is preserved" = {
+    expr =
+      builtins.elem ".config/direct/tree/default.nix" directoryDestinations
+      && builtins.elem ".config/direct/tree/diagnostics.nix" directoryDestinations
+      && hasFurnishRuntime directoryOnly;
+    expected = true;
+  };
+  "test direct theme backend still lowers files" = {
+    expr =
+      builtins.elem ".config/noctalia/templates/direct-theme/safe-render.nix" themeDestinations
+      && builtins.elem ".config/noctalia/direct-theme.toml" themeDestinations
+      && hasFurnishRuntime themeOnly;
+    expected = true;
+  };
+  "test direct top level claims are rejected" = {
+    expr = topClaimFails;
+    expected = true;
+  };
+  "test direct file claims are rejected" = {
+    expr = fileClaimFails;
+    expected = true;
+  };
+  "test direct directory claims are rejected" = {
+    expr = directoryClaimFails;
+    expected = true;
+  };
+  "test direct directory rule claims are rejected" = {
+    expr = directoryRuleClaimFails;
+    expected = true;
+  };
+  "test direct theme claims are rejected" = {
+    expr = themeClaimFails;
+    expected = true;
+  };
+  "test direct files require a user target" = {
+    expr = missingUserFails;
+    expected = true;
+  };
+  "test invalid direct targets are rejected" = {
+    expr = invalidTargetFails;
+    expected = true;
+  };
+  "test direct filesystem target needs host identity" = {
+    expr = missingHostIdentityFails;
+    expected = true;
+  };
 
-  ownerships-binding-accepts-a-roster = builtins.isFunction ownedProgram;
-  ownerships-global-declarations-apply =
-    homeImportsWith aliceArgs globalOwned == [ globalImport ]
-    && homeImportsWith bobArgs globalOwned == [ globalImport ];
-  ownerships-host-and-user-claims-select-context =
-    homeImportsWith aliceArgs selectedOwned == [ selectedImport ]
-    && homeImportsWith bobArgs selectedOwned == [ ];
-  ownerships-exclusions-and-predicates-select-context =
-    homeImportsWith aliceArgs excludedOwned == [ selectedImport ]
-    && homeImportsWith bobArgs excludedOwned == [ ];
-  ownerships-inactive-malformed-payloads-stay-lazy = inactiveOwnedResult.success;
-  ownerships-files-only-reach-the-selected-user =
-    builtins.length aliceFileDeclarations == 1
-    && builtins.length bobFileDeclarations == 0
-    && (builtins.head aliceFileDeclarations).authority.identity == "alice";
-  ownerships-system-slices-select-canonical-hosts =
-    workstationSystem.services.programBoundary.selected
-    && !(workstationSystem.services.programBoundary.server or false)
-    && serverSystem.services.programBoundary.server
-    && !(serverSystem.services.programBoundary.selected or false);
-  invalid-ownerships-rosters-are-rejected = invalidRosterFails;
+  "test ownerships binding accepts a roster" = {
+    expr = builtins.isFunction ownedProgram;
+    expected = true;
+  };
+  "test ownerships global declarations apply" = {
+    expr =
+      homeImportsWith aliceArgs globalOwned == [ globalImport ]
+      && homeImportsWith bobArgs globalOwned == [ globalImport ];
+    expected = true;
+  };
+  "test ownerships host and user claims select context" = {
+    expr =
+      homeImportsWith aliceArgs selectedOwned == [ selectedImport ]
+      && homeImportsWith bobArgs selectedOwned == [ ];
+    expected = true;
+  };
+  "test ownerships exclusions and predicates select context" = {
+    expr =
+      homeImportsWith aliceArgs excludedOwned == [ selectedImport ]
+      && homeImportsWith bobArgs excludedOwned == [ ];
+    expected = true;
+  };
+  "test ownerships inactive malformed payloads stay lazy" = {
+    expr = inactiveOwnedResult.success;
+    expected = true;
+  };
+  "test ownerships files only reach the selected user" = {
+    expr =
+      builtins.length aliceFileDeclarations == 1
+      && builtins.length bobFileDeclarations == 0
+      && (builtins.head aliceFileDeclarations).authority.identity == "alice";
+    expected = true;
+  };
+  "test ownerships system slices select canonical hosts" = {
+    expr =
+      workstationSystem.services.programBoundary.selected
+      && !(workstationSystem.services.programBoundary.server or false)
+      && serverSystem.services.programBoundary.server
+      && !(serverSystem.services.programBoundary.selected or false);
+    expected = true;
+  };
+  "test invalid ownerships rosters are rejected" = {
+    expr = invalidRosterFails;
+    expected = true;
+  };
 
-  den-binding-uses-the-adapter-boundary =
-    lib.hasInfix "import ../den.nix" denBindingSource
-    && !lib.hasInfix "den.hosts" denBindingSource
-    && !lib.hasInfix "den.lib" denBindingSource
-    && !lib.hasInfix "den.aspects" denBindingSource;
-  den-binding-does-not-force-host-instantiation = denResult.success;
-  den-roster-enumerates-without-user-bodies =
-    denAdapter.roster.hosts == [ hostId ]
-    && denAdapter.roster.users == [ "alice" ]
-    && denAdapter.roster.membership.${hostId} == [ "alice" ];
-  den-host-user-names-enumerate-without-user-bodies =
-    denAdapter.hostUserNames denProjection == [ "alice" ];
-  den-host-principals-enumerate-possible-authorities =
-    map (principal: principal.authority) denHostPrincipals == [
+  "test den binding uses the adapter boundary" = {
+    expr =
+      lib.hasInfix "import ../den.nix" denBindingSource
+      && !lib.hasInfix "den.hosts" denBindingSource
+      && !lib.hasInfix "den.lib" denBindingSource
+      && !lib.hasInfix "den.aspects" denBindingSource;
+    expected = true;
+  };
+  "test den binding does not force host instantiation" = {
+    expr = denResult.success;
+    expected = true;
+  };
+  "test den roster enumerates without user bodies" = {
+    expr =
+      denAdapter.roster.hosts == [ hostId ]
+      && denAdapter.roster.users == [ "alice" ]
+      && denAdapter.roster.membership.${hostId} == [ "alice" ];
+    expected = true;
+  };
+  "test den host user names enumerate without user bodies" = {
+    expr = denAdapter.hostUserNames denProjection;
+    expected = [ "alice" ];
+  };
+  "test den host principals enumerate possible authorities" = {
+    expr = map (principal: principal.authority) denHostPrincipals;
+    expected = [
       {
         scope = "system";
         identity = hostId;
@@ -706,22 +833,32 @@ in
         identity = "alice";
       }
     ];
-  den-file-principals-select-one-resolved-user =
-    builtins.length denSelectedPrincipals == 1
-    &&
-      (builtins.head denSelectedPrincipals).authority == {
-        scope = "user";
-        identity = "alice";
-      }
-    && denAdapter.filePrincipals denProjection == [ ];
-  den-binding-keeps-the-program-output-shape = builtins.attrNames denFile == [ "nixos" ];
-  den-binding-resolves-one-user-file-to-one-principal =
-    builtins.length denDeclarations == 1
-    &&
-      (builtins.head denDeclarations).authority == {
-        scope = "user";
-        identity = "alice";
-      }
-    && (builtins.head denDeclarations).managedRoot == "/home/alice"
-    && (builtins.head denDeclarations).filesystemNamespace == hostId;
+  };
+  "test den file principals select one resolved user" = {
+    expr =
+      builtins.length denSelectedPrincipals == 1
+      &&
+        (builtins.head denSelectedPrincipals).authority == {
+          scope = "user";
+          identity = "alice";
+        }
+      && denAdapter.filePrincipals denProjection == [ ];
+    expected = true;
+  };
+  "test den binding keeps the program output shape" = {
+    expr = builtins.attrNames denFile;
+    expected = [ "nixos" ];
+  };
+  "test den binding resolves one user file to one principal" = {
+    expr =
+      builtins.length denDeclarations == 1
+      &&
+        (builtins.head denDeclarations).authority == {
+          scope = "user";
+          identity = "alice";
+        }
+      && (builtins.head denDeclarations).managedRoot == "/home/alice"
+      && (builtins.head denDeclarations).filesystemNamespace == hostId;
+    expected = true;
+  };
 }

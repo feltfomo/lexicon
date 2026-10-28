@@ -491,173 +491,249 @@ let
       (declaration.homeManager args).imports;
   };
   tests = {
-    mapped-failure-has-no-success-value = !(mappedProbe ? value) && projectionProbe.recovered;
-    mapped-presentation-and-context-stay-deferred =
-      projectionProbe.code == "mapped" && projectionProbe.summary.total == 1;
-    mapped-success-recovers-qualified-carriers = (mapped (_: poison) transported).value.safe;
-    report-eliminators-reject-missing-evidence-and-impossible-constructors = builtins.all (
-      report:
-      rejects (builtins.seq (krisis.effects.resultFromReport report) true)
-      && rejects (builtins.seq (mapped (_: first) report) true)
-      && rejects (krisis.effects.finishReport (_: true) report)
-    ) malformedReports;
-    shared-elimination-rejects-invalid-without-evidence = rejects (
-      krisis.effects.finishComputation (_: true) (krisis.effects.share (fx.pure { _con = "Invalid"; }))
-    );
-    mapped-diagnostic-order-and-authored-content =
-      let
-        result = mapped (d: {
-          inherit (d) code;
-          inherit (d) severity;
-          message = "authored ${d.code}";
-          primary = {
-            label = "origin";
-            source = "source";
-          };
-          context.path = [
-            "authored"
-            2
-          ];
-        }) (run independent);
-      in
-      result.diagnostics == map
-        (d: {
-          inherit (d) code severity;
-          message = "authored ${d.code}";
-          primary = {
-            label = "origin";
-            source = "source";
-          };
-          context.path = [
-            "authored"
-            2
-          ];
-        })
-        [
-          first
-          second
-        ]
-      && !(result ? value);
+    "test mapped failure has no success value" = {
+      expr = !(mappedProbe ? value) && projectionProbe.recovered;
+      expected = true;
+    };
+    "test mapped presentation and context stay deferred" = {
+      expr = projectionProbe.code == "mapped" && projectionProbe.summary.total == 1;
+      expected = true;
+    };
+    "test mapped success recovers qualified carriers" = {
+      expr = (mapped (_: poison) transported).value.safe;
+      expected = true;
+    };
+    "test report eliminators reject missing evidence and impossible constructors" = {
+      expr = builtins.all (
+        report:
+        rejects (builtins.seq (krisis.effects.resultFromReport report) true)
+        && rejects (builtins.seq (mapped (_: first) report) true)
+        && rejects (krisis.effects.finishReport (_: true) report)
+      ) malformedReports;
+      expected = true;
+    };
+    "test shared elimination rejects invalid without evidence" = {
+      expr = krisis.effects.finishComputation (_: true) (
+        krisis.effects.share (fx.pure { _con = "Invalid"; })
+      );
+      expectedError.type = "ThrownError";
+      expectedError.msg = "lexicon: invalid validation without diagnostics";
+    };
+    "test mapped diagnostic order and authored content" = {
+      expr =
+        let
+          result = mapped (d: {
+            inherit (d) code;
+            inherit (d) severity;
+            message = "authored ${d.code}";
+            primary = {
+              label = "origin";
+              source = "source";
+            };
+            context.path = [
+              "authored"
+              2
+            ];
+          }) (run independent);
+        in
+        result.diagnostics == map
+          (d: {
+            inherit (d) code severity;
+            message = "authored ${d.code}";
+            primary = {
+              label = "origin";
+              source = "source";
+            };
+            context.path = [
+              "authored"
+              2
+            ];
+          })
+          [
+            first
+            second
+          ]
+        && !(result ? value);
+      expected = true;
+    };
 
-    structural-terminal-projection-does-not-replace-prepared-entry =
-      (builtins.head (projectedDeclaration.homeManager args).imports).safe;
-    shared-validation-retains-diagnostics-and-suppresses-dependent-work =
-      let
-        computation = krisis.effects.share (
-          native.validation.all [
-            (krisis.effects.fromDiagnostics [ first ] poison)
-            (krisis.effects.fromDiagnostics [ second ] poison)
-          ]
-        );
-      in
-      krisis.effects.finishComputation (items: map (item: item.code) items) (
-        native.validation.andThen (_: poison) computation
-      ) == [
-        first.code
-        second.code
-      ];
-    shared-validation-transports-opaque-successes =
-      let
-        computation = krisis.effects.share (krisis.effects.accept opaque);
-      in
-      (krisis.effects.finishComputation (_: poison) computation).safe
-      && (krisis.effects.finishComputation (_: poison) computation).safe;
-    string-and-record-diagnostics-recover-in-order =
-      krisis.effects.finishComputation
-        (items: [
-          (builtins.head items)
-          (builtins.elemAt items 1).code
-        ])
-        (
-          native.validation.all [
-            (krisis.effects.fromDiagnostics [ "authored string" ] poison)
-            (krisis.effects.fromDiagnostics [ first ] poison)
-          ]
+    "test structural terminal projection does not replace prepared entry" = {
+      expr = (builtins.head (projectedDeclaration.homeManager args).imports).safe;
+      expected = true;
+    };
+    "test shared validation retains diagnostics and suppresses dependent work" = {
+      expr =
+        let
+          computation = krisis.effects.share (
+            native.validation.all [
+              (krisis.effects.fromDiagnostics [ first ] poison)
+              (krisis.effects.fromDiagnostics [ second ] poison)
+            ]
+          );
+        in
+        krisis.effects.finishComputation (items: map (item: item.code) items) (
+          native.validation.andThen (_: poison) computation
         ) == [
+          first.code
+          second.code
+        ];
+      expected = true;
+    };
+    "test shared validation transports opaque successes" = {
+      expr =
+        let
+          computation = krisis.effects.share (krisis.effects.accept opaque);
+        in
+        (krisis.effects.finishComputation (_: poison) computation).safe
+        && (krisis.effects.finishComputation (_: poison) computation).safe;
+      expected = true;
+    };
+    "test string and record diagnostics recover in order" = {
+      expr =
+        krisis.effects.finishComputation
+          (items: [
+            (builtins.head items)
+            (builtins.elemAt items 1).code
+          ])
+          (
+            native.validation.all [
+              (krisis.effects.fromDiagnostics [ "authored string" ] poison)
+              (krisis.effects.fromDiagnostics [ first ] poison)
+            ]
+          );
+      expected = [
         "authored string"
         first.code
       ];
-    composed-checked-values-protect-arbitrary-payloads =
-      (krisis.effects.finishComputation (_: poison) (
-        native.validation.andThen
-          (
-            values:
-            krisis.effects.accept {
-              context = builtins.elemAt values 0;
-              payload = builtins.elemAt values 1;
-              predecessor = builtins.elemAt values 2;
+    };
+    "test composed checked values protect arbitrary payloads" = {
+      expr =
+        (krisis.effects.finishComputation (_: poison) (
+          native.validation.andThen
+            (
+              values:
+              krisis.effects.accept {
+                context = builtins.elemAt values 0;
+                payload = builtins.elemAt values 1;
+                predecessor = builtins.elemAt values 2;
+              }
+            )
+            (
+              native.validation.all [
+                (krisis.effects.accept {
+                  safe = true;
+                  opaque = poison;
+                })
+                (krisis.effects.accept { opaque = poison; })
+                (krisis.effects.accept { previous = poison; })
+              ]
+            )
+        )).context.safe;
+      expected = true;
+    };
+    "test old location poison stays opaque" = {
+      expr =
+        (krisis.effects.run {
+          diagnostics = [
+            {
+              code = "opaque";
+              severity = "warning";
+              message = poison;
+              primary = poison;
             }
-          )
-          (
-            native.validation.all [
-              (krisis.effects.accept {
-                safe = true;
-                opaque = poison;
-              })
-              (krisis.effects.accept { opaque = poison; })
-              (krisis.effects.accept { previous = poison; })
-            ]
-          )
-      )).context.safe;
-    old-location-poison-stays-opaque =
-      (krisis.effects.run {
-        diagnostics = [
-          {
-            code = "opaque";
-            severity = "warning";
-            message = poison;
-            primary = poison;
-          }
-        ];
-      }).summary.total == 1;
-    empty-old-primary-is-absent-in-native-presentation =
-      (native.render.project (
-        builtins.head
-          (krisis.effects.run {
-            diagnostics = [
-              (krisis.mkDiagnostic {
-                code = "empty";
-                severity = "warning";
-                message = "empty";
-                primary = { };
-              })
-            ];
-          }).diagnostics
-      )).primary == null;
-    malformed-inspection-options-fail-before-payload = rejects controlExceptions.inspection;
-    malformed-summary-input-fails = rejects controlExceptions.summary;
-    injected-axiom-identity-participates =
-      (builtins.head (identityDeclaration.homeManager args).imports).hook.identity == "injected identity";
-    shared-handler-runs-remain-isolated =
-      emitted.summary.total == 2
-      && (krisis.effects.run (validation.success true)).summary.total == 0
-      && (krisis.effects.run (validation.success true)).outcome._con == "Success";
-    malformed-success-result-is-rejected = rejects (krisis.effects.run { diagnostics = [ ]; }).outcome;
-    malformed-diagnostics-result-is-rejected =
-      rejects
-        (krisis.effects.run { diagnostics = { }; }).outcome;
-    independent-diagnostics-stay-ordered =
-      map (item: item.code) (run independent).diagnostics == [
+          ];
+        }).summary.total;
+      expected = 1;
+    };
+    "test empty old primary is absent in native presentation" = {
+      expr =
+        (native.render.project (
+          builtins.head
+            (krisis.effects.run {
+              diagnostics = [
+                (krisis.mkDiagnostic {
+                  code = "empty";
+                  severity = "warning";
+                  message = "empty";
+                  primary = { };
+                })
+              ];
+            }).diagnostics
+        )).primary;
+      expected = null;
+    };
+    "test malformed inspection options fail before payload" = {
+      expr = controlExceptions.inspection;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "krisis: render option 'maxAttrs' must be a non-negative integer; got int";
+    };
+    "test malformed summary input fails" = {
+      expr = controlExceptions.summary;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "krisis: diagnostic summary requires a list";
+    };
+    "test injected axiom identity participates" = {
+      expr = (builtins.head (identityDeclaration.homeManager args).imports).hook.identity;
+      expected = "injected identity";
+    };
+    "test shared handler runs remain isolated" = {
+      expr =
+        emitted.summary.total == 2
+        && (krisis.effects.run (validation.success true)).summary.total == 0
+        && (krisis.effects.run (validation.success true)).outcome._con == "Success";
+      expected = true;
+    };
+    "test malformed success result is rejected" = {
+      expr = rejects (krisis.effects.run { diagnostics = [ ]; }).outcome;
+      expected = true;
+    };
+    "test malformed diagnostics result is rejected" = {
+      expr = rejects (krisis.effects.run { diagnostics = { }; }).outcome;
+      expected = true;
+    };
+    "test independent diagnostics stay ordered" = {
+      expr = map (item: item.code) (run independent).diagnostics;
+      expected = [
         "first"
         "second"
       ];
-    dependent-callback-is-suppressed = (checked skipped)._con == "Invalid";
-    invalid-has-no-value = builtins.attrNames (checked skipped) == [ "_con" ];
-    failure-has-no-value = builtins.attrNames emitted.outcome == [ "_con" ];
-    failure-constructor-is-explicit = emitted.outcome._con == "Failure";
-    valid-and-success-eliminate-through-carriers =
-      transported.outcome._con == "Success"
-      && (forceThunk transported.outcome.value)._con == "Valid"
-      && (forceThunk (forceThunk transported.outcome.value).value).safe;
-    returned-poison-stays-opaque =
-      builtins.attrNames (forceThunk (forceThunk transported.outcome.value).value) == [
+    };
+    "test dependent callback is suppressed" = {
+      expr = (checked skipped)._con;
+      expected = "Invalid";
+    };
+    "test invalid has no value" = {
+      expr = builtins.attrNames (checked skipped);
+      expected = [ "_con" ];
+    };
+    "test failure has no value" = {
+      expr = builtins.attrNames emitted.outcome;
+      expected = [ "_con" ];
+    };
+    "test failure constructor is explicit" = {
+      expr = emitted.outcome._con;
+      expected = "Failure";
+    };
+    "test valid and success eliminate through carriers" = {
+      expr =
+        transported.outcome._con == "Success"
+        && (forceThunk transported.outcome.value)._con == "Valid"
+        && (forceThunk (forceThunk transported.outcome.value).value).safe;
+      expected = true;
+    };
+    "test returned poison stays opaque" = {
+      expr = builtins.attrNames (forceThunk (forceThunk transported.outcome.value).value);
+      expected = [
         "payload"
         "safe"
       ];
-    poisoned-input-state-and-summary-stay-opaque =
-      deferred.summary.total == 1 && deferred.summary.byCode.opaque == 1;
-    old-diagnostic-recovery-stays-opaque =
-      krisis.effects.finish (items: builtins.attrNames (builtins.head items)) {
+    };
+    "test poisoned input state and summary stay opaque" = {
+      expr = deferred.summary.total == 1 && deferred.summary.byCode.opaque == 1;
+      expected = true;
+    };
+    "test old diagnostic recovery stays opaque" = {
+      expr = krisis.effects.finish (items: builtins.attrNames (builtins.head items)) {
         diagnostics = [
           {
             code = "opaque";
@@ -666,69 +742,108 @@ let
             context = poison;
           }
         ];
-      } == [
+      };
+      expected = [
         "code"
         "context"
         "message"
         "severity"
       ];
-    nested-and-sibling-scopes-restore =
-      map (item: item.code) scoped.diagnostics == [
+    };
+    "test nested and sibling scopes restore" = {
+      expr = map (item: item.code) scoped.diagnostics;
+      expected = [
         "root/first"
         "nested/second"
         "root/third"
         "sibling/fourth"
       ];
-    scoped-poison-stays-opaque = scoped.summary.total == 4;
-    handler-collisions-fail = rejects (
-      native.report.run {
+    };
+    "test scoped poison stays opaque" = {
+      expr = scoped.summary.total;
+      expected = 4;
+    };
+    "test handler collisions fail" = {
+      expr = native.report.run {
         handlers."krisis.emit" = poison;
-      } (fx.pure 1)
-    );
-    unhandled-effects-fail = rejects (run (fx.send "effects-contract.unhandled" null));
-    raw-state-control-forces-poison = rejects rawState.value;
-    protected-state-preserves-poison =
-      (forceThunk protectedState.state).safe && (forceThunk protectedState.value).safe;
-    optional-field-is-omitted = !(normalized.value ? optional);
-    explicit-null-is-present = normalized.value ? nullable && normalized.value.nullable == null;
-    defaults-are-parsed = normalized.value.defaulted == "parsed authored";
-    unknown-values-stay-opaque-and-field-order-is-authored =
-      map (item: item.code) ordered.diagnostics == [
+      } (fx.pure 1);
+      expectedError.type = "ThrownError";
+      expectedError.msg = "krisis: handler collision krisis\\.emit";
+    };
+    "test unhandled effects fail" = {
+      expr = run (fx.send "effects-contract.unhandled" null);
+      expectedError.type = "ThrownError";
+      expectedError.msg = "nix-effects: unhandled effect 'effects-contract\\.unhandled'";
+    };
+    "test raw state control forces poison" = {
+      expr = rawState.value;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "effects contract poison";
+    };
+    "test protected state preserves poison" = {
+      expr = (forceThunk protectedState.state).safe && (forceThunk protectedState.value).safe;
+      expected = true;
+    };
+    "test optional field is omitted" = {
+      expr = !(normalized.value ? optional);
+      expected = true;
+    };
+    "test explicit null is present" = {
+      expr = normalized.value ? nullable && normalized.value.nullable == null;
+      expected = true;
+    };
+    "test defaults are parsed" = {
+      expr = normalized.value.defaulted;
+      expected = "parsed authored";
+    };
+    "test unknown values stay opaque and field order is authored" = {
+      expr = map (item: item.code) ordered.diagnostics;
+      expected = [
         "contract/unknown"
         "contract/b"
         "contract/a"
       ];
-    malformed-field-specification-fails =
-      rejects
-        (
-          (schema {
-            value = {
-              parse = 1;
-            };
-          })
-          null
-        ).diagnostics;
-    incompatible-field-specification-fails =
-      rejects
-        (
-          (schema {
-            value = {
-              parse = validation.success;
-              normalize = x: x;
-            };
-          })
-          null
-        ).diagnostics;
-    aggregate-custom-rendering-is-retained =
-      reporter.render [
+    };
+    "test malformed field specification fails" = {
+      expr =
+        rejects
+          (
+            (schema {
+              value = {
+                parse = 1;
+              };
+            })
+            null
+          ).diagnostics;
+      expected = true;
+    };
+    "test incompatible field specification fails" = {
+      expr =
+        rejects
+          (
+            (schema {
+              value = {
+                parse = validation.success;
+                normalize = x: x;
+              };
+            })
+            null
+          ).diagnostics;
+      expected = true;
+    };
+    "test aggregate custom rendering is retained" = {
+      expr = reporter.render [
         first
         second
-      ] == "errors 2 | custom first | custom second";
-    summary-projection-is-retained =
-      krisis.summarizeDiagnostics [
+      ];
+      expected = "errors 2 | custom first | custom second";
+    };
+    "test summary projection is retained" = {
+      expr = krisis.summarizeDiagnostics [
         first
         second
-      ] == {
+      ];
+      expected = {
         total = 2;
         hasErrors = true;
         bySeverity = {
@@ -741,40 +856,48 @@ let
           second = 1;
         };
       };
-    summary-demands-only-envelope =
-      (krisis.summarizeDiagnostics [
-        {
-          code = "envelope";
-          severity = "info";
-          primary = poison;
-          context = poison;
-        }
-      ]).byCode.envelope == 1;
-    empty-primary-survives-round-trip =
-      krisis.effects.finish (items: (builtins.head items).primary == { })
+    };
+    "test summary demands only envelope" = {
+      expr =
+        (krisis.summarizeDiagnostics [
+          {
+            code = "envelope";
+            severity = "info";
+            primary = poison;
+            context = poison;
+          }
+        ]).byCode.envelope;
+      expected = 1;
+    };
+    "test empty primary survives round trip" = {
+      expr = krisis.effects.finish (items: (builtins.head items).primary == { }) (
+        validation.failure [
+          (krisis.mkDiagnostic {
+            code = "empty-primary";
+            severity = "error";
+            message = "empty";
+            primary = { };
+          })
+        ]
+      );
+      expected = true;
+    };
+    "test explicit null call retains factory primary" = {
+      expr =
         (
-          validation.failure [
-            (krisis.mkDiagnostic {
-              code = "empty-primary";
-              severity = "error";
-              message = "empty";
-              primary = { };
-            })
-          ]
-        );
-    explicit-null-call-retains-factory-primary =
-      (
-        (krisis.mkDiagnosticFactory {
-          primary.label = "default";
-        })
-        {
-          code = "null";
-          message = "null";
-          primary = null;
-        }
-      ).primary.label == "default";
-    explicit-null-presentation-fields-are-omitted =
-      builtins.attrNames (
+          (krisis.mkDiagnosticFactory {
+            primary.label = "default";
+          })
+          {
+            code = "null";
+            message = "null";
+            primary = null;
+          }
+        ).primary.label;
+      expected = "default";
+    };
+    "test explicit null presentation fields are omitted" = {
+      expr = builtins.attrNames (
         krisis.mkDiagnostic {
           code = "null";
           severity = "error";
@@ -784,95 +907,131 @@ let
           notes = null;
           help = null;
         }
-      ) == [
+      );
+      expected = [
         "code"
         "message"
         "severity"
       ];
-    code-and-path-helpers-retain-spellings =
-      krisis.qualifyCode "contract" "code" == "contract/code"
-      && krisis.qualifyCode "" "code" == "code"
-      &&
-        krisis.renderPath [
-          "a.b"
-          2
-          "x"
-        ] == "$.\"a.b\"[2].x";
-    collector-and-optional-preserve-laziness =
-      krisis.collectDiagnostics [
-        [ first ]
-        [ second ]
-      ] == [
-        first
-        second
-      ]
-      && krisis.optionalDiagnostic false poison == [ ];
-    safe-inspection-variants-retain-projections =
-      krisis.safeRender [
-        1
-        "a"
-      ] == "[1,\"a\"]"
-      && krisis.safeRenderWith { maxListItems = 0; } [ poison ] == "[] (+1 more)"
-      && krisis.safeShape opaque == "{ payload, safe }"
-      && lib.hasPrefix "{ payload," (krisis.safeShapeWith { maxAttrs = 1; } opaque)
-      &&
-        krisis.safeIdentity {
-          value = poison;
-          label = "label";
-          noun = "entry";
-        } == "entry 'label'";
-    suggestion-variants-retain-nearest =
-      krisis.editDistance "port" "ports" == 1
-      &&
-        krisis.suggest "port" [
-          "ports"
-          "host"
-        ] == "ports"
-      && krisis.suggestWith { maxDistance = 0; } "port" [ "ports" ] == null;
-    axiom-type-adapter-retains-valid-value =
-      (krisis.validateType {
-        type = axiom.types.int;
-        code = "contract/type";
-      })
-        1 == validation.success 1;
-    axiom-type-adapter-retains-failure-path =
-      let
-        result =
-          (krisis.validateType {
-            type = axiom.types.int;
-            code = "contract/type";
-            path = [ "field" ];
-            label = "subject";
-          })
-            false;
-      in
-      result.diagnostics != [ ]
-      && !(result ? value)
-      && (builtins.head result.diagnostics).primary.label == "subject"
-      && (builtins.head result.diagnostics).context.validation.path == [ "field" ];
-    callback-old-diagnostic-enters-native-report = (builtins.head emitted.diagnostics).code == "first";
-    public-external-bookmark-lowers =
-      builtins.length bookmarkEntries == 1
-      && (builtins.head bookmarkEntries).destination == ".bookmarks/book";
-    injected-diagnostic-factory-participates-in-extension = hook.message == "injected diagnostic";
-    injected-renderer-participates-in-extension = hook.rendered == "injected extension/made";
-    injected-summary-participates-in-extension = hook.injected;
-    injected-reporter-participates-in-public-report =
-      publicReport.finish (validation.success 1) == "injected finish";
-    selected-praxis-keeps-sibling-opaque = praxis.manifests.selected.version == 2;
-    injected-summary-participates-in-praxis = praxis.diagnosticSummaries.selected.injected;
+    };
+    "test code and path helpers retain spellings" = {
+      expr =
+        krisis.qualifyCode "contract" "code" == "contract/code"
+        && krisis.qualifyCode "" "code" == "code"
+        &&
+          krisis.renderPath [
+            "a.b"
+            2
+            "x"
+          ] == "$.\"a.b\"[2].x";
+      expected = true;
+    };
+    "test collector and optional preserve laziness" = {
+      expr =
+        krisis.collectDiagnostics [
+          [ first ]
+          [ second ]
+        ] == [
+          first
+          second
+        ]
+        && krisis.optionalDiagnostic false poison == [ ];
+      expected = true;
+    };
+    "test safe inspection variants retain projections" = {
+      expr =
+        krisis.safeRender [
+          1
+          "a"
+        ] == "[1,\"a\"]"
+        && krisis.safeRenderWith { maxListItems = 0; } [ poison ] == "[] (+1 more)"
+        && krisis.safeShape opaque == "{ payload, safe }"
+        && lib.hasPrefix "{ payload," (krisis.safeShapeWith { maxAttrs = 1; } opaque)
+        &&
+          krisis.safeIdentity {
+            value = poison;
+            label = "label";
+            noun = "entry";
+          } == "entry 'label'";
+      expected = true;
+    };
+    "test suggestion variants retain nearest" = {
+      expr =
+        krisis.editDistance "port" "ports" == 1
+        &&
+          krisis.suggest "port" [
+            "ports"
+            "host"
+          ] == "ports"
+        && krisis.suggestWith { maxDistance = 0; } "port" [ "ports" ] == null;
+      expected = true;
+    };
+    "test axiom type adapter retains valid value" = {
+      expr =
+        (krisis.validateType {
+          type = axiom.types.int;
+          code = "contract/type";
+        })
+          1;
+      expected = validation.success 1;
+    };
+    "test axiom type adapter retains failure path" = {
+      expr =
+        let
+          result =
+            (krisis.validateType {
+              type = axiom.types.int;
+              code = "contract/type";
+              path = [ "field" ];
+              label = "subject";
+            })
+              false;
+        in
+        result.diagnostics != [ ]
+        && !(result ? value)
+        && (builtins.head result.diagnostics).primary.label == "subject"
+        && (builtins.head result.diagnostics).context.validation.path == [ "field" ];
+      expected = true;
+    };
+    "test callback old diagnostic enters native report" = {
+      expr = (builtins.head emitted.diagnostics).code;
+      expected = "first";
+    };
+    "test public external bookmark lowers" = {
+      expr =
+        builtins.length bookmarkEntries == 1
+        && (builtins.head bookmarkEntries).destination == ".bookmarks/book";
+      expected = true;
+    };
+    "test injected diagnostic factory participates in extension" = {
+      expr = hook.message;
+      expected = "injected diagnostic";
+    };
+    "test injected renderer participates in extension" = {
+      expr = hook.rendered;
+      expected = "injected extension/made";
+    };
+    "test injected summary participates in extension" = {
+      expr = hook.injected;
+      expected = true;
+    };
+    "test injected reporter participates in public report" = {
+      expr = publicReport.finish (validation.success 1);
+      expected = "injected finish";
+    };
+    "test selected praxis keeps sibling opaque" = {
+      expr = praxis.manifests.selected.version;
+      expected = 2;
+    };
+    "test injected summary participates in praxis" = {
+      expr = praxis.diagnosticSummaries.selected.injected;
+      expected = true;
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: pass: !pass) tests);
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "effects contract tests failed ${lib.concatStringsSep ", " failing}";
 in
 {
   inherit
     tests
-    ok
     callbackProbe
     sharedProbe
     projectionProbe

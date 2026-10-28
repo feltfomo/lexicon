@@ -192,871 +192,1111 @@ let
       scope = "user";
     };
   selected = compile declaration;
-  cases = {
-    external-block-lowers-through-registry = (builtins.head selected.resources).value == entry;
-    custom-and-host-annotations-narrow = builtins.length three.resources == 1;
-    authored-index-survives-filter =
-      (builtins.head three.resources).origin == [
+  tests = {
+    "test external block lowers through registry" = {
+      expr = (builtins.head selected.resources).value;
+      expected = entry;
+    };
+    "test custom and host annotations narrow" = {
+      expr = builtins.length three.resources;
+      expected = 1;
+    };
+    "test authored index survives filter" = {
+      expr = (builtins.head three.resources).origin;
+      expected = [
         "bookmarks"
         "entries"
         1
       ];
-    root-ancestry-constrains-block =
-      (compile {
-        hosts = [ "lumi" ];
-        bookmarks.entries = _: throw "inactive callback";
-      }).resources == [ ];
-    block-ancestry-constrains-callback =
-      (compile {
-        bookmarks = {
-          roles = [ "laptop" ];
-          entries = _: throw "inactive block callback";
-        };
-      }).resources == [ ];
-    empty-collection-is-retained = (compile { bookmarks.entries = [ ]; }).resources == [ ];
-    optional-record-is-omitted = !(sampleCapture.value ? optional);
-    record-map-filters-and-retains-name = builtins.attrNames sampleCapture.value.named == [ "a" ];
-    original-map-origin =
-      sampleCapture.origins.children.named.a.self == [
+    };
+    "test root ancestry constrains block" = {
+      expr =
+        (compile {
+          hosts = [ "lumi" ];
+          bookmarks.entries = _: throw "inactive callback";
+        }).resources;
+      expected = [ ];
+    };
+    "test block ancestry constrains callback" = {
+      expr =
+        (compile {
+          bookmarks = {
+            roles = [ "laptop" ];
+            entries = _: throw "inactive block callback";
+          };
+        }).resources;
+      expected = [ ];
+    };
+    "test empty collection is retained" = {
+      expr = (compile { bookmarks.entries = [ ]; }).resources;
+      expected = [ ];
+    };
+    "test optional record is omitted" = {
+      expr = !(sampleCapture.value ? optional);
+      expected = true;
+    };
+    "test record map filters and retains name" = {
+      expr = builtins.attrNames sampleCapture.value.named;
+      expected = [ "a" ];
+    };
+    "test original map origin" = {
+      expr = sampleCapture.origins.children.named.a.self;
+      expected = [
         "capture"
         "named"
         "a"
       ];
-    original-list-origin =
-      (builtins.head sampleCapture.origins.children.entries).self == [
+    };
+    "test original list origin" = {
+      expr = (builtins.head sampleCapture.origins.children.entries).self;
+      expected = [
         "capture"
         "entries"
         1
       ];
-    metadata-does-not-inherit =
-      sampleCapture.metadata.self.tags == [ "root" ]
-      && (builtins.head sampleCapture.metadata.children.entries).self.tags == [ "child" ]
-      && sampleCapture.metadata.children.named.a.self == { };
-    annotations-are-stripped =
-      !(sampleCapture.value ? metadata) && !(builtins.head sampleCapture.value.entries ? metadata);
-    native-record-is-opaque = sampleCapture.value.native.hosts == "native field";
-    value-node-validates =
-      sampleCapture.value.scalar == "value"
-      && throws (capture {
-        scalar = 42;
-      });
-    structural-reservations-include-inactive =
-      sampleCapture.prepared.self.reserved == [
+    };
+    "test metadata does not inherit" = {
+      expr =
+        sampleCapture.metadata.self.tags == [ "root" ]
+        && (builtins.head sampleCapture.metadata.children.entries).self.tags == [ "child" ]
+        && sampleCapture.metadata.children.named.a.self == { };
+      expected = true;
+    };
+    "test annotations are stripped" = {
+      expr = !(sampleCapture.value ? metadata) && !(builtins.head sampleCapture.value.entries ? metadata);
+      expected = true;
+    };
+    "test native record is opaque" = {
+      expr = sampleCapture.value.native.hosts;
+      expected = "native field";
+    };
+    "test value node validates" = {
+      expr =
+        sampleCapture.value.scalar == "value"
+        && throws (capture {
+          scalar = 42;
+        });
+      expected = true;
+    };
+    "test structural reservations include inactive" = {
+      expr = sampleCapture.prepared.self.reserved;
+      expected = [
         "reserved"
         "selected"
       ];
-    preparation-keeps-authored-path = sampleCapture.prepared.self.path == [ "capture" ];
-    inactive-preparation-is-lazy =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter { node = definitions.record { prepare = _: throw "inactive preparation"; }; })
-          ];
-        };
-      in
-      (((env.bind { inherit roster; }).prepare { capture.hosts = [ "lumi" ]; }).compile {
-        inherit context;
-        scope = "user";
-      }).homeManager == [ ];
-    callback-result-reenters-selection =
-      builtins.length
-        (compile {
-          bookmarks.entries = _: [
-            (entry // { roles = [ "laptop" ]; })
-            entry
-          ];
-        }).resources == 1;
-    callback-receives-same-context =
-      (builtins.head
-        (compile { bookmarks.entries = args: [ (entry // { destination = args.role.name; }) ]; }).resources
-      ).value.destination == "desktop";
-    callback-result-shape-fails = throws (compile {
-      bookmarks.entries = _: { };
-    });
-    callback-result-unknown-field-fails = throws (compile {
-      bookmarks.entries = _: [ (entry // { typo = true; }) ];
-    });
-    callback-result-claim-shape-fails = throws (compile {
-      bookmarks.entries = _: [ (entry // { roles = "desktop"; }) ];
-    });
-    missing-custom-context-fails = throws (
-      ((environment.bind { inherit roster; }).prepare {
-        bookmarks = {
-          roles = [ "desktop" ];
-          entries = [ entry ];
-        };
-      }).compile
-        {
-          scope = "user";
-          context = removeAttrs context [ "role" ];
-        }
-    );
-    inactive-callback-context-stays-lazy =
-      (compile {
-        hosts = [ "lumi" ];
-        bookmarks.entries = _: throw "inactive callback";
-      }).resources == [ ];
-    unsupported-scope-fails =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "system";
-              outputs = [ "nixos" ];
-              lower = _: { };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { inherit roster; }).prepare { capture.roles = [ "desktop" ]; }).compile {
+    };
+    "test preparation keeps authored path" = {
+      expr = sampleCapture.prepared.self.path;
+      expected = [ "capture" ];
+    };
+    "test inactive preparation is lazy" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter { node = definitions.record { prepare = _: throw "inactive preparation"; }; })
+            ];
+          };
+        in
+        (((env.bind { inherit roster; }).prepare { capture.hosts = [ "lumi" ]; }).compile {
           inherit context;
-          scope = "system";
-        }
-      );
-    declaration-user-claim-projects-for-system =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              scope = "system";
-              outputs = [ "nixos" ];
-              lower = { origins, ... }: {
-                nixos = [
-                  {
-                    module = { };
-                    origin = origins.self;
-                  }
-                ];
-              };
-            })
-          ];
-        };
-      in
-      builtins.length
-        (
-          ((env.bind { inherit roster; }).prepare {
-            users = [ "other" ];
-            capture = { };
-          }).compile
+          scope = "user";
+        }).homeManager == [ ];
+      expected = true;
+    };
+    "test callback result reenters selection" = {
+      expr =
+        builtins.length
+          (compile {
+            bookmarks.entries = _: [
+              (entry // { roles = [ "laptop" ]; })
+              entry
+            ];
+          }).resources;
+      expected = 1;
+    };
+    "test callback receives same context" = {
+      expr =
+        (builtins.head
+          (compile { bookmarks.entries = args: [ (entry // { destination = args.role.name; }) ]; }).resources
+        ).value.destination;
+      expected = "desktop";
+    };
+    "test callback result shape fails" = {
+      expr = compile {
+        bookmarks.entries = _: { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/collection-shape\\] \\$\\.bookmarks\\.entries: expected a list";
+    };
+    "test callback result unknown field fails" = {
+      expr = compile {
+        bookmarks.entries = _: [ (entry // { typo = true; }) ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.bookmarks\\.entries\\[0\\]\\.typo: unregistered field typo";
+    };
+    "test callback result claim shape fails" = {
+      expr = compile {
+        bookmarks.entries = _: [ (entry // { roles = "desktop"; }) ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/annotation-shape\\] \\$\\.bookmarks\\.entries\\[0\\]\\.roles: ownerships: 'roles' must be a list of names; got stri";
+    };
+    "test missing custom context fails" = {
+      expr =
+        ((environment.bind { inherit roster; }).prepare {
+          bookmarks = {
+            roles = [ "desktop" ];
+            entries = [ entry ];
+          };
+        }).compile
           {
+            scope = "user";
+            context = removeAttrs context [ "role" ];
+          };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit '\\$\\.bookmarks': axis 'role' is narrowed on by claim \\{ set = \\[ \"desktop\" \\]; tag = \"include\"; \\} but the bu";
+    };
+    "test inactive callback context stays lazy" = {
+      expr =
+        (compile {
+          hosts = [ "lumi" ];
+          bookmarks.entries = _: throw "inactive callback";
+        }).resources;
+      expected = [ ];
+    };
+    "test unsupported scope fails" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "system";
+                outputs = [ "nixos" ];
+                lower = _: { };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { inherit roster; }).prepare { capture.roles = [ "desktop" ]; }).compile {
             inherit context;
             scope = "system";
           }
-        ).nixos == 1;
-    direct-rejects-custom-root-claim = throws (
-      ((environment.bind { direct = true; }).prepare {
-        roles = [ "desktop" ];
-        bookmarks.entries = [ ];
-      }).compile
-        {
-          inherit context;
-          scope = "user";
-        }
-    );
-    direct-rejects-custom-entry-claim = throws (
-      ((environment.bind { direct = true; }).prepare {
-        bookmarks.entries = [ (entry // { roles = [ "desktop" ]; }) ];
-      }).compile
-        {
-          inherit context;
-          scope = "user";
-        }
-    );
-    direct-rejects-callback-custom-claim = throws (
-      ((environment.bind { direct = true; }).prepare {
-        bookmarks.entries = _: [ (entry // { roles = [ "desktop" ]; }) ];
-      }).compile
-        {
-          inherit context;
-          scope = "user";
-        }
-    );
-    direct-allows-metadata =
-      builtins.length
-        (
-          ((environment.bind { direct = true; }).prepare {
-            bookmarks.entries = [ (entry // { metadata.tags = [ ]; }) ];
-          }).compile
-          {
-            inherit context;
-            scope = "user";
-          }
-        ).resources == 1;
-    direct-host-only-native-remains-valid =
-      builtins.length
-        (((captureEnvironment.bind { direct = true; }).prepare { capture = { }; }).compile {
-          context = { inherit (context) host; };
-          scope = "user";
-        }).homeManager == 1;
-    direct-resource-needs-user-even-empty-callback = throws (
-      ((environment.bind { direct = true; }).prepare { bookmarks.entries = _: [ ]; }).compile {
-        context = { inherit (context) host; };
-        scope = "user";
-      }
-    );
-    selected-domain-validation-fails = throws (compile {
-      bookmarks.entries = [ (entry // { source = 1; }) ];
-    });
-    unknown-root-field-fails = throws (compile {
-      typo = throw "unknown field payload";
-    });
-    unknown-inactive-entry-field-fails = throws (compile {
-      bookmarks.entries = [
-        (
-          entry
-          // {
-            hosts = [ "lumi" ];
-            typo = throw "unknown inactive payload";
-          }
-        )
-      ];
-    });
-    invalid-map-key-fails = throws (capture {
-      named.bad.payload = true;
-    });
-    malformed-metadata-fails = throws (compile {
-      bookmarks.metadata.tags = "oops";
-    });
-    unregistered-metadata-fails = throws (compile {
-      bookmarks.metadata.typo = throw "unknown metadata";
-    });
-    registration-rejects-malformed-extension = malformed {
-      extensions = [
-        (_: {
-          name = "x";
-          typo = true;
-        })
-      ];
+        );
+      expected = true;
     };
-    registration-rejects-duplicate-extension = malformed {
-      extensions = [
-        bookmarks
-        bookmarks
-      ];
-    };
-    registration-rejects-duplicate-block = malformed {
-      extensions = [
-        (extensionWith [
-          captureBlock
-          captureBlock
-        ])
-      ];
-    };
-    registration-rejects-block-claim-collision = malformed {
-      extensions = [ (alter { name = "hosts"; }) ];
-    };
-    registration-rejects-record-claim-collision = malformed {
-      extensions = [ (alter { node = definitions.record { fields.hosts = { }; }; }) ];
-    };
-    registration-rejects-domain-child-collision = malformed {
-      extensions = [
-        (alter {
-          node = definitions.record {
-            fields.entries = { };
-            children.entries = definitions.collection { item = definitions.record { }; };
-          };
-        })
-      ];
-    };
-    registration-rejects-unknown-definition-field = malformed {
-      extensions = [ (alter { typo = true; }) ];
-    };
-    registration-rejects-invalid-node = malformed {
-      extensions = [ (alter { node.kind = "unknown"; }) ];
-    };
-    registration-rejects-invalid-field-schema = malformed {
-      extensions = [ (alter { node = definitions.record { fields.example.validate = 1; }; }) ];
-    };
-    registration-rejects-duplicate-metadata = malformed {
-      extensions = [
-        bookmarks
-        (_: {
-          name = "other";
-          metadata = [
-            {
-              name = "tags";
-              field = { };
-            }
-          ];
-        })
-      ];
-    };
-    registration-rejects-malformed-before-lower = malformed {
-      extensions = [
-        (alter {
-          scope = "bad";
-          lower = _: throw "lower ran before registration";
-        })
-      ];
-    };
-    output-envelope-is-closed = throws (evaluateOutput {
-      typo = true;
-    });
-    output-scope-is-checked = throws (evaluateOutput {
-      nixos = [
-        {
-          module = { };
-          origin = [ ];
-        }
-      ];
-    });
-    output-kind-must-be-declared = throws (evaluateOutput {
-      resources = [
-        {
-          kind = "external-link";
-          value = entry;
-          origin = [ ];
-        }
-      ];
-    });
-    output-origin-is-structured = throws (evaluateOutput {
-      homeManager = [
-        {
-          module = { };
-          origin = [ (-1) ];
-        }
-      ];
-    });
-    native-contribution-envelope-is-closed = throws (evaluateOutput {
-      homeManager = [
-        {
-          module = { };
-          origin = [ ];
-          typo = true;
-        }
-      ];
-    });
-    invalid-selected-child-fails-even-when-lower-ignores-value =
-      let
-        env = compiler.configure { extensions = [ (alter { lower = _: { }; }) ]; };
-      in
-      throws (
-        ((env.bind { inherit roster; }).prepare { capture.scalar = 42; }).compile {
-          inherit context;
-          scope = "user";
-        }
-      );
-    invalid-selected-callback-fails-even-when-lower-ignores-value =
-      let
-        env = compiler.configure { extensions = [ (alter { lower = _: { }; }) ]; };
-      in
-      throws (
-        ((env.bind { inherit roster; }).prepare { capture.entries = _: { }; }).compile {
-          inherit context;
-          scope = "user";
-        }
-      );
-    split-lower-and-callback-receive-scope =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              scope = "split";
-              outputs = [
-                "homeManager"
-                "nixos"
-              ];
-              lower =
-                {
-                  value,
-                  context,
-                  origins,
-                  ...
-                }:
-                {
-                  ${if context.scope == "user" then "homeManager" else "nixos"} = [
+    "test declaration user claim projects for system" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                scope = "system";
+                outputs = [ "nixos" ];
+                lower = { origins, ... }: {
+                  nixos = [
                     {
-                      module = value;
+                      module = { };
                       origin = origins.self;
                     }
                   ];
                 };
-            })
-          ];
-        };
-        prepared = (env.bind { inherit roster; }).prepare {
-          capture.entries = args: [ { payload = args.scope; } ];
-        };
-        user = prepared.compile {
-          inherit context;
-          scope = "user";
-        };
-        system = prepared.compile {
-          inherit context;
-          scope = "system";
-        };
-      in
-      (builtins.head (builtins.head user.homeManager).module.entries).payload == "user"
-      && (builtins.head (builtins.head system.nixos).module.entries).payload == "system";
-    resource-intent-cannot-lie =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              resourceIntent = _: false;
-              outputs = [ "resources" ];
-              lower = _: {
-                resources = [
-                  {
-                    kind = "external-link";
-                    value = entry;
-                    origin = [ ];
-                  }
-                ];
-              };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { direct = true; }).prepare { capture = { }; }).compile {
-          inherit context;
-          scope = "user";
-        }
-      );
-    inactive-resource-intent-is-lazy =
-      let
-        env = compiler.configure {
-          extensions = [ (alter { resourceIntent = _: throw "inactive intent"; }) ];
-        };
-      in
-      (((env.bind { inherit roster; }).prepare { capture.hosts = [ "lumi" ]; }).compile {
-        inherit context;
+              })
+            ];
+          };
+        in
+        builtins.length
+          (
+            ((env.bind { inherit roster; }).prepare {
+              users = [ "other" ];
+              capture = { };
+            }).compile
+            {
+              inherit context;
+              scope = "system";
+            }
+          ).nixos == 1;
+      expected = true;
+    };
+    "test direct rejects custom root claim" = {
+      expr =
+        ((environment.bind { direct = true; }).prepare {
+          roles = [ "desktop" ];
+          bookmarks.entries = [ ];
+        }).compile
+          {
+            inherit context;
+            scope = "user";
+          };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.roles: direct binding rejects ownership annotations";
+    };
+    "test direct rejects custom entry claim" = {
+      expr =
+        ((environment.bind { direct = true; }).prepare {
+          bookmarks.entries = [ (entry // { roles = [ "desktop" ]; }) ];
+        }).compile
+          {
+            inherit context;
+            scope = "user";
+          };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.bookmarks\\.entries\\[0\\]\\.roles: direct binding rejects ownership annotations";
+    };
+    "test direct rejects callback custom claim" = {
+      expr =
+        ((environment.bind { direct = true; }).prepare {
+          bookmarks.entries = _: [ (entry // { roles = [ "desktop" ]; }) ];
+        }).compile
+          {
+            inherit context;
+            scope = "user";
+          };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.bookmarks\\.entries\\[0\\]\\.roles: direct binding rejects ownership annotations";
+    };
+    "test direct allows metadata" = {
+      expr =
+        builtins.length
+          (
+            ((environment.bind { direct = true; }).prepare {
+              bookmarks.entries = [ (entry // { metadata.tags = [ ]; }) ];
+            }).compile
+            {
+              inherit context;
+              scope = "user";
+            }
+          ).resources;
+      expected = 1;
+    };
+    "test direct host only native remains valid" = {
+      expr =
+        builtins.length
+          (((captureEnvironment.bind { direct = true; }).prepare { capture = { }; }).compile {
+            context = { inherit (context) host; };
+            scope = "user";
+          }).homeManager;
+      expected = 1;
+    };
+    "test direct resource needs user even empty callback" = {
+      expr = ((environment.bind { direct = true; }).prepare { bookmarks.entries = _: [ ]; }).compile {
+        context = { inherit (context) host; };
         scope = "user";
-      }).homeManager == [ ];
-    registration-rejects-malformed-metadata-schema = malformed {
-      extensions = [
-        (_: {
-          name = "bad";
-          metadata = [
-            {
-              name = "tags";
-              field.validate = 1;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/resource-user\\] \\$\\.bookmarks: resource-producing declarations require a concrete user target";
+    };
+    "test selected domain validation fails" = {
+      expr = compile {
+        bookmarks.entries = [ (entry // { source = 1; }) ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[bookmarks/string\\] \\$\\.bookmarks\\.entries\\[0\\]\\.source: bookmark field must be a string";
+    };
+    "test unknown root field fails" = {
+      expr = compile {
+        typo = throw "unknown field payload";
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.typo: unregistered field typo";
+    };
+    "test unknown inactive entry field fails" = {
+      expr = compile {
+        bookmarks.entries = [
+          (
+            entry
+            // {
+              hosts = [ "lumi" ];
+              typo = throw "unknown inactive payload";
             }
-          ];
-        })
-      ];
+          )
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.bookmarks\\.entries\\[0\\]\\.typo: unregistered field typo";
     };
-    registration-rejects-duplicate-author-key = malformed {
-      extensions = [
-        bookmarks
-        ({ definitions, ... }: {
-          name = "clash";
-          ownership = [
-            (definitions.mkPredicateDescriptor {
-              name = "duplicate";
-              authorKey = "hosts";
-              order = 99;
-              allowedScopes = [ "user" ];
-            })
-          ];
-        })
-      ];
+    "test invalid map key fails" = {
+      expr = capture {
+        named.bad.payload = true;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/record-map-key\\] \\$\\.capture\\.named\\.bad: invalid record map key";
     };
-    registration-rejects-reserved-author-key = malformed {
-      extensions = [
-        ({ definitions, ... }: {
-          name = "clash";
-          ownership = [
-            (definitions.mkPredicateDescriptor {
-              name = "duplicate";
-              authorKey = "value";
-              order = 99;
-              allowedScopes = [ "user" ];
-            })
-          ];
-        })
-      ];
+    "test malformed metadata fails" = {
+      expr = compile {
+        bookmarks.metadata.tags = "oops";
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[bookmarks/tags\\] \\$\\.bookmarks\\.metadata\\.tags: tags must be strings";
     };
-    registration-rejects-unknown-relation-axis = malformed {
-      extensions = [
-        (_: {
-          name = "bad";
-          relations = [
-            {
-              name = "bad-relation";
-              leftAxis = "host";
-              rightAxis = "missing";
-              unknownFor = _: {
-                left = [ ];
-                right = [ ];
-              };
-              compatibleFor =
-                _: _: _:
-                true;
-              reason = _: _: "bad relation";
-            }
-          ];
-        })
-      ];
+    "test unregistered metadata fails" = {
+      expr = compile {
+        bookmarks.metadata.typo = throw "unknown metadata";
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.bookmarks\\.metadata\\.typo: unregistered field typo";
     };
-    resource-output-envelope-is-closed =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              outputs = [ "resources" ];
-              lower = _: {
-                resources = [
-                  {
-                    kind = "external-link";
-                    value = entry;
-                    origin = [ ];
-                    authority = "forbidden";
-                  }
+    "test registration rejects malformed extension" = {
+      expr = malformed {
+        extensions = [
+          (_: {
+            name = "x";
+            typo = true;
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects duplicate extension" = {
+      expr = malformed {
+        extensions = [
+          bookmarks
+          bookmarks
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects duplicate block" = {
+      expr = malformed {
+        extensions = [
+          (extensionWith [
+            captureBlock
+            captureBlock
+          ])
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects block claim collision" = {
+      expr = malformed {
+        extensions = [ (alter { name = "hosts"; }) ];
+      };
+      expected = true;
+    };
+    "test registration rejects record claim collision" = {
+      expr = malformed {
+        extensions = [ (alter { node = definitions.record { fields.hosts = { }; }; }) ];
+      };
+      expected = true;
+    };
+    "test registration rejects domain child collision" = {
+      expr = malformed {
+        extensions = [
+          (alter {
+            node = definitions.record {
+              fields.entries = { };
+              children.entries = definitions.collection { item = definitions.record { }; };
+            };
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects unknown definition field" = {
+      expr = malformed {
+        extensions = [ (alter { typo = true; }) ];
+      };
+      expected = true;
+    };
+    "test registration rejects invalid node" = {
+      expr = malformed {
+        extensions = [ (alter { node.kind = "unknown"; }) ];
+      };
+      expected = true;
+    };
+    "test registration rejects invalid field schema" = {
+      expr = malformed {
+        extensions = [ (alter { node = definitions.record { fields.example.validate = 1; }; }) ];
+      };
+      expected = true;
+    };
+    "test registration rejects duplicate metadata" = {
+      expr = malformed {
+        extensions = [
+          bookmarks
+          (_: {
+            name = "other";
+            metadata = [
+              {
+                name = "tags";
+                field = { };
+              }
+            ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects malformed before lower" = {
+      expr = malformed {
+        extensions = [
+          (alter {
+            scope = "bad";
+            lower = _: throw "lower ran before registration";
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test output envelope is closed" = {
+      expr = evaluateOutput {
+        typo = true;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.capture\\.typo: unregistered field typo";
+    };
+    "test output scope is checked" = {
+      expr = evaluateOutput {
+        nixos = [
+          {
+            module = { };
+            origin = [ ];
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/undeclared-output\\] \\$\\.capture\\.nixos: definition did not declare this contribution";
+    };
+    "test output kind must be declared" = {
+      expr = evaluateOutput {
+        resources = [
+          {
+            kind = "external-link";
+            value = entry;
+            origin = [ ];
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/undeclared-output\\] \\$\\.capture\\.resources: definition did not declare this contribution";
+    };
+    "test output origin is structured" = {
+      expr = evaluateOutput {
+        homeManager = [
+          {
+            module = { };
+            origin = [ (-1) ];
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/shape\\] \\$\\.capture\\.homeManager\\[0\\]\\.origin: unexpected list";
+    };
+    "test native contribution envelope is closed" = {
+      expr = evaluateOutput {
+        homeManager = [
+          {
+            module = { };
+            origin = [ ];
+            typo = true;
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.capture\\.homeManager\\[0\\]\\.typo: unregistered field typo";
+    };
+    "test invalid selected child fails even when lower ignores value" = {
+      expr =
+        let
+          env = compiler.configure { extensions = [ (alter { lower = _: { }; }) ]; };
+        in
+        throws (
+          ((env.bind { inherit roster; }).prepare { capture.scalar = 42; }).compile {
+            inherit context;
+            scope = "user";
+          }
+        );
+      expected = true;
+    };
+    "test invalid selected callback fails even when lower ignores value" = {
+      expr =
+        let
+          env = compiler.configure { extensions = [ (alter { lower = _: { }; }) ]; };
+        in
+        throws (
+          ((env.bind { inherit roster; }).prepare { capture.entries = _: { }; }).compile {
+            inherit context;
+            scope = "user";
+          }
+        );
+      expected = true;
+    };
+    "test split lower and callback receive scope" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                scope = "split";
+                outputs = [
+                  "homeManager"
+                  "nixos"
                 ];
-              };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { direct = true; }).prepare { capture = { }; }).compile {
+                lower =
+                  {
+                    value,
+                    context,
+                    origins,
+                    ...
+                  }:
+                  {
+                    ${if context.scope == "user" then "homeManager" else "nixos"} = [
+                      {
+                        module = value;
+                        origin = origins.self;
+                      }
+                    ];
+                  };
+              })
+            ];
+          };
+          prepared = (env.bind { inherit roster; }).prepare {
+            capture.entries = args: [ { payload = args.scope; } ];
+          };
+          user = prepared.compile {
+            inherit context;
+            scope = "user";
+          };
+          system = prepared.compile {
+            inherit context;
+            scope = "system";
+          };
+        in
+        (builtins.head (builtins.head user.homeManager).module.entries).payload == "user"
+        && (builtins.head (builtins.head system.nixos).module.entries).payload == "system";
+      expected = true;
+    };
+    "test resource intent cannot lie" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                resourceIntent = _: false;
+                outputs = [ "resources" ];
+                lower = _: {
+                  resources = [
+                    {
+                      kind = "external-link";
+                      value = entry;
+                      origin = [ ];
+                    }
+                  ];
+                };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { direct = true; }).prepare { capture = { }; }).compile {
+            inherit context;
+            scope = "user";
+          }
+        );
+      expected = true;
+    };
+    "test inactive resource intent is lazy" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [ (alter { resourceIntent = _: throw "inactive intent"; }) ];
+          };
+        in
+        (((env.bind { inherit roster; }).prepare { capture.hosts = [ "lumi" ]; }).compile {
           inherit context;
           scope = "user";
-        }
-      );
-    split-collection-items-keep-explicit-scope =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "split";
-              outputs = [ "nixos" ];
-              node = definitions.collection {
-                contextual = true;
-                item = definitions.record { };
+        }).homeManager == [ ];
+      expected = true;
+    };
+    "test registration rejects malformed metadata schema" = {
+      expr = malformed {
+        extensions = [
+          (_: {
+            name = "bad";
+            metadata = [
+              {
+                name = "tags";
+                field.validate = 1;
+              }
+            ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects duplicate author key" = {
+      expr = malformed {
+        extensions = [
+          bookmarks
+          ({ definitions, ... }: {
+            name = "clash";
+            ownership = [
+              (definitions.mkPredicateDescriptor {
+                name = "duplicate";
+                authorKey = "hosts";
+                order = 99;
+                allowedScopes = [ "user" ];
+              })
+            ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects reserved author key" = {
+      expr = malformed {
+        extensions = [
+          ({ definitions, ... }: {
+            name = "clash";
+            ownership = [
+              (definitions.mkPredicateDescriptor {
+                name = "duplicate";
+                authorKey = "value";
+                order = 99;
+                allowedScopes = [ "user" ];
+              })
+            ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test registration rejects unknown relation axis" = {
+      expr = malformed {
+        extensions = [
+          (_: {
+            name = "bad";
+            relations = [
+              {
+                name = "bad-relation";
+                leftAxis = "host";
+                rightAxis = "missing";
+                unknownFor = _: {
+                  left = [ ];
+                  right = [ ];
+                };
+                compatibleFor =
+                  _: _: _:
+                  true;
+                reason = _: _: "bad relation";
+              }
+            ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test resource output envelope is closed" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                outputs = [ "resources" ];
+                lower = _: {
+                  resources = [
+                    {
+                      kind = "external-link";
+                      value = entry;
+                      origin = [ ];
+                      authority = "forbidden";
+                    }
+                  ];
+                };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { direct = true; }).prepare { capture = { }; }).compile {
+            inherit context;
+            scope = "user";
+          }
+        );
+      expected = true;
+    };
+    "test split collection items keep explicit scope" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "split";
+                outputs = [ "nixos" ];
+                node = definitions.collection {
+                  contextual = true;
+                  item = definitions.record { };
+                };
+                lower = _: {
+                  nixos = [
+                    {
+                      module = { };
+                      origin = [ ];
+                    }
+                  ];
+                };
+              })
+            ];
+          };
+          compile =
+            value:
+            ((env.bind { inherit roster; }).prepare {
+              users = [ "other" ];
+              capture = value;
+            }).compile
+              {
+                inherit context;
+                scope = "system";
               };
-              lower = _: {
-                nixos = [
-                  {
-                    module = { };
-                    origin = [ ];
-                  }
-                ];
+        in
+        {
+          unclaimed = builtins.length (compile [ { } ]).nixos;
+          staticUser = throws (compile [ { users = [ "other" ]; } ]);
+          staticRole = throws (compile [ { roles = [ "desktop" ]; } ]);
+          contextualUser = throws (compile (_: [ { users = [ "other" ]; } ]));
+          contextualRole = throws (compile (_: [ { roles = [ "desktop" ]; } ]));
+        };
+      expected = {
+        unclaimed = 1;
+        staticUser = true;
+        staticRole = true;
+        contextualUser = true;
+        contextualRole = true;
+      };
+    };
+    "test split record map items keep explicit scope" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "split";
+                outputs = [ "nixos" ];
+                node = definitions.recordMap {
+                  key = _: true;
+                  item = definitions.record { };
+                };
+                lower = _: {
+                  nixos = [
+                    {
+                      module = { };
+                      origin = [ ];
+                    }
+                  ];
+                };
+              })
+            ];
+          };
+          compile =
+            value:
+            ((env.bind { inherit roster; }).prepare {
+              users = [ "other" ];
+              capture = value;
+            }).compile
+              {
+                inherit context;
+                scope = "system";
               };
-            })
-          ];
-        };
-        compile =
-          value:
-          ((env.bind { inherit roster; }).prepare {
-            users = [ "other" ];
-            capture = value;
-          }).compile
-            {
-              inherit context;
-              scope = "system";
-            };
-      in
-      builtins.length (compile [ { } ]).nixos == 1
-      && throws (compile [ { users = [ "other" ]; } ])
-      && throws (compile [ { roles = [ "desktop" ]; } ])
-      && throws (compile (_: [ { users = [ "other" ]; } ]))
-      && throws (compile (_: [ { roles = [ "desktop" ]; } ]));
-    split-record-map-items-keep-explicit-scope =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "split";
-              outputs = [ "nixos" ];
-              node = definitions.recordMap {
-                key = _: true;
-                item = definitions.record { };
+        in
+        builtins.length (compile { unit = { }; }).nixos == 1
+        && throws (compile {
+          unit.users = [ "other" ];
+        })
+        && throws (compile {
+          unit.roles = [ "desktop" ];
+        });
+      expected = true;
+    };
+    "test direct rejects static claims in other scope" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "system";
+                outputs = [ "nixos" ];
+                lower = _: { };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { direct = true; }).prepare { capture.roles = [ "desktop" ]; }).compile {
+            inherit context;
+            scope = "user";
+          }
+        );
+      expected = true;
+    };
+    "test inactive static system claims still fail" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "split";
+                outputs = [ "nixos" ];
+                lower = _: { };
+              })
+            ];
+          };
+          compile =
+            entry:
+            ((env.bind { inherit roster; }).prepare {
+              capture = {
+                hosts = [ "lumi" ];
+                entries = [ entry ];
               };
-              lower = _: {
-                nixos = [
-                  {
-                    module = { };
-                    origin = [ ];
-                  }
-                ];
+            }).compile
+              {
+                inherit context;
+                scope = "system";
               };
-            })
-          ];
-        };
-        compile =
-          value:
-          ((env.bind { inherit roster; }).prepare {
-            users = [ "other" ];
-            capture = value;
-          }).compile
-            {
-              inherit context;
-              scope = "system";
-            };
-      in
-      builtins.length (compile { unit = { }; }).nixos == 1
-      && throws (compile {
-        unit.users = [ "other" ];
-      })
-      && throws (compile {
-        unit.roles = [ "desktop" ];
-      });
-    direct-rejects-static-claims-in-other-scope =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "system";
-              outputs = [ "nixos" ];
-              lower = _: { };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { direct = true; }).prepare { capture.roles = [ "desktop" ]; }).compile {
-          inherit context;
-          scope = "user";
-        }
-      );
-    inactive-static-system-claims-still-fail =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "split";
-              outputs = [ "nixos" ];
-              lower = _: { };
-            })
-          ];
-        };
-        compile =
-          entry:
+        in
+        throws (compile {
+          users = [ "other" ];
+          payload = throw "inactive payload";
+        })
+        && throws (compile {
+          roles = [ "desktop" ];
+          payload = throw "inactive payload";
+        });
+      expected = true;
+    };
+    "test inactive callback scope pass stays lazy" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                scope = "split";
+                outputs = [ "nixos" ];
+                lower = _: { };
+              })
+            ];
+          };
+        in
+        (
           ((env.bind { inherit roster; }).prepare {
             capture = {
               hosts = [ "lumi" ];
-              entries = [ entry ];
+              entries = _: throw "inactive callback";
             };
           }).compile
-            {
-              inherit context;
-              scope = "system";
-            };
-      in
-      throws (compile {
-        users = [ "other" ];
-        payload = throw "inactive payload";
-      })
-      && throws (compile {
-        roles = [ "desktop" ];
-        payload = throw "inactive payload";
-      });
-    inactive-callback-scope-pass-stays-lazy =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              scope = "split";
-              outputs = [ "nixos" ];
-              lower = _: { };
-            })
-          ];
-        };
-      in
-      (
-        ((env.bind { inherit roster; }).prepare {
-          capture = {
-            hosts = [ "lumi" ];
-            entries = _: throw "inactive callback";
-          };
-        }).compile
-        {
-          inherit context;
-          scope = "system";
-        }
-      ).nixos == [ ];
-    callback-static-scope-check-precedes-item-selection =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              scope = "split";
-              outputs = [ "nixos" ];
-              lower = _: { };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { inherit roster; }).prepare {
-          capture.entries = _: [
-            {
-              hosts = [ "lumi" ];
-              roles = [ "desktop" ];
-              payload = throw "inactive payload";
-            }
-          ];
-        }).compile
           {
             inherit context;
             scope = "system";
           }
-      );
-    schema-defaults-remain-lazy-until-selection =
-      let
-        env = compiler.configure {
-          extensions = [
-            (alter {
-              node = definitions.record {
-                fields.payload = {
-                  default = throw "poisoned default";
-                  validate = builtins.isString;
-                  onInvalid = _: _: {
-                    severity = "error";
-                    code = "default";
-                    message = "default rejected";
+        ).nixos == [ ];
+      expected = true;
+    };
+    "test callback static scope check precedes item selection" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                scope = "split";
+                outputs = [ "nixos" ];
+                lower = _: { };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { inherit roster; }).prepare {
+            capture.entries = _: [
+              {
+                hosts = [ "lumi" ];
+                roles = [ "desktop" ];
+                payload = throw "inactive payload";
+              }
+            ];
+          }).compile
+            {
+              inherit context;
+              scope = "system";
+            }
+        );
+      expected = true;
+    };
+    "test schema defaults remain lazy until selection" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              (alter {
+                node = definitions.record {
+                  fields.payload = {
+                    default = throw "poisoned default";
+                    validate = builtins.isString;
+                    onInvalid = _: _: {
+                      severity = "error";
+                      code = "default";
+                      message = "default rejected";
+                    };
                   };
                 };
-              };
-              lower = _: { };
-            })
-          ];
-        };
-        inherit ((env.bind { inherit roster; })) prepare;
-        compile =
-          declaration:
-          (prepare declaration).compile {
-            inherit context;
-            scope = "user";
+                lower = _: { };
+              })
+            ];
           };
-      in
-      (compile { }).homeManager == [ ]
-      && (compile { capture.hosts = [ "lumi" ]; }).homeManager == [ ]
-      && throws (compile {
-        capture = { };
-      });
-    sibling-diagnostics-keep-authored-order =
-      let
-        result =
-          ((environment.bind { inherit roster; }).prepare {
-            bookmarks.entries = [
-              {
-                source = 1;
-                destination = ".first";
-              }
-              {
-                source = false;
-                destination = ".second";
-              }
-            ];
-          }).validate
-            {
+          inherit ((env.bind { inherit roster; })) prepare;
+          compile =
+            declaration:
+            (prepare declaration).compile {
               inherit context;
               scope = "user";
             };
-      in
-      map (diagnostic: diagnostic.primary.label) result.diagnostics == [
-        "$.bookmarks.entries[0].source"
-        "$.bookmarks.entries[1].source"
-      ];
-    domain-and-metadata-diagnostics-accumulate =
-      let
-        result =
-          ((environment.bind { inherit roster; }).prepare {
-            bookmarks.entries = [
+        in
+        (compile { }).homeManager == [ ]
+        && (compile { capture.hosts = [ "lumi" ]; }).homeManager == [ ]
+        && throws (compile {
+          capture = { };
+        });
+      expected = true;
+    };
+    "test sibling diagnostics keep authored order" = {
+      expr =
+        let
+          result =
+            ((environment.bind { inherit roster; }).prepare {
+              bookmarks.entries = [
+                {
+                  source = 1;
+                  destination = ".first";
+                }
+                {
+                  source = false;
+                  destination = ".second";
+                }
+              ];
+            }).validate
               {
-                source = 1;
-                destination = ".first";
-                metadata.tags = false;
-              }
-            ];
-          }).validate
-            {
-              inherit context;
-              scope = "user";
-            };
-      in
-      map (diagnostic: diagnostic.primary.label) result.diagnostics == [
-        "$.bookmarks.entries[0].source"
-        "$.bookmarks.entries[0].metadata.tags"
-      ];
-    structural-sibling-diagnostics-accumulate = throws (
-      (environment.bind { inherit roster; }).prepare {
+                inherit context;
+                scope = "user";
+              };
+        in
+        map (diagnostic: diagnostic.primary.label) result.diagnostics == [
+          "$.bookmarks.entries[0].source"
+          "$.bookmarks.entries[1].source"
+        ];
+      expected = true;
+    };
+    "test domain and metadata diagnostics accumulate" = {
+      expr =
+        let
+          result =
+            ((environment.bind { inherit roster; }).prepare {
+              bookmarks.entries = [
+                {
+                  source = 1;
+                  destination = ".first";
+                  metadata.tags = false;
+                }
+              ];
+            }).validate
+              {
+                inherit context;
+                scope = "user";
+              };
+        in
+        map (diagnostic: diagnostic.primary.label) result.diagnostics == [
+          "$.bookmarks.entries[0].source"
+          "$.bookmarks.entries[0].metadata.tags"
+        ];
+      expected = true;
+    };
+    "test structural sibling diagnostics accumulate" = {
+      expr = (environment.bind { inherit roster; }).prepare {
         bookmarks.entries = [
           { typo = true; }
           { otherTypo = true; }
         ];
-      }
-    );
-    lower-cannot-reintroduce-custom-annotations =
-      let
-        env = compiler.configure {
-          extensions = [
-            bookmarks
-            (alter {
-              outputs = [ "resources" ];
-              lower = _: {
-                resources = [
-                  {
-                    kind = "external-link";
-                    value = entry // {
-                      roles = throw "output annotation payload";
-                    };
-                    origin = [ ];
-                  }
-                ];
-              };
-            })
-          ];
-        };
-      in
-      throws (
-        ((env.bind { inherit roster; }).prepare { capture = { }; }).compile {
-          inherit context;
-          scope = "user";
-        }
-      );
-    value-node-diagnostic-path-is-authored =
-      let
-        result = ((captureEnvironment.bind { inherit roster; }).prepare { capture.scalar = 42; }).validate {
-          inherit context;
-          scope = "user";
-        };
-      in
-      map (diagnostic: diagnostic.primary.label) result.diagnostics == [ "$.capture.scalar" ];
-    advanced-resolver-vocabulary-is-shared =
-      let
-        resolvers = ownerships.mkResolvers roster;
-      in
-      builtins.length
-        (
-          (
-            (environment.bind {
-              resolvers = {
-                inherit (resolvers) resolveSystem;
-                resolvePrepared = resolvers.prepared;
-              };
-            }).prepare
-            {
-              bookmarks = {
-                roles = [ "desktop" ];
-                entries = [ entry ];
-              };
-            }
-          ).compile
-          {
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.bookmarks\\.entries\\[0\\]\\.typo: unregistered field typo";
+    };
+    "test lower cannot reintroduce custom annotations" = {
+      expr =
+        let
+          env = compiler.configure {
+            extensions = [
+              bookmarks
+              (alter {
+                outputs = [ "resources" ];
+                lower = _: {
+                  resources = [
+                    {
+                      kind = "external-link";
+                      value = entry // {
+                        roles = throw "output annotation payload";
+                      };
+                      origin = [ ];
+                    }
+                  ];
+                };
+              })
+            ];
+          };
+        in
+        throws (
+          ((env.bind { inherit roster; }).prepare { capture = { }; }).compile {
             inherit context;
             scope = "user";
           }
-        ).resources == 1;
+        );
+      expected = true;
+    };
+    "test value node diagnostic path is authored" = {
+      expr =
+        let
+          result = ((captureEnvironment.bind { inherit roster; }).prepare { capture.scalar = 42; }).validate {
+            inherit context;
+            scope = "user";
+          };
+        in
+        map (diagnostic: diagnostic.primary.label) result.diagnostics == [ "$.capture.scalar" ];
+      expected = true;
+    };
+    "test advanced resolver vocabulary is shared" = {
+      expr =
+        let
+          resolvers = ownerships.mkResolvers roster;
+        in
+        builtins.length
+          (
+            (
+              (environment.bind {
+                resolvers = {
+                  inherit (resolvers) resolveSystem;
+                  resolvePrepared = resolvers.prepared;
+                };
+              }).prepare
+              {
+                bookmarks = {
+                  roles = [ "desktop" ];
+                  entries = [ entry ];
+                };
+              }
+            ).compile
+            {
+              inherit context;
+              scope = "user";
+            }
+          ).resources == 1;
+      expected = true;
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: pass: !pass) cases);
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "declaration tests failed ${lib.concatStringsSep ", " failing}";
 in
 {
-  inherit cases ok;
+  inherit tests;
 }

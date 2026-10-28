@@ -188,30 +188,58 @@ let
   });
   document = "# retained\r\nnumber = 0x1_0\r\nstamp = ${spelling}\r\n";
   tests = {
-    empty-root = (render (table { })).text == "";
-    scalar-keys-are-sorted =
-      (render (table {
-        z = scalar 2;
-        a = scalar 1;
-      })).text == "\"a\" = 1\n\"z\" = 2\n";
-    each-component-is-quoted = lib.hasInfix ''["a.b"."c.d"]'' fixtures.keys.rendered.text;
-    del-is-escaped =
-      lib.hasInfix "\\u007f" fixtures.keys.rendered.text
-      && !(lib.hasInfix del fixtures.keys.rendered.text);
-    float-retains-type-and-precision =
-      lib.hasInfix ''"float" = 1.0'' fixtures.numbers.rendered.text
-      && lib.hasInfix "1.2345678901234567" fixtures.numbers.rendered.text
-      && lib.hasInfix "1e-100" fixtures.numbers.rendered.text;
-    automatic-and-explicit-tables =
-      lib.hasInfix ''[["automatic"]]'' fixtures.arrays.rendered.text
-      && lib.hasInfix ''[["explicit"."child"]]'' fixtures.arrays.rendered.text;
-    inline-does-not-open-table-headers = !(lib.hasInfix ''[["inline"'' fixtures.arrays.rendered.text);
-    raw-spelling-survives = lib.hasInfix spelling raw.text && lib.hasInfix "-0.0" raw.text;
-    comments-end-before-separators =
-      lib.hasInfix "${comment}\n," fixtures.comments.rendered.text
-      && lib.hasInfix "1 # no final newline\n," fixtures.comments.rendered.text;
-    metadata-retains-original-order-and-paths =
-      map (entry: entry.path) ordered.literals == [
+    "test empty root" = {
+      expr = (render (table { })).text;
+      expected = "";
+    };
+    "test scalar keys are sorted" = {
+      expr =
+        (render (table {
+          z = scalar 2;
+          a = scalar 1;
+        })).text;
+      expected = "\"a\" = 1\n\"z\" = 2\n";
+    };
+    "test each component is quoted" = {
+      expr = lib.hasInfix ''["a.b"."c.d"]'' fixtures.keys.rendered.text;
+      expected = true;
+    };
+    "test del is escaped" = {
+      expr =
+        lib.hasInfix "\\u007f" fixtures.keys.rendered.text
+        && !(lib.hasInfix del fixtures.keys.rendered.text);
+      expected = true;
+    };
+    "test float retains type and precision" = {
+      expr =
+        lib.hasInfix ''"float" = 1.0'' fixtures.numbers.rendered.text
+        && lib.hasInfix "1.2345678901234567" fixtures.numbers.rendered.text
+        && lib.hasInfix "1e-100" fixtures.numbers.rendered.text;
+      expected = true;
+    };
+    "test automatic and explicit tables" = {
+      expr =
+        lib.hasInfix ''[["automatic"]]'' fixtures.arrays.rendered.text
+        && lib.hasInfix ''[["explicit"."child"]]'' fixtures.arrays.rendered.text;
+      expected = true;
+    };
+    "test inline does not open table headers" = {
+      expr = !(lib.hasInfix ''[["inline"'' fixtures.arrays.rendered.text);
+      expected = true;
+    };
+    "test raw spelling survives" = {
+      expr = lib.hasInfix spelling raw.text && lib.hasInfix "-0.0" raw.text;
+      expected = true;
+    };
+    "test comments end before separators" = {
+      expr =
+        lib.hasInfix "${comment}\n," fixtures.comments.rendered.text
+        && lib.hasInfix "1 # no final newline\n," fixtures.comments.rendered.text;
+      expected = true;
+    };
+    "test metadata retains original order and paths" = {
+      expr = map (entry: entry.path) ordered.literals;
+      expected = [
         [
           "a"
           "leaf"
@@ -227,34 +255,45 @@ let
           "leaf"
         ]
       ];
-    metadata-retains-original-text =
-      (builtins.head fixtures.comments.rendered.literals).text == comment;
-    metadata-does-not-force-scalar-payload = (builtins.head opaque.literals).text == "1";
-    document-is-byte-preserved = (render (node "document" document)).text == document;
-    document-metadata-is-opaque =
-      (render (node "document" (throw "forced document text"))).literals == [ ];
-    context-survives-both-results =
-      builtins.getContext fixtures.context.rendered.text == builtins.getContext context
-      &&
-        builtins.getContext (builtins.head fixtures.context.rendered.literals).text
-        == builtins.getContext context;
-    malformed-toml-stays-unvalidated =
-      (render (table {
-        value = literal "broken=[";
-      })).literals == [
+    };
+    "test metadata retains original text" = {
+      expr = (builtins.head fixtures.comments.rendered.literals).text;
+      expected = comment;
+    };
+    "test metadata does not force scalar payload" = {
+      expr = (builtins.head opaque.literals).text;
+      expected = "1";
+    };
+    "test document is byte preserved" = {
+      expr = (render (node "document" document)).text;
+      expected = document;
+    };
+    "test document metadata is opaque" = {
+      expr = (render (node "document" (throw "forced document text"))).literals;
+      expected = [ ];
+    };
+    "test context survives both results" = {
+      expr =
+        builtins.getContext fixtures.context.rendered.text == builtins.getContext context
+        &&
+          builtins.getContext (builtins.head fixtures.context.rendered.literals).text
+          == builtins.getContext context;
+      expected = true;
+    };
+    "test malformed toml stays unvalidated" = {
+      expr =
+        (render (table {
+          value = literal "broken=[";
+        })).literals;
+      expected = [
         {
           path = [ "value" ];
           text = "broken=[";
         }
       ];
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: passed: !passed) tests);
 in
 {
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "TOML rendering tests failed: ${lib.concatStringsSep ", " failing}";
-  inherit fixtures;
+  inherit tests fixtures;
 }

@@ -536,31 +536,30 @@ let
   manifestContext = builtins.getContext sampleResult.manifestJson;
   inherit (sampleResult) manifestDocument;
 
-  checks = [
-    {
-      name = "ownerships facade keeps internals private and supplies furnish claim keys";
-      pass =
+  tests = {
+    "test ownerships facade keeps internals private and supplies furnish claim keys" = {
+      expr =
         !(ownerships ? engine)
         && !(ownerships ? engineArgsFor)
         && !(ownerships ? resolveWith)
         && furnish.core.isOwnerTagged (lib.genAttrs ownerships.claimKeys (_: [ ]));
-    }
-    {
-      name = "safe rendering never traverses arbitrary attribute values";
-      pass =
+      expected = true;
+    };
+    "test safe rendering never traverses arbitrary attribute values" = {
+      expr =
         krisis.safeRender poisonSecret == "<unrenderable value>"
         && krisis.safeRender poisonType == "<unrenderable value>"
         && krisis.safeShape poisonType == "{ token, type }";
-    }
-    {
-      name = "safe rendering tolerates poisoned derivation names";
-      pass =
+      expected = true;
+    };
+    "test safe rendering tolerates poisoned derivation names" = {
+      expr =
         krisis.safeRender poisonNamedDerivation == "<derivation ?>"
         && krisis.safeShape poisonNamedDerivation == "<derivation ?>";
-    }
-    {
-      name = "safe rendering keeps flat scalar lists and rejects unsafe list members";
-      pass =
+      expected = true;
+    };
+    "test safe rendering keeps flat scalar lists and rejects unsafe list members" = {
+      expr =
         krisis.safeRender [
           "visible"
           1
@@ -568,10 +567,10 @@ let
           null
         ] == ''["visible",1,true,null]''
         && krisis.safeRender poisonList == "<unrenderable value>";
-    }
-    {
-      name = "sample manifest is byte-stable and entry order is canonical";
-      pass =
+      expected = true;
+    };
+    "test sample manifest is byte-stable and entry order is canonical" = {
+      expr =
         sampleResult.manifestJson == (compile [ sample ]).manifestJson
         && sampleResult.manifestPath == null
         && orderedA.manifestJson == orderedB.manifestJson
@@ -580,10 +579,10 @@ let
             "x86_64-linux/khion:/home/feltfomo/.config/furnish/other.conf"
             "x86_64-linux/khion:/home/feltfomo/.config/furnish/sample.conf"
           ];
-    }
-    {
-      name = "manifest keeps identity authority root and executor separate";
-      pass =
+      expected = true;
+    };
+    "test manifest keeps identity authority root and executor separate" = {
+      expr =
         sampleEntry.filesystemIdentity == {
           namespace = "x86_64-linux/khion";
           destination = "/home/feltfomo/.config/furnish/sample.conf";
@@ -600,10 +599,10 @@ let
             identity = "executor/a";
             protocolVersion = 1;
           };
-    }
-    {
-      name = "manifest is safe serializable data with enum lifecycle strategies";
-      pass =
+      expected = true;
+    };
+    "test manifest is safe serializable data with enum lifecycle strategies" = {
+      expr =
         (builtins.tryEval (builtins.deepSeq (builtins.toJSON sampleResult.manifestData) true)).success
         &&
           manifestKeys == [
@@ -622,88 +621,86 @@ let
         && sampleEntry.cleanupStrategy == "exact-symlink-target"
         && sampleEntry.selfHealStrategy == "exact-symlink-target"
         && !(sampleEntry ? source);
-    }
-    {
-      name = "a declaration naming no conflict policy still serializes the error policy";
-      pass = !(sample ? onConflict) && sampleEntry.onConflict == contract.conflictPolicies.error;
-    }
-    {
-      name = "an explicit conflict policy reaches the manifest entry unchanged";
-      pass = explicitPolicyEntry.onConflict == contract.conflictPolicies.sourceWins;
-    }
-    {
-      name = "a conflict policy outside the enum is refused by shape validation";
-      pass = throws (furnish.core.validateShape bogusPolicy);
-    }
-    {
-      name = "shape validation accumulates metadata errors without forcing source value";
-      pass =
+      expected = true;
+    };
+    "test a declaration naming no conflict policy still serializes the error policy" = {
+      expr = !(sample ? onConflict) && sampleEntry.onConflict == contract.conflictPolicies.error;
+      expected = true;
+    };
+    "test an explicit conflict policy reaches the manifest entry unchanged" = {
+      expr = explicitPolicyEntry.onConflict;
+      expected = contract.conflictPolicies.sourceWins;
+    };
+    "test a conflict policy outside the enum is refused by shape validation" = {
+      expr = furnish.core.validateShape bogusPolicy;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: shape-validation/on-conflict-value: bogus-policy: onConflict must be one of the declared conflict pol";
+    };
+    "test shape validation accumulates metadata errors without forcing source value" = {
+      expr =
         malformedShapeResult.success
         && builtins.length malformedShapeDiagnostics >= 8
         && builtins.elem "shape-validation/label-type" malformedShapeCodes
         && builtins.elem "shape-validation/authority-identity" malformedShapeCodes
         && builtins.elem "shape-validation/on-conflict-value" malformedShapeCodes;
-    }
-    {
-      name = "executor metadata validation rejects malformed records before selection";
-      pass = !malformedExecutorResult.success;
-    }
-    {
-      name = "selected executor artifacts must satisfy the lifecycle result contract";
-      pass = !invalidArtifactResult.success;
-    }
-    {
-      name = "manifest document versions runtime diagnostics and carries entries";
-      pass =
+      expected = true;
+    };
+    "test executor metadata validation rejects malformed records before selection" = {
+      expr = !malformedExecutorResult.success;
+      expected = true;
+    };
+    "test selected executor artifacts must satisfy the lifecycle result contract" = {
+      expr = !invalidArtifactResult.success;
+      expected = true;
+    };
+    "test manifest document versions runtime diagnostics and carries entries" = {
+      expr =
         manifestDocument.schemaVersion == contract.schemaVersion
         && manifestDocument.diagnosticContract == contract.runtimeDiagnostics
         && manifestDocument.entries == sampleResult.manifestData
         && contract.runtimeDiagnostics.schemaVersion == contract.diagnosticSchemaVersion
         && builtins.all builtins.isString (builtins.attrValues contract.runtimeDiagnostics.codes);
-    }
-    {
-      name = "native executor tuple is exact and has no fallback identity";
-      pass =
-        contract.executors.nativeSymlink == {
-          identity = "furnish/native-symlink";
-          protocolVersion = 1;
-          representation = contract.capabilities.symlink;
-        };
-    }
-    {
-      name = "manifest context pins a dedicated artifact object";
-      pass =
+      expected = true;
+    };
+    "test native executor tuple is exact and has no fallback identity" = {
+      expr = contract.executors.nativeSymlink;
+      expected = {
+        identity = "furnish/native-symlink";
+        protocolVersion = 1;
+        representation = contract.capabilities.symlink;
+      };
+    };
+    "test manifest context pins a dedicated artifact object" = {
+      expr =
         lib.hasPrefix "/nix/store/" artifactTarget
         && artifactTarget != toString ./fixtures/example.conf
         && builtins.elem (builtins.unsafeDiscardStringContext artifactTarget) (
           builtins.attrNames manifestContext
         );
-    }
-    {
-      name = "inactive ownership: deepSeq forces no inactive payload";
-      pass = (builtins.tryEval (builtins.deepSeq inactiveResult.manifestData true)).success;
-    }
-    {
-      name = "inactive ownership: exactly one entry survives selection";
-      pass = builtins.length inactiveResult.manifestData == 1;
-    }
-    {
-      name = "inactive ownership: surviving entry identity equals the sample entry";
-      pass =
-        (builtins.head inactiveResult.manifestData).filesystemIdentity.canonical
-        == sampleEntry.filesystemIdentity.canonical;
-    }
-    {
-      name = "inactive ownership: manifest equals the sample-only manifest";
-      pass = inactiveResult.manifestData == sampleResult.manifestData;
-    }
-    {
-      name = "unused executor: materialize stays unforced when a capable executor exists";
-      pass = (builtins.tryEval (builtins.deepSeq sampleResult.manifestData true)).success;
-    }
-    {
-      name = "no capable executor is a structured furnish error without forcing payload";
-      pass =
+      expected = true;
+    };
+    "test inactive ownership: deepSeq forces no inactive payload" = {
+      expr = (builtins.tryEval (builtins.deepSeq inactiveResult.manifestData true)).success;
+      expected = true;
+    };
+    "test inactive ownership: exactly one entry survives selection" = {
+      expr = builtins.length inactiveResult.manifestData;
+      expected = 1;
+    };
+    "test inactive ownership: surviving entry identity equals the sample entry" = {
+      expr = (builtins.head inactiveResult.manifestData).filesystemIdentity.canonical;
+      expected = sampleEntry.filesystemIdentity.canonical;
+    };
+    "test inactive ownership: manifest equals the sample-only manifest" = {
+      expr = inactiveResult.manifestData;
+      expected = sampleResult.manifestData;
+    };
+    "test unused executor: materialize stays unforced when a capable executor exists" = {
+      expr = (builtins.tryEval (builtins.deepSeq sampleResult.manifestData true)).success;
+      expected = true;
+    };
+    "test no capable executor is a structured furnish error without forcing payload" = {
+      expr =
         throws (
           furnish.compile {
             declarations = [ noCapable ];
@@ -713,140 +710,145 @@ let
         )
         &&
           diagnosticText == "furnish: capability-selection/no-capable-executor: sample: no executor matched";
-    }
-    {
-      name = "duplicate executor identities fail before capability selection";
-      pass = throws (
-        furnish.core.selectExecutor [
+      expected = true;
+    };
+    "test duplicate executor identities fail before capability selection" = {
+      expr = furnish.core.selectExecutor [
+        preferredExecutor
+        (
           preferredExecutor
+          // {
+            priority = 20;
+            materialize = throw "forced duplicate executor implementation";
+          }
+        )
+      ] sample;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: executor-validation/identity-duplicate: executor/a: executor identity must be unique";
+    };
+    "test throwing provider callbacks fail through the furnish selection context" = {
+      expr = furnish.core.compile {
+        declarations = [ sample ];
+        inherit executors ctx;
+        provider.selectApplicable = _declarations: _ctx: throw "boom, provider selection failed";
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "boom, provider selection failed";
+    };
+    "test throwing executor callbacks fail through declaration and executor context" = {
+      expr = furnish.compile {
+        declarations = [ sample ];
+        executors = [
           (
             preferredExecutor
             // {
-              priority = 20;
-              materialize = throw "forced duplicate executor implementation";
+              identity = "executor/evil";
+              materialize = _declaration: throw "boom, materialization failed";
             }
           )
-        ] sample
-      );
-    }
-    {
-      name = "throwing provider callbacks fail through the furnish selection context";
-      pass = throws (
-        furnish.core.compile {
-          declarations = [ sample ];
-          inherit executors ctx;
-          provider.selectApplicable = _declarations: _ctx: throw "boom, provider selection failed";
-        }
-      );
-    }
-    {
-      name = "throwing executor callbacks fail through declaration and executor context";
-      pass = throws (
-        furnish.compile {
-          declarations = [ sample ];
-          executors = [
-            (
-              preferredExecutor
-              // {
-                identity = "executor/evil";
-                materialize = _declaration: throw "boom, materialization failed";
-              }
-            )
-          ];
-          inherit ctx;
-        }
-      );
-    }
-    {
-      name = "ownership impossible errors propagate through furnish without a catch or wrapper";
-      pass = throws (compile [ impossible ]);
-    }
-    {
-      name = "off mode passes an untagged declaration byte-identical to enabled mode";
-      pass =
+        ];
+        inherit ctx;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "boom, materialization failed";
+    };
+    "test ownership impossible errors propagate through furnish without a catch or wrapper" = {
+      expr = compile [ impossible ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'ownership-impossible': axis 'user' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis ";
+    };
+    "test off mode passes an untagged declaration byte-identical to enabled mode" = {
+      expr =
         offUntaggedResult.manifestJson == (compile [ untagged ]).manifestJson
         && builtins.length offUntaggedResult.manifestData == 1;
-    }
-    {
-      name = "off mode rejects an owner-tagged declaration instead of silently passing it";
-      pass = throws offTaggedResult;
-    }
-    {
-      name = "empty declarations have one inert encoding and don't enter ownership";
-      pass =
+      expected = true;
+    };
+    "test off mode rejects an owner-tagged declaration instead of silently passing it" = {
+      expr = offTaggedResult;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: ownership-selection/ownerships-disabled: sample-config: ownership claim requires the ownerships subsy";
+    };
+    "test empty declarations have one inert encoding and don't enter ownership" = {
+      expr =
         noOp.manifestData == [ ]
         && noOp.manifestPath == null
         && noOp.manifestDocument.entries == [ ]
         && noOp.raw == raw;
-    }
-    {
-      name = "raw config is returned byte-for-byte adjacent to furnish output";
-      pass = (furnish.compile { inherit raw; }).raw == raw;
-    }
-    {
-      name = "authority chooses the system ownership door";
-      pass =
+      expected = true;
+    };
+    "test raw config is returned byte-for-byte adjacent to furnish output" = {
+      expr = (furnish.compile { inherit raw; }).raw;
+      expected = raw;
+    };
+    "test authority chooses the system ownership door" = {
+      expr =
         (builtins.head systemResult.manifestData).authority.identity == "x86_64-linux/khion"
         &&
           (builtins.head systemResult.manifestData).filesystemIdentity.destination
           == "/etc/furnish/sample.conf";
-    }
-    {
-      name = "lexical normalization collapses equivalent in-root spellings";
-      pass =
-        (furnish.core.deriveDestination canonicalSpelling).filesystemIdentity.canonical
-        == "x86_64-linux/khion:/tmp/furnish/shared.conf";
-    }
-    {
-      name = "lexical normalization still rejects managed-root escape";
-      pass = throws (furnish.core.deriveDestination escaping);
-    }
-    {
-      name = "single claims across principals build one deterministic host index";
-      pass =
-        builtins.attrNames (
-          furnish.core.buildHostIndex {
-            declarations = [
-              userClaim
-              (systemClaim // { destination = "furnish/system.conf"; })
-              inactiveHostClaim
-            ];
-            principals = hostPrincipals;
-          }
-        ) == [
-          "x86_64-linux/khion:/tmp/furnish/shared.conf"
-          "x86_64-linux/khion:/tmp/furnish/system.conf"
-        ];
-    }
-    {
-      name = "cross-principal and same-principal collisions share one diagnostic";
-      pass =
-        crossCollisionText == expectedCrossCollisionText
-        && samePrincipalCollisionText == expectedSamePrincipalCollisionText
-        && throws (
-          furnish.core.buildHostIndex {
-            declarations = [
-              userClaim
-              systemClaim
-            ];
-            principals = hostPrincipals;
-          }
-        )
-        && throws (compile [
+      expected = true;
+    };
+    "test lexical normalization collapses equivalent in-root spellings" = {
+      expr = (furnish.core.deriveDestination canonicalSpelling).filesystemIdentity.canonical;
+      expected = "x86_64-linux/khion:/tmp/furnish/shared.conf";
+    };
+    "test lexical normalization still rejects managed-root escape" = {
+      expr = furnish.core.deriveDestination escaping;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: destination-validation/outside-managed-root: escaping: destination must remain beneath its managed ro";
+    };
+    "test single claims across principals build one deterministic host index" = {
+      expr = builtins.attrNames (
+        furnish.core.buildHostIndex {
+          declarations = [
+            userClaim
+            (systemClaim // { destination = "furnish/system.conf"; })
+            inactiveHostClaim
+          ];
+          principals = hostPrincipals;
+        }
+      );
+      expected = [
+        "x86_64-linux/khion:/tmp/furnish/shared.conf"
+        "x86_64-linux/khion:/tmp/furnish/system.conf"
+      ];
+    };
+    "test cross-principal collisions render the shared diagnostic" = {
+      expr = crossCollisionText;
+      expected = expectedCrossCollisionText;
+    };
+    "test same-principal collisions render the shared diagnostic" = {
+      expr = samePrincipalCollisionText;
+      expected = expectedSamePrincipalCollisionText;
+    };
+    "test the host index rejects a cross-principal collision" = {
+      expr = furnish.core.buildHostIndex {
+        declarations = [
           userClaim
-          secondUserClaim
-        ]);
-    }
-    {
-      name = "three claimants are all rendered in deterministic order";
-      pass =
+          systemClaim
+        ];
+        principals = hostPrincipals;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: collision-detection/duplicate-filesystem-identity: x86_64-linux/khion:/tmp/furnish/shared\\.conf: claim";
+    };
+    "test compile rejects a same-principal collision" = {
+      expr = compile [
+        userClaim
+        secondUserClaim
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "furnish: collision-detection/duplicate-filesystem-identity: x86_64-linux/khion:/tmp/furnish/shared\\.conf: claim";
+    };
+    "test three claimants are all rendered in deterministic order" = {
+      expr =
         lib.hasInfix "system/x86_64-linux/khion (system-claim at system-source.nix)" threeClaimantText
         && lib.hasInfix "user/feltfomo (second-user-claim at second-user-source.nix)" threeClaimantText
         && lib.hasInfix "user/feltfomo (user-claim at user-source.nix)" threeClaimantText;
-    }
-    {
-      name = "distinct collisions aggregate into one rendered report";
-      pass =
+      expected = true;
+    };
+    "test distinct collisions aggregate into one rendered report" = {
+      expr =
         builtins.length (
           furnish.core.collisionDiagnostics (projectHost [
             userClaim
@@ -857,10 +859,10 @@ let
         ) == 2
         && lib.hasInfix "/tmp/furnish/other.conf" aggregateCollisionText
         && lib.hasInfix "/tmp/furnish/shared.conf" aggregateCollisionText;
-    }
-    {
-      name = "whole host index stays payload executor generator and exclusion lazy";
-      pass =
+      expected = true;
+    };
+    "test whole host index stays payload executor generator and exclusion lazy" = {
+      expr =
         (builtins.tryEval (
           builtins.deepSeq (furnish.core.buildHostIndex {
             declarations = [
@@ -870,26 +872,26 @@ let
             principals = hostPrincipals;
           }) true
         )).success;
-    }
-    {
-      name = "empty host index is inert";
-      pass = furnish.core.buildHostIndex { principals = hostPrincipals; } == { };
-    }
-    {
-      name = "the files layer generates the record kitty wrote by hand";
-      pass = kittyGenerated == [ kittyRecord ];
-    }
-    {
-      name = "a home-relative entry takes no declaration from a system principal";
-      pass = systemOnlyGenerated == [ ];
-    }
-    {
-      name = "hand-written and generated kitty records compile to one manifest";
-      pass = (compileKitty [ kittyRecord ]).manifestJson == (compileKitty kittyGenerated).manifestJson;
-    }
-    {
-      name = "the files layer takes no claim key and counts one declaration per principal handed in";
-      pass =
+      expected = true;
+    };
+    "test empty host index is inert" = {
+      expr = furnish.core.buildHostIndex { principals = hostPrincipals; };
+      expected = { };
+    };
+    "test the files layer generates the record kitty wrote by hand" = {
+      expr = kittyGenerated;
+      expected = [ kittyRecord ];
+    };
+    "test a home-relative entry takes no declaration from a system principal" = {
+      expr = systemOnlyGenerated;
+      expected = [ ];
+    };
+    "test hand-written and generated kitty records compile to one manifest" = {
+      expr = (compileKitty [ kittyRecord ]).manifestJson;
+      expected = (compileKitty kittyGenerated).manifestJson;
+    };
+    "test the files layer takes no claim key and counts one declaration per principal handed in" = {
+      expr =
         builtins.length (
           furnish.files.mkDeclarations {
             filesystemNamespace = "x86_64-linux/khion";
@@ -901,19 +903,18 @@ let
           }
         ) == 2
         && builtins.length twoUserGenerated == 2;
-    }
-    {
-      name = "one entry and one user principal make exactly one declaration";
-      pass =
-        furnish.files.mkDeclarations {
-          filesystemNamespace = "x86_64-linux/khion";
-          principals = [ userPrincipal ];
-          files = [ kittyEntry ];
-        } == [ kittyRecord ];
-    }
-    {
-      name = "two user principals do not collapse onto one declaration";
-      pass =
+      expected = true;
+    };
+    "test one entry and one user principal make exactly one declaration" = {
+      expr = furnish.files.mkDeclarations {
+        filesystemNamespace = "x86_64-linux/khion";
+        principals = [ userPrincipal ];
+        files = [ kittyEntry ];
+      };
+      expected = [ kittyRecord ];
+    };
+    "test two user principals do not collapse onto one declaration" = {
+      expr =
         map (declaration: declaration.authority.identity) twoUserGenerated == [
           "feltfomo"
           "grandpa"
@@ -924,48 +925,40 @@ let
             "/home/grandpa"
           ]
         && builtins.all (declaration: declaration.destination == kittyEntry.dest) twoUserGenerated;
-    }
-    {
-      name = "an explicit principal managed root overrides the conventional home";
-      pass = (builtins.head rootedUserGenerated).managedRoot == "/srv/furnish/feltfomo";
-    }
-    {
-      name = "no principal at all is a host-scope zero, not the same zero as a system principal";
-      pass = noPrincipalGenerated == [ ] && systemOnlyGenerated == [ ];
-    }
-    {
-      name = "the emission site names host and user with defaults so the class wrapper keeps it";
-      pass = nixosArgs.host && nixosArgs.user;
-    }
-    {
-      name = "an empty file half generates an empty declaration set";
-      pass =
-        furnish.files.mkDeclarations {
-          filesystemNamespace = "x86_64-linux/khion";
-          principals = hostPrincipals;
-        } == [ ];
-    }
-    {
-      name = "a declaration naming no provenance source falls back to its own label";
-      pass =
-        (builtins.head (compile [ (removeAttrs sample [ "provenance" ]) ]).manifestData).provenance == {
-          declaration = "sample-config";
-          source = "sample-config";
-        };
-    }
-  ];
+      expected = true;
+    };
+    "test an explicit principal managed root overrides the conventional home" = {
+      expr = (builtins.head rootedUserGenerated).managedRoot;
+      expected = "/srv/furnish/feltfomo";
+    };
+    "test no principal at all is a host-scope zero, not the same zero as a system principal" = {
+      expr = noPrincipalGenerated == [ ] && systemOnlyGenerated == [ ];
+      expected = true;
+    };
+    "test the emission site names host and user with defaults so the class wrapper keeps it" = {
+      expr = nixosArgs.host && nixosArgs.user;
+      expected = true;
+    };
+    "test an empty file half generates an empty declaration set" = {
+      expr = furnish.files.mkDeclarations {
+        filesystemNamespace = "x86_64-linux/khion";
+        principals = hostPrincipals;
+      };
+      expected = [ ];
+    };
+    "test a declaration naming no provenance source falls back to its own label" = {
+      expr = (builtins.head (compile [ (removeAttrs sample [ "provenance" ]) ]).manifestData).provenance;
+      expected = {
+        declaration = "sample-config";
+        source = "sample-config";
+      };
+    };
+  };
 
-  failing = builtins.filter (check: !check.pass) checks;
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "furnish tests FAILED: ${lib.concatMapStringsSep ", " (check: check.name) failing}";
 in
 {
   inherit
-    checks
-    ok
+    tests
     sampleResult
     collisionEvidence
     ;

@@ -100,22 +100,30 @@ let
       label = d.primary.label;
     }) diagnostics;
   tests = {
-    selected-namespace-leaf-keeps-siblings-lazy =
-      builtins.attrNames project.manifests.once.commands == [
+    "test selected namespace leaf keeps siblings lazy" = {
+      expr = builtins.attrNames project.manifests.once.commands;
+      expected = [
         "once"
         "tools.good"
       ];
-    namespace-poison-control = !(builtins.tryEval project.manifests.tools.commands).success;
-    malformed-parent-suppresses-child-lookup =
-      projection malformed.diagnostics.once == [
+    };
+    "test namespace poison control" = {
+      expr = !(builtins.tryEval project.manifests.tools.commands).success;
+      expected = true;
+    };
+    "test malformed parent suppresses child lookup" = {
+      expr = projection malformed.diagnostics.once;
+      expected = [
         {
           code = "praxis/command-name";
           message = "subcommand names must be command-style names";
           label = "commands.tools.bad name";
         }
       ];
-    reached-errors-keep-depth-first-order =
-      projection failures.diagnostics.gate == [
+    };
+    "test reached errors keep depth first order" = {
+      expr = projection failures.diagnostics.gate;
+      expected = [
         {
           code = "praxis/command-cycle";
           message = "command cycle gate -> cycle-a -> cycle-b -> cycle-a";
@@ -132,8 +140,10 @@ let
           label = "tasks.invalid";
         }
       ];
-    alias-errors-precede-sensitive-source-errors =
-      projection collisions.diagnostics.gate == [
+    };
+    "test alias errors precede sensitive source errors" = {
+      expr = projection collisions.diagnostics.gate;
+      expected = [
         {
           code = "praxis/aliases";
           message = "alias 'both' belongs to multiple commands a, b";
@@ -145,8 +155,10 @@ let
           label = "commands.a";
         }
       ];
-    failed-graph-summary-needs-no-builder =
-      failures.diagnosticSummaries.gate == {
+    };
+    "test failed graph summary needs no builder" = {
+      expr = failures.diagnosticSummaries.gate;
+      expected = {
         total = 3;
         hasErrors = true;
         bySeverity = {
@@ -160,15 +172,13 @@ let
           "praxis/task-steps" = 1;
         };
       };
-    successful-summary-keeps-runtime-inputs-opaque = opaque.diagnosticSummaries.selected.total == 0;
+    };
+    "test successful summary keeps runtime inputs opaque" = {
+      expr = opaque.diagnosticSummaries.selected.total;
+      expected = 0;
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: pass: !pass) tests);
 in
 {
   inherit tests;
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "praxis graph effects failed ${lib.concatStringsSep ", " failing}";
 }

@@ -176,108 +176,221 @@ let
     users.amy = { };
   };
 
-  checks = {
-    rootDoesNotDemandFleet = inaccessibleFleet.root == ../..;
-    rootDoesNotValidateTables = invalidFleet.root == ../..;
-    checkValidatesCompleteTables = fails invalidFleet.check;
-    emptySystemQueryKeepsSelectorLazy =
-      empty.forSystem (throw "empty system query forced its selector") == [ ];
-    emptyMembershipQueryKeepsHostLazy =
-      empty.usersOn (throw "empty membership query forced its host") == [ ]
-      && diagnosticFleet.usersOn (throw "known-empty membership query forced its host") == [ ];
-    nonStringSystemQueryIsEmpty = identified.forSystem null == [ ];
-    userIdLookup = (identified.user "account/zed").name == "zed";
-    usersOnAliasPreservesNameOrder =
-      names (identified.usersOn "first") == [
+  tests = {
+    "test root does not demand fleet" = {
+      expr = inaccessibleFleet.root;
+      expected = ../..;
+    };
+    "test root does not validate tables" = {
+      expr = invalidFleet.root;
+      expected = ../..;
+    };
+    "test check validates complete tables" = {
+      expr = invalidFleet.check;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/host-system-missing\\] hosts\\.missingSystem: host 'missingSystem' has no system";
+    };
+    "test check reports every hostless host instead of stopping at the first" = {
+      expr =
+        (registry {
+          root = ../..;
+          runtimeRoot = null;
+          hosts = {
+            zulu = { };
+            alpha = { };
+          };
+          users = { };
+        }).check;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 2 error\\(s\\)\n\\[registry/host-system-missing\\] hosts\\.alpha: [^\n]*\n[^\n]*\n\\[registry/host-system-missing\\] hosts\\.zulu: ";
+    };
+    "test empty system query keeps selector lazy" = {
+      expr = empty.forSystem (throw "empty system query forced its selector");
+      expected = [ ];
+    };
+    "test empty membership query keeps host lazy" = {
+      expr =
+        empty.usersOn (throw "empty membership query forced its host") == [ ]
+        && diagnosticFleet.usersOn (throw "known-empty membership query forced its host") == [ ];
+      expected = true;
+    };
+    "test non string system query is empty" = {
+      expr = identified.forSystem null;
+      expected = [ ];
+    };
+    "test user id lookup" = {
+      expr = (identified.user "account/zed").name;
+      expected = "zed";
+    };
+    "test users on alias preserves name order" = {
+      expr = names (identified.usersOn "first");
+      expected = [
         "amy"
         "zed"
       ];
-    usersOnKnownEmptyHost = identified.usersOn "beta" == [ ];
-    hostsForKnownEmptyUser = identified.hostsFor "nobody" == [ ];
-    unknownSystemHasNoHosts = identified.forSystem "unknown-system" == [ ];
-    systemQueryPreservesNameOrder =
-      names (identified.forSystem "x86_64-linux") == [
+    };
+    "test users on known empty host" = {
+      expr = identified.usersOn "beta";
+      expected = [ ];
+    };
+    "test hosts for known empty user" = {
+      expr = identified.hostsFor "nobody";
+      expected = [ ];
+    };
+    "test unknown system has no hosts" = {
+      expr = identified.forSystem "unknown-system";
+      expected = [ ];
+    };
+    "test system query preserves name order" = {
+      expr = names (identified.forSystem "x86_64-linux");
+      expected = [
         "alpha"
         "beta"
       ];
-    homeLookupAcceptsAliasesAndId =
-      identified.homeFor {
+    };
+    "test home lookup accepts aliases and id" = {
+      expr = identified.homeFor {
         host = "first";
         user = "account/zed";
-      } == "/home/zed";
-    membershipRejectsKnownEmptyHost = fails (
-      identified.homeFor {
+      };
+      expected = "/home/zed";
+    };
+    "test membership rejects known empty host" = {
+      expr = identified.homeFor {
         host = "beta";
         user = "last";
-      }
-    );
-    unknownHostDiagnosticRetainsPublicProjection =
-      let
-        diagnostic = diagnosticFleet.host "alph";
-      in
-      diagnostic.code == "registry/unknown-host"
-      && diagnostic.severity == "error"
-      && diagnostic.message == "'alph' is not a registered host"
-      && diagnostic.primary.label == "registry"
-      && diagnostic.help == "did you mean 'alpha'?";
-    membershipDiagnosticRetainsPublicProjection =
-      let
-        diagnostic = diagnosticFleet.homeFor {
-          host = "alpha";
-          user = "amy";
-        };
-      in
-      diagnostic.code == "registry/unknown-user"
-      && diagnostic.message == "user 'amy' is not registered on host 'alpha'"
-      && diagnostic.help == "add 'alpha' to users.amy.hosts";
-    rootsStayDistinct = fleet.root == ../.. && fleet.runtimeRoot == "/etc/my-config";
-    canonicalIds =
-      fleet.hosts.khion.id == "x86_64-linux/khion" && fleet.hosts.pi.id == "aarch64-linux/pi";
-    defaultSystemApplies = fleet.hosts.lumi.system == "x86_64-linux";
-    declaredSystemWins = fleet.hosts.pi.system == "aarch64-linux";
-    systemsSorted =
-      fleet.systems == [
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-user\\] user 'zed' is not registered on host 'beta'";
+    };
+    "test unknown host diagnostic retains public projection" = {
+      expr =
+        let
+          diagnostic = diagnosticFleet.host "alph";
+        in
+        diagnostic.code == "registry/unknown-host"
+        && diagnostic.severity == "error"
+        && diagnostic.message == "'alph' is not a registered host"
+        && diagnostic.primary.label == "registry"
+        && diagnostic.help == "did you mean 'alpha'?";
+      expected = true;
+    };
+    "test membership diagnostic retains public projection" = {
+      expr =
+        let
+          diagnostic = diagnosticFleet.homeFor {
+            host = "alpha";
+            user = "amy";
+          };
+        in
+        diagnostic.code == "registry/unknown-user"
+        && diagnostic.message == "user 'amy' is not registered on host 'alpha'"
+        && diagnostic.help == "add 'alpha' to users.amy.hosts";
+      expected = true;
+    };
+    "test roots stay distinct" = {
+      expr = fleet.root == ../.. && fleet.runtimeRoot == "/etc/my-config";
+      expected = true;
+    };
+    "test canonical ids" = {
+      expr = fleet.hosts.khion.id == "x86_64-linux/khion" && fleet.hosts.pi.id == "aarch64-linux/pi";
+      expected = true;
+    };
+    "test default system applies" = {
+      expr = fleet.hosts.lumi.system;
+      expected = "x86_64-linux";
+    };
+    "test declared system wins" = {
+      expr = fleet.hosts.pi.system;
+      expected = "aarch64-linux";
+    };
+    "test systems sorted" = {
+      expr = fleet.systems;
+      expected = [
         "aarch64-linux"
         "x86_64-linux"
       ];
-    dimensionDefaultApplies = fleet.hosts.khion.dimensions.site == "home";
-    dimensionValueWins = fleet.hosts.lumi.dimensions.site == "colo";
-    membershipFromTopLevel =
-      fleet.users.feltfomo.hosts == [
+    };
+    "test dimension default applies" = {
+      expr = fleet.hosts.khion.dimensions.site;
+      expected = "home";
+    };
+    "test dimension value wins" = {
+      expr = fleet.hosts.lumi.dimensions.site;
+      expected = "colo";
+    };
+    "test membership from top level" = {
+      expr = fleet.users.feltfomo.hosts;
+      expected = [
         "khion"
         "lumi"
       ];
-    membershipFromHostBlock = fleet.users.grandpa.hosts == [ "lumi" ];
-    perHostHome =
-      fleet.homeFor {
+    };
+    "test membership from host block" = {
+      expr = fleet.users.grandpa.hosts;
+      expected = [ "lumi" ];
+    };
+    "test per host home" = {
+      expr = fleet.homeFor {
         host = "lumi";
         user = "feltfomo";
-      } == "/srv/feltfomo";
-    defaultHome =
-      fleet.homeFor {
+      };
+      expected = "/srv/feltfomo";
+    };
+    "test default home" = {
+      expr = fleet.homeFor {
         host = "khion";
         user = "feltfomo";
-      } == "/home/feltfomo";
-    hostBlockHome = fleet.users.grandpa.homeByHost.lumi == "/srv/grandpa";
-    aliasLookup = fleet.host "desktop" == fleet.hosts.khion;
-    userAliasLookup = (fleet.user "quiet").name == "feltfomo";
-    membershipQueries =
-      names (fleet.usersOn "lumi") == [
-        "feltfomo"
-        "grandpa"
-      ]
-      && names (fleet.hostsFor "grandpa") == [ "lumi" ];
-    dimensionQuery =
-      names (fleet.hostsWhere { role = "server"; }) == [
+      };
+      expected = "/home/feltfomo";
+    };
+    "test host block home" = {
+      expr = fleet.users.grandpa.homeByHost.lumi;
+      expected = "/srv/grandpa";
+    };
+    "test alias lookup" = {
+      expr = fleet.host "desktop";
+      expected = fleet.hosts.khion;
+    };
+    "test user alias lookup" = {
+      expr = (fleet.user "quiet").name;
+      expected = "feltfomo";
+    };
+    "test membership queries" = {
+      expr =
+        names (fleet.usersOn "lumi") == [
+          "feltfomo"
+          "grandpa"
+        ]
+        && names (fleet.hostsFor "grandpa") == [ "lumi" ];
+      expected = true;
+    };
+    "test dimension query" = {
+      expr = names (fleet.hostsWhere { role = "server"; });
+      expected = [
         "lumi"
         "pi"
       ];
-    systemQuery = names (fleet.forSystem "aarch64-linux") == [ "pi" ];
-    selectedContext = selected.host.name == "khion" && selected.user.name == "feltfomo";
-    knowsWithoutThrowing = fleet.knows.host "khion" && !(fleet.knows.host "khionn");
-    everythingChecks = fleet.check;
-    summaryIsPlainData =
-      fleet.summary == {
+    };
+    "test system query" = {
+      expr = names (fleet.forSystem "aarch64-linux");
+      expected = [ "pi" ];
+    };
+    "test selected context" = {
+      expr = selected.host.name == "khion" && selected.user.name == "feltfomo";
+      expected = true;
+    };
+    "test knows without throwing" = {
+      expr = fleet.knows.host "khion" && !(fleet.knows.host "khionn");
+      expected = true;
+    };
+    "test everything checks" = {
+      expr = fleet.check;
+      expected = true;
+    };
+    "test summary is plain data" = {
+      expr = fleet.summary;
+      expected = {
         systems = [
           "aarch64-linux"
           "x86_64-linux"
@@ -293,135 +406,221 @@ let
           "operator"
         ];
       };
-    nativeOrigin = fleet.hosts.khion.origin == "lexicon";
+    };
+    "test native origin" = {
+      expr = fleet.hosts.khion.origin;
+      expected = "lexicon";
+    };
 
-    denInventory =
-      inherited.summary.hosts == [
-        "khion"
-        "lumi"
-        "pi"
-      ]
-      &&
-        inherited.users.feltfomo.hosts == [
+    "test den inventory" = {
+      expr =
+        inherited.summary.hosts == [
           "khion"
           "lumi"
-        ];
-    denOrigin = inherited.hosts.khion.origin == "den";
-    denHomesDefault = inherited.users.grandpa.homeByHost.lumi == "/home/grandpa";
-    denDimensions = inherited.hosts.lumi.dimensions.role == "server";
-
-    layerMerges =
-      layered.hosts.khion.origin == "both"
-      &&
-        layered.hosts.khion.aliases == [
-          "khion"
-          "desk"
+          "pi"
         ]
-      && layered.hosts.khion.dimensions.role == "desktop";
-    layerAdds = layered.hosts.buildbox.origin == "lexicon";
-    exclusionRemoves = !(layered.hosts ? pi) && !(layered.knows.host "pi");
-    exclusionStaysUnavailable = fails (layered.host "pi");
+        &&
+          inherited.users.feltfomo.hosts == [
+            "khion"
+            "lumi"
+          ];
+      expected = true;
+    };
+    "test den origin" = {
+      expr = inherited.hosts.khion.origin;
+      expected = "den";
+    };
+    "test den homes default" = {
+      expr = inherited.users.grandpa.homeByHost.lumi;
+      expected = "/home/grandpa";
+    };
+    "test den dimensions" = {
+      expr = inherited.hosts.lumi.dimensions.role;
+      expected = "server";
+    };
 
-    emptyRegistry = empty.summary.hosts == [ ] && empty.summary.users == [ ] && empty.systems == [ ];
+    "test layer merges" = {
+      expr =
+        layered.hosts.khion.origin == "both"
+        &&
+          layered.hosts.khion.aliases == [
+            "khion"
+            "desk"
+          ]
+        && layered.hosts.khion.dimensions.role == "desktop";
+      expected = true;
+    };
+    "test layer adds" = {
+      expr = layered.hosts.buildbox.origin;
+      expected = "lexicon";
+    };
+    "test exclusion removes" = {
+      expr = !(layered.hosts ? pi) && !(layered.knows.host "pi");
+      expected = true;
+    };
+    "test exclusion stays unavailable" = {
+      expr = layered.host "pi";
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/host-excluded\\] host 'pi' is excluded from this registry";
+    };
 
-    rejectsMissingUsers = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      hosts = { };
-    });
-    rejectsUnknownField = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      hostz = { };
-      hosts = { };
-      users = { };
-    });
-    rejectsStringRoot = fails (registry {
-      root = "/tmp/config";
-      runtimeRoot = null;
-      hosts = { };
-      users = { };
-    });
-    rejectsHostWithoutSystem = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      hosts.khion = { };
-      users = { };
-    });
-    rejectsUnknownDimension = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      dimensions.role.values = [ "desktop" ];
-      hosts.khion.dimensions.rol = "desktop";
-      users = { };
-    });
-    rejectsUndeclaredDimensionValue = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      dimensions.role.values = [ "desktop" ];
-      hosts.khion.dimensions.role = "laptop";
-      users = { };
-    });
-    rejectsMissingRequiredDimension = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      dimensions.role = {
-        values = [ "desktop" ];
-        required = true;
+    "test empty registry" = {
+      expr = empty.summary.hosts == [ ] && empty.summary.users == [ ] && empty.systems == [ ];
+      expected = true;
+    };
+
+    "test rejects missing users" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        hosts = { };
       };
-      hosts.khion = { };
-      users = { };
-    });
-    rejectsUnknownUserHost = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      hosts.khion = { };
-      users.river.hosts = [ "khionn" ];
-    });
-    rejectsStrayExclusion = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      hosts.ghost = null;
-      users = { };
-    });
-    rejectsUnknownHostLookup = fails (fleet.host "khionn");
-    rejectsUnknownUserLookup = fails (fleet.user "nobody");
-    rejectsUserOffHost = fails (
-      fleet.context {
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/users-missing\\] users: users is required";
+    };
+    "test rejects unknown field" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        hostz = { };
+        hosts = { };
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/declaration-field\\] registry: unknown declaration field 'hostz'";
+    };
+    "test rejects string root" = {
+      expr = registry {
+        root = "/tmp/config";
+        runtimeRoot = null;
+        hosts = { };
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/root\\] root: root must be a Nix path";
+    };
+    "test rejects host without system" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        hosts.khion = { };
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/host-system-missing\\] hosts\\.khion: host 'khion' has no system";
+    };
+    "test rejects unknown dimension" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        dimensions.role.values = [ "desktop" ];
+        hosts.khion.dimensions.rol = "desktop";
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-dimension\\] hosts\\.khion: host 'khion' sets undeclared dimension 'rol'";
+    };
+    "test rejects undeclared dimension value" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        dimensions.role.values = [ "desktop" ];
+        hosts.khion.dimensions.role = "laptop";
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/dimension-value\\] hosts\\.khion: host 'khion' sets dimension 'role' to 'laptop', which is not a declare";
+    };
+    "test rejects missing required dimension" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        dimensions.role = {
+          values = [ "desktop" ];
+          required = true;
+        };
+        hosts.khion = { };
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/dimension-required\\] hosts\\.khion: host 'khion' is missing required dimension 'role'";
+    };
+    "test rejects unknown user host" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        hosts.khion = { };
+        users.river.hosts = [ "khionn" ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-host\\] users\\.river: user 'river' lives on unregistered host 'khionn'";
+    };
+    "test rejects stray exclusion" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        hosts.ghost = null;
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/exclude-no-match\\] hosts\\.ghost: hosts\\.ghost = null excludes a host no layer declares";
+    };
+    "test rejects unknown host lookup" = {
+      expr = fleet.host "khionn";
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-host\\] registry: 'khionn' is not a registered host";
+    };
+    "test rejects unknown user lookup" = {
+      expr = fleet.user "nobody";
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-user\\] registry: 'nobody' is not a registered user";
+    };
+    "test rejects user off host" = {
+      expr = fleet.context {
         host = "pi";
         user = "quiet";
-      }
-    );
-    rejectsConflictingUserIds = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      hosts.khion = { };
-      users = {
-        river.id = "operator";
-        brook.id = "operator";
       };
-    });
-    rejectsAliasConflicts = fails (registry {
-      root = ../..;
-      runtimeRoot = null;
-      defaultSystem = "x86_64-linux";
-      hosts = {
-        khion.aliases = [
-          "khion"
-          "box"
-        ];
-        lumi.aliases = [
-          "lumi"
-          "box"
-        ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/unknown-user\\] user 'feltfomo' is not registered on host 'pi'";
+    };
+    "test rejects conflicting user ids" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        hosts.khion = { };
+        users = {
+          river.id = "operator";
+          brook.id = "operator";
+        };
       };
-      users = { };
-    });
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/user-id-conflict\\] user id 'operator' belongs to more than one registered user";
+    };
+    "test rejects alias conflicts" = {
+      expr = registry {
+        root = ../..;
+        runtimeRoot = null;
+        defaultSystem = "x86_64-linux";
+        hosts = {
+          khion.aliases = [
+            "khion"
+            "box"
+          ];
+          lumi.aliases = [
+            "lumi"
+            "box"
+          ];
+        };
+        users = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "registry: 1 error\\(s\\)\n\\s*\\[registry/alias-conflict\\] host name or alias 'box' is registered more than once";
+    };
   };
 in
 {
@@ -429,7 +628,6 @@ in
     fleet
     inherited
     layered
-    checks
+    tests
     ;
-  ok = builtins.all (value: value) (builtins.attrValues checks);
 }

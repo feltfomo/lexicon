@@ -4,3 +4,7 @@ result-*
 /src/praxis/runtime/target/
 __pycache__/
 /.claude/worktrees/
+/.devenv/
+/.devenv.flake.nix
+/.direnv/
+/devenv.local.nix

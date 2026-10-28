@@ -123,9 +123,10 @@ let
     }
   ];
 
-  narrowingCases = map (expected: {
-    inherit (expected) name;
-    pass =
+  # one trace per row so a mismatch names the narrowing step that broke
+  narrowingTests = lib.listToAttrs (
+    map (
+      expected:
       let
         observed = ownerships.mkResolveSystemTrace roster [
           (
@@ -137,21 +138,29 @@ let
         ] { host.name = "khion"; };
         leaf = builtins.head observed.trace;
       in
-      leaf.effectiveClaim.host == expected.claim
-      &&
-        builtins.attrNames leaf.effectiveClaim.host == [
-          "set"
-          "tag"
-        ]
-      && leaf.axisResults.host.details.materializedMembers == expected.members
-      && leaf.selected == expected.selected
-      && observed.value == (if expected.selected then { selected = true; } else { });
-  }) rawNarrowing;
+      lib.nameValuePair "test ${expected.name}" {
+        expr = {
+          claim = leaf.effectiveClaim.host;
+          claimFields = builtins.attrNames leaf.effectiveClaim.host;
+          members = leaf.axisResults.host.details.materializedMembers;
+          inherit (leaf) selected;
+          inherit (observed) value;
+        };
+        expected = {
+          inherit (expected) claim members selected;
+          claimFields = [
+            "set"
+            "tag"
+          ];
+          value = if expected.selected then { selected = true; } else { };
+        };
+      }
+    ) rawNarrowing
+  );
 
-  cases = narrowingCases ++ [
-    {
-      name = "canonical membership takes precedence over a colliding alias";
-      pass =
+  tests = narrowingTests // {
+    "test canonical membership takes precedence over a colliding alias" = {
+      expr =
         ownerships.mkResolveSystem
           (
             roster
@@ -169,110 +178,105 @@ let
               value.selected = true;
             }
           ]
-          { host.name = "khion"; } == {
-          selected = true;
-        };
-    }
-    {
-      name = "strict system resolution accepts a canonical host id without a display name";
-      pass = strict "system" [ { value.x = 1; } ] { host.id = "standalone/khion"; } == { x = 1; };
-    }
-    {
-      name = "strict user resolution accepts canonical ids with real membership";
-      pass =
-        strict "user" [ { value.x = 1; } ] {
-          host.id = "standalone/khion";
-          user.id = "feltfomo";
-        } == {
-          x = 1;
-        };
-    }
-    {
-      name = "canonical ids can label context diagnostics without display names";
-      pass =
-        axes.ctxLabelFor axes.descriptors {
-          host.id = "standalone/khion";
-          user.id = "feltfomo";
-        } == "host 'standalone/khion', user 'feltfomo'";
-    }
-    {
-      name = "define.* resolves a nested host+user unit with no den";
-      pass =
-        r (ctxOf "khion" "feltfomo") {
-          claim.host = include [
-            "khion"
-            "lumi"
-          ];
-          children = [
-            { value.packages = [ "a" ]; }
-            {
-              claim.user = include [ "feltfomo" ];
-              value.packages = [ "b" ];
-            }
-          ];
-        } == {
-          packages = [
-            "a"
-            "b"
-          ];
-        };
-    }
-    {
-      name = "cross-axis membership fires: grandpa is not on khion";
-      pass = throws (
-        r (ctxOf "khion" "grandpa") {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.user = include [ "grandpa" ];
-              value.x = 1;
-            }
-          ];
-        }
-      );
-    }
-    {
-      name = "unknown-membership user degrades to same-axis-only";
-      pass =
-        r (ctxOf "khion" "nomad") {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.user = include [ "nomad" ];
-              value.x = 1;
-            }
-          ];
-        } == {
-          x = 1;
-        };
-    }
-    {
-      name = "known-none user still trips membership (null vs [])";
-      pass = throws (
-        r (ctxOf "khion" "ghostless") {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.user = include [ "ghostless" ];
-              value.x = 1;
-            }
-          ];
-        }
-      );
-    }
-    {
-      name = "host-only config on a user-less host is not a membership error";
-      pass =
-        r (ctxOf "server" "feltfomo") {
-          claim.host = include [ "server" ];
-          value.systemPackages = [ "vim" ];
-        } == {
-          systemPackages = [ "vim" ];
-        };
-    }
-    {
-      name = "distinct canonical user ids select without conflating a shared bare name";
-      pass =
+          { host.name = "khion"; };
+      expected = {
+        selected = true;
+      };
+    };
+    "test strict system resolution accepts a canonical host id without a display name" = {
+      expr = strict "system" [ { value.x = 1; } ] { host.id = "standalone/khion"; };
+      expected = {
+        x = 1;
+      };
+    };
+    "test strict user resolution accepts canonical ids with real membership" = {
+      expr = strict "user" [ { value.x = 1; } ] {
+        host.id = "standalone/khion";
+        user.id = "feltfomo";
+      };
+      expected = {
+        x = 1;
+      };
+    };
+    "test canonical ids can label context diagnostics without display names" = {
+      expr = axes.ctxLabelFor axes.descriptors {
+        host.id = "standalone/khion";
+        user.id = "feltfomo";
+      };
+      expected = "host 'standalone/khion', user 'feltfomo'";
+    };
+    "test define.* resolves a nested host+user unit with no den" = {
+      expr = r (ctxOf "khion" "feltfomo") {
+        claim.host = include [
+          "khion"
+          "lumi"
+        ];
+        children = [
+          { value.packages = [ "a" ]; }
+          {
+            claim.user = include [ "feltfomo" ];
+            value.packages = [ "b" ];
+          }
+        ];
+      };
+      expected = {
+        packages = [
+          "a"
+          "b"
+        ];
+      };
+    };
+    "test cross-axis membership fires: grandpa is not on khion" = {
+      expr = r (ctxOf "khion" "grandpa") {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.user = include [ "grandpa" ];
+            value.x = 1;
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: no user in \\{ grandpa \\} lives on any host in \\{ standalone/khion \\} -- this host/user co-";
+    };
+    "test unknown-membership user degrades to same-axis-only" = {
+      expr = r (ctxOf "khion" "nomad") {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.user = include [ "nomad" ];
+            value.x = 1;
+          }
+        ];
+      };
+      expected = {
+        x = 1;
+      };
+    };
+    "test known-none user still trips membership (null vs [])" = {
+      expr = r (ctxOf "khion" "ghostless") {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.user = include [ "ghostless" ];
+            value.x = 1;
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: no user in \\{ ghostless \\} lives on any host in \\{ standalone/khion \\} -- this host/user c";
+    };
+    "test host-only config on a user-less host is not a membership error" = {
+      expr = r (ctxOf "server" "feltfomo") {
+        claim.host = include [ "server" ];
+        value.systemPackages = [ "vim" ];
+      };
+      expected = {
+        systemPackages = [ "vim" ];
+      };
+    };
+    "test distinct canonical user ids select without conflating a shared bare name" = {
+      expr =
         let
           federated = toRoster [
             (define.host "khion")
@@ -320,10 +324,10 @@ let
               };
         in
         selected == { x = 1; } && throws ambiguous;
-    }
-    {
-      name = "grouped host aliases retain declaration order";
-      pass =
+      expected = true;
+    };
+    "test grouped host aliases retain declaration order" = {
+      expr =
         let
           federated = toRoster [
             (define.host "khion" { system = "x86_64-linux"; })
@@ -334,30 +338,28 @@ let
           "x86_64-linux/khion"
           "aarch64-linux/khion"
         ];
-    }
-    {
-      name = "explicit unknown and ambiguous user host references fail during roster construction";
-      pass =
-        throws (toRoster [
-          (define.host "khion")
-          (define.user "operator" { hosts = [ "ghost" ]; })
-        ])
-        && throws (toRoster [
-          (define.host "khion" { system = "x86_64-linux"; })
-          (define.host "khion" { system = "aarch64-linux"; })
-          (define.user "operator" { hosts = [ "khion" ]; })
-        ]);
-    }
-  ];
+      expected = true;
+    };
+    "test an unknown user host reference fails during roster construction" = {
+      expr = toRoster [
+        (define.host "khion")
+        (define.user "operator" { hosts = [ "ghost" ]; })
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/roster-unknown-host\\] user roster references unknown host 'ghost'";
+    };
+    "test an ambiguous user host reference fails during roster construction" = {
+      expr = toRoster [
+        (define.host "khion" { system = "x86_64-linux"; })
+        (define.host "khion" { system = "aarch64-linux"; })
+        (define.user "operator" { hosts = [ "khion" ]; })
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/roster-ambiguous-host\\] user roster host alias 'khion' is ambiguous; use a canonical system/name";
+    };
+  };
 
-  failing = builtins.filter (c: !c.pass) cases;
-
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "ownerships roster tests FAILED: ${lib.concatMapStringsSep ", " (c: c.name) failing}";
 in
 {
-  inherit cases ok;
+  inherit tests;
 }

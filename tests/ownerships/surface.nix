@@ -1,10 +1,7 @@
-# _lib/ownerships/tests/surface.nix
-#
-# proof for the authoring surface - throwaway aspects written the way a real one
-# would be, resolved against a small fleet. `results` is the resolved output per
-# claim kind, kept plain so it can be eyeballed with `nix eval`; `ok` asserts
-# each and is what a flake check forces. nothing den-related is imported, so a
-# green run also proves the surface resolves standalone.
+# proof for the authoring surface, with throwaway aspects written the way a real
+# one would be and resolved against a small fleet. `results` stays plain so it
+# can be eyeballed with `nix eval`. nothing den-related is imported, so a green
+# run also proves the surface resolves standalone.
 {
   lib,
   krisis,
@@ -411,10 +408,9 @@ let
     ctxSystemKhion // { unrelated = "private"; }
   );
 
-  checks = [
-    {
-      name = "default registry projects the byte-identical bounded user and system contexts";
-      pass =
+  tests = {
+    "test default registry projects the byte-identical bounded user and system contexts" = {
+      expr =
         projectedUserCtx == {
           inherit (ctx) host user;
         }
@@ -423,10 +419,10 @@ let
             inherit (ctxSystemKhion) host;
             user = null;
           };
-    }
-    {
-      name = "default descriptors preserve the public key, registry, and roster shapes";
-      pass =
+      expected = true;
+    };
+    "test default descriptors preserve the public key, registry, and roster shapes" = {
+      expr =
         claimKeys == [
           "hosts"
           "users"
@@ -450,162 +446,172 @@ let
             "users"
             "usersWithUnknownMembership"
           ];
-    }
-    {
-      name = "untagged is global";
-      pass = results.global == { pkg = "everyone"; };
-    }
-    {
-      name = "host hit";
-      pass = results.hostHit == { pkg = "khion-only"; };
-    }
-    {
-      name = "host miss drops";
-      pass = results.hostMiss == { };
-    }
-    {
-      name = "user hit";
-      pass = results.userHit == { pkg = "feltfomo-only"; };
-    }
-    {
-      name = "user miss drops";
-      pass = results.userMiss == { };
-    }
-    {
-      name = "exceptHosts active";
-      pass = results.exceptHostActive == { pkg = "not-lumi"; };
-    }
-    {
-      name = "exceptHosts inactive drops";
-      pass = results.exceptHostInactive == { };
-    }
-    {
-      name = "exceptUsers active";
-      pass = results.exceptUserActive == { pkg = "not-grandpa"; };
-    }
-    {
-      name = "exceptUsers inactive drops";
-      pass = results.exceptUserInactive == { };
-    }
-    {
-      name = "when hit";
-      pass = results.whenHit == { pkg = "nvidia-only"; };
-    }
-    {
-      name = "when miss drops";
-      pass = results.whenMiss == { };
-    }
-    {
-      name = "a throwing when predicate fails through the contextual selector boundary";
-      pass = throws (
-        resolve [
+      expected = true;
+    };
+    "test untagged is global" = {
+      expr = results.global;
+      expected = {
+        pkg = "everyone";
+      };
+    };
+    "test host hit" = {
+      expr = results.hostHit;
+      expected = {
+        pkg = "khion-only";
+      };
+    };
+    "test host miss drops" = {
+      expr = results.hostMiss;
+      expected = { };
+    };
+    "test user hit" = {
+      expr = results.userHit;
+      expected = {
+        pkg = "feltfomo-only";
+      };
+    };
+    "test user miss drops" = {
+      expr = results.userMiss;
+      expected = { };
+    };
+    "test exceptHosts active" = {
+      expr = results.exceptHostActive;
+      expected = {
+        pkg = "not-lumi";
+      };
+    };
+    "test exceptHosts inactive drops" = {
+      expr = results.exceptHostInactive;
+      expected = { };
+    };
+    "test exceptUsers active" = {
+      expr = results.exceptUserActive;
+      expected = {
+        pkg = "not-grandpa";
+      };
+    };
+    "test exceptUsers inactive drops" = {
+      expr = results.exceptUserInactive;
+      expected = { };
+    };
+    "test when hit" = {
+      expr = results.whenHit;
+      expected = {
+        pkg = "nvidia-only";
+      };
+    };
+    "test when miss drops" = {
+      expr = results.whenMiss;
+      expected = { };
+    };
+    "test a throwing when predicate fails through the contextual selector boundary" = {
+      expr = resolve [
+        {
+          label = "evil-predicate";
+          when = _ctx: throw "boom, this predicate is evil";
+          pkg = "never";
+        }
+      ] ctx;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "boom, this predicate is evil";
+    };
+    "test nested narrow + merge + option path" = {
+      expr = results.nested;
+      expected = {
+        packages = [
+          "base"
+          "feltfomo-extra"
+        ];
+        services.hypridle.enable = true;
+      };
+    };
+    "test file-link entries merge across units" = {
+      expr = results.files;
+      expected = {
+        files = [
           {
-            label = "evil-predicate";
-            when = _ctx: throw "boom, this predicate is evil";
-            pkg = "never";
+            dest = ".config/a";
+            src = "/a";
           }
-        ] ctx
-      );
-    }
-    {
-      name = "nested narrow + merge + option path";
-      pass =
-        results.nested == {
-          packages = [
-            "base"
-            "feltfomo-extra"
-          ];
-          services.hypridle.enable = true;
-        };
-    }
-    {
-      name = "file-link entries merge across units";
-      pass =
-        results.files == {
-          files = [
-            {
-              dest = ".config/a";
-              src = "/a";
-            }
-            {
-              dest = ".config/b";
-              src = "/b";
-            }
-          ];
-        };
-    }
-    {
-      name = "label never leaks into merged output";
-      pass = results.labeledUnit == { pkg = "khion-only"; };
-    }
-    {
-      name = "label/source are optional plain-string identification, not claims or config";
-      pass =
-        translate {
-          label = "my-unit";
-          source = "modules/foo.nix";
+          {
+            dest = ".config/b";
+            src = "/b";
+          }
+        ];
+      };
+    };
+    "test label never leaks into merged output" = {
+      expr = results.labeledUnit;
+      expected = {
+        pkg = "khion-only";
+      };
+    };
+    "test label/source are optional plain-string identification, not claims or config" = {
+      expr = translate {
+        label = "my-unit";
+        source = "modules/foo.nix";
+        pkg = "x";
+      };
+      expected = {
+        claim = { };
+        value = {
           pkg = "x";
-        } == {
-          claim = { };
-          value = {
-            pkg = "x";
-          };
-          label = "my-unit";
-          source = "modules/foo.nix";
         };
-    }
-    {
-      name = "metadata-only terminal units fail instead of silently disappearing";
-      pass =
+        label = "my-unit";
+        source = "modules/foo.nix";
+      };
+    };
+    "test metadata-only terminal units fail instead of silently disappearing" = {
+      expr =
         throws (translate {
           label = "orphan";
         })
         && throws (translate {
           hosts = [ "khion" ];
         });
-    }
-    {
-      name = "a contradictory metadata-only unit fails before selection";
-      pass = throws (
-        resolve [
-          {
-            label = "impossible-empty-unit";
-            hosts = [ "khion" ];
-            exceptHosts = [ "khion" ];
-          }
-        ] ctxLumi
-      );
-    }
-    {
-      name = "a claim-only parent remains valid when it narrows a real child";
-      pass =
-        resolve [
-          {
-            label = "claim-wrapper";
-            hosts = [ "khion" ];
-            children = [ { pkg = "nested"; } ];
-          }
-        ] ctx == {
-          pkg = "nested";
-        };
-    }
-    {
-      name = "a non-string label throws at author time";
-      pass = throws (translate {
+      expected = true;
+    };
+    "test a contradictory metadata-only unit fails before selection" = {
+      expr = resolve [
+        {
+          label = "impossible-empty-unit";
+          hosts = [ "khion" ];
+          exceptHosts = [ "khion" ];
+        }
+      ] ctxLumi;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/claim-polarity\\] a unit cannot set both 'hosts' and 'exceptHosts' -- pick the set or its complement";
+    };
+    "test a claim-only parent remains valid when it narrows a real child" = {
+      expr = resolve [
+        {
+          label = "claim-wrapper";
+          hosts = [ "khion" ];
+          children = [ { pkg = "nested"; } ];
+        }
+      ] ctx;
+      expected = {
+        pkg = "nested";
+      };
+    };
+    "test a non-string label throws at author time" = {
+      expr = translate {
         label = 123;
         pkg = "x";
-      });
-    }
-    {
-      name = "a non-string source throws at author time";
-      pass = throws (translate {
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-label\\] 'label' must be a plain string; got int";
+    };
+    "test a non-string source throws at author time" = {
+      expr = translate {
         source = { };
         pkg = "x";
-      });
-    }
-    {
-      name = "label/source don't inherit to children";
-      pass =
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-source\\] 'source' must be a plain string; got set";
+    };
+    "test label/source don't inherit to children" = {
+      expr =
         let
           t = translate {
             label = "parent";
@@ -615,188 +621,178 @@ let
           child = builtins.head t.children;
         in
         t.label == "parent" && !(child ? label);
-    }
-    {
-      name = "cross-host user claim still impossible through the surface";
-      pass = throws (
-        run ctx [
-          {
-            hosts = [ "khion" ];
-            children = [
-              {
-                users = [ "grandpa" ];
-                pkg = "x";
-              }
-            ];
-          }
-        ]
-      );
-    }
-    {
-      name = "misshaped reserved key throws at author time";
-      pass = throws (
-        run ctx [
-          {
-            users = {
-              alice = { };
-            };
-            pkg = "x";
-          }
-        ]
-      );
-    }
-    {
-      name = "system scope resolves a host-narrowed unit with no user bound";
-      pass =
-        results.systemHostHit == {
-          programs.hyprland.enable = true;
-        };
-    }
-    {
-      name = "system scope drops a host-narrowed unit off its claimed hosts";
-      pass = results.systemHostMiss == { };
-    }
-    {
-      name = "system scope rejects a users claim at author time";
-      pass = throws (
-        resolveSystem [
-          {
-            hosts = [ "khion" ];
-            users = [ "feltfomo" ];
-            programs.hyprland.enable = true;
-          }
-        ] ctxSystemKhion
-      );
-    }
-    {
-      name = "system scope rejects an exceptUsers claim at author time";
-      pass = throws (
-        resolveSystem [
-          {
-            exceptUsers = [ "grandpa" ];
-            programs.hyprland.enable = true;
-          }
-        ] ctxSystemKhion
-      );
-    }
-    {
-      name = "value escape hatch routes users.* as ordinary config";
-      pass =
-        results.valueEscapeHatch == {
-          users.users.alice = {
-            isNormalUser = true;
+      expected = true;
+    };
+    "test cross-host user claim still impossible through the surface" = {
+      expr = run ctx [
+        {
+          hosts = [ "khion" ];
+          children = [
+            {
+              users = [ "grandpa" ];
+              pkg = "x";
+            }
+          ];
+        }
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ pkg \\}: no user in \\{ grandpa \\} lives on any host in \\{ standalone/khion \\} -- this host/user c";
+    };
+    "test misshaped reserved key throws at author time" = {
+      expr = run ctx [
+        {
+          users = {
+            alice = { };
           };
-        };
-    }
-    {
-      name = "a claim narrows around a value block (hit)";
-      pass =
-        results.valueEscapeHatchHit == {
-          users.users.alice = {
-            isNormalUser = true;
-          };
-        };
-    }
-    {
-      name = "a claim narrows around a value block (miss drops)";
-      pass = results.valueEscapeHatchMiss == { };
-    }
-    {
-      name = "value block content is never re-scanned for claim keys";
-      pass =
-        results.valueNoSwallow == {
-          hosts = "not-a-claim-this-is-config";
-          when = "also-just-a-string";
-        };
-    }
-    {
-      name = "value + children matches the inline-config + children shape";
-      pass = results.nestedViaValue == results.nested;
-    }
-    {
-      name = "value mixed with inline config throws at author time";
-      pass = throws (
-        run ctx [
-          {
-            value = {
-              users.users.alice = {
-                isNormalUser = true;
-              };
-            };
-            pkg = "x";
-          }
-        ]
-      );
-    }
-    {
-      name = "strict rejects an unknown host name";
-      pass = throws (resolveStrict [ { pkg = "x"; } ] ctxUnknownHost);
-    }
-    {
-      name = "strict rejects an unknown user name";
-      pass = throws (resolveStrict [ { pkg = "x"; } ] ctxUnknownUser);
-    }
-    {
-      name = "strict rejects a known but impossible host x user pair";
-      pass = throws (resolveStrict [ { pkg = "x"; } ] ctxImpossiblePair);
-    }
-    {
-      name = "strict rescues an unknown-membership user instead of rejecting it";
-      pass =
-        resolveStrict [ { pkg = "x"; } ] ctxRescuedUnknownMembership == {
           pkg = "x";
+        }
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 'users' must be a list of names; got set\\. a reserved ownership key can't also be a config path on ";
+    };
+    "test system scope resolves a host-narrowed unit with no user bound" = {
+      expr = results.systemHostHit;
+      expected = {
+        programs.hyprland.enable = true;
+      };
+    };
+    "test system scope drops a host-narrowed unit off its claimed hosts" = {
+      expr = results.systemHostMiss;
+      expected = { };
+    };
+    "test system scope rejects a users claim at author time" = {
+      expr = resolveSystem [
+        {
+          hosts = [ "khion" ];
+          users = [ "feltfomo" ];
+          programs.hyprland.enable = true;
+        }
+      ] ctxSystemKhion;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: a system-scope \\(host-only\\) unit sets 'users' = \\[\"feltfomo\"\\] -- a host-only slice binds no user, so";
+    };
+    "test system scope rejects an exceptUsers claim at author time" = {
+      expr = resolveSystem [
+        {
+          exceptUsers = [ "grandpa" ];
+          programs.hyprland.enable = true;
+        }
+      ] ctxSystemKhion;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: a system-scope \\(host-only\\) unit sets 'exceptUsers' = \\[\"grandpa\"\\] -- a host-only slice binds no use";
+    };
+    "test value escape hatch routes users.* as ordinary config" = {
+      expr = results.valueEscapeHatch;
+      expected = {
+        users.users.alice = {
+          isNormalUser = true;
         };
-    }
-    {
-      name = "strict permissive path is byte-identical to the non-strict resolve";
-      pass =
-        resolveStrict [
-          {
-            hosts = [ "khion" ];
-            pkg = "khion-only";
-          }
-        ] ctx == results.hostHit;
-    }
-    {
-      name = "system-scope strict validates the host only and still resolves";
-      pass =
-        resolveSystemStrict [
-          {
-            hosts = [
-              "khion"
-              "lumi"
-            ];
-            programs.hyprland.enable = true;
-          }
-        ] ctxSystemKhion == results.systemHostHit;
-    }
-    {
-      name = "system-scope strict rejects an unknown host";
-      pass = throws (
-        resolveSystemStrict [
-          {
-            hosts = [
-              "khion"
-              "lumi"
-            ];
-            programs.hyprland.enable = true;
-          }
-        ] ctxSystemUnknownHost
-      );
-    }
-    {
-      name = "trace names host as the rejecting axis";
-      pass =
+      };
+    };
+    "test a claim narrows around a value block (hit)" = {
+      expr = results.valueEscapeHatchHit;
+      expected = {
+        users.users.alice = {
+          isNormalUser = true;
+        };
+      };
+    };
+    "test a claim narrows around a value block (miss drops)" = {
+      expr = results.valueEscapeHatchMiss;
+      expected = { };
+    };
+    "test value block content is never re-scanned for claim keys" = {
+      expr = results.valueNoSwallow;
+      expected = {
+        hosts = "not-a-claim-this-is-config";
+        when = "also-just-a-string";
+      };
+    };
+    "test value + children matches the inline-config + children shape" = {
+      expr = results.nestedViaValue;
+      expected = results.nested;
+    };
+    "test value mixed with inline config throws at author time" = {
+      expr = run ctx [
+        {
+          value = {
+            users.users.alice = {
+              isNormalUser = true;
+            };
+          };
+          pkg = "x";
+        }
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-mixed-value\\] a unit cannot mix a 'value' block with inline config keys \\(pkg\\) -- route everyth";
+    };
+    "test strict rejects an unknown host name" = {
+      expr = resolveStrict [ { pkg = "x"; } ] ctxUnknownHost;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'standalone ctx host 'ghost', user 'feltfomo'': axis 'host' claim can never be satisfied \\(disjoint nest";
+    };
+    "test strict rejects an unknown user name" = {
+      expr = resolveStrict [ { pkg = "x"; } ] ctxUnknownUser;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'standalone ctx host 'khion', user 'nobody'': axis 'user' claim can never be satisfied \\(disjoint nest o";
+    };
+    "test strict rejects a known but impossible host x user pair" = {
+      expr = resolveStrict [ { pkg = "x"; } ] ctxImpossiblePair;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'standalone ctx host 'khion', user 'grandpa'': no user in \\{ grandpa \\} lives on any host in \\{ standalone";
+    };
+    "test strict rescues an unknown-membership user instead of rejecting it" = {
+      expr = resolveStrict [ { pkg = "x"; } ] ctxRescuedUnknownMembership;
+      expected = {
+        pkg = "x";
+      };
+    };
+    "test strict permissive path is byte-identical to the non-strict resolve" = {
+      expr = resolveStrict [
+        {
+          hosts = [ "khion" ];
+          pkg = "khion-only";
+        }
+      ] ctx;
+      expected = results.hostHit;
+    };
+    "test system-scope strict validates the host only and still resolves" = {
+      expr = resolveSystemStrict [
+        {
+          hosts = [
+            "khion"
+            "lumi"
+          ];
+          programs.hyprland.enable = true;
+        }
+      ] ctxSystemKhion;
+      expected = results.systemHostHit;
+    };
+    "test system-scope strict rejects an unknown host" = {
+      expr = resolveSystemStrict [
+        {
+          hosts = [
+            "khion"
+            "lumi"
+          ];
+          programs.hyprland.enable = true;
+        }
+      ] ctxSystemUnknownHost;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'standalone ctx host 'ghost'': axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\)";
+    };
+    "test trace names host as the rejecting axis" = {
+      expr =
         let
           leaf = builtins.head hostMissTrace.trace;
         in
         hostMissTrace.value == results.hostMiss
         && leaf.rejectedBy == [ "host" ]
         && leaf.axisResults.host.decision == "rejected";
-    }
-    {
-      name = "trace names predicate rejection without inventing members";
-      pass =
+      expected = true;
+    };
+    "test trace names predicate rejection without inventing members" = {
+      expr =
         let
           leaf = builtins.head whenMissTrace.trace;
         in
@@ -804,10 +800,10 @@ let
         && leaf.rejectedBy == [ "when" ]
         && leaf.axisResults.when.decision == "rejected"
         && !(leaf.axisResults.when.details ? materializedMembers);
-    }
-    {
-      name = "trace reuses diagnostic identity and reports pre-merge contribution";
-      pass =
+      expected = true;
+    };
+    "test trace reuses diagnostic identity and reports pre-merge contribution" = {
+      expr =
         let
           leaf = builtins.head labeledTrace.trace;
         in
@@ -815,10 +811,10 @@ let
         && leaf.identity == "unit 'khion-only-unit'"
         && leaf.preMergeContribution.stage == "pre-merge"
         && leaf.preMergeContribution.offeredPaths == [ "pkg" ];
-    }
-    {
-      name = "plain and trace surface entries both preserve impossible claims";
-      pass =
+      expected = true;
+    };
+    "test plain and trace surface entries both preserve impossible claims" = {
+      expr =
         let
           units = [
             {
@@ -833,107 +829,102 @@ let
           ];
         in
         throws (resolve units ctx) && throws (resolveTrace units ctx);
-    }
-    {
-      name = "profiled surface applies unanimous unit selection";
-      pass =
-        resolveProfiled [
-          {
-            mergeProfile = "last-wins";
-            port = 80;
-          }
-          {
-            mergeProfile = "last-wins";
-            port = 443;
-          }
-        ] ctx == {
+      expected = true;
+    };
+    "test profiled surface applies unanimous unit selection" = {
+      expr = resolveProfiled [
+        {
+          mergeProfile = "last-wins";
+          port = 80;
+        }
+        {
+          mergeProfile = "last-wins";
           port = 443;
-        };
-    }
-    {
-      name = "profiled system surface applies unanimous unit selection";
-      pass =
-        resolveSystemProfiled [
-          {
-            mergeProfile = "last-wins";
-            port = 80;
-          }
-          {
-            mergeProfile = "last-wins";
-            port = 443;
-          }
-        ] ctxSystemKhion == {
+        }
+      ] ctx;
+      expected = {
+        port = 443;
+      };
+    };
+    "test profiled system surface applies unanimous unit selection" = {
+      expr = resolveSystemProfiled [
+        {
+          mergeProfile = "last-wins";
+          port = 80;
+        }
+        {
+          mergeProfile = "last-wins";
           port = 443;
-        };
-    }
-    {
-      name = "profiled surface rejects unknown profiles on inactive units";
-      pass = throws (
-        resolveProfiled [
-          {
-            hosts = [ "lumi" ];
-            mergeProfile = "missing";
-            pkg = "inactive";
-          }
-        ] ctx
-      );
-    }
-    {
-      name = "default surface reserves mergeProfile without enabling it";
-      pass =
-        resolve [
-          {
-            mergeProfile = "last-wins";
-            pkg = "kept";
-          }
-        ] ctx == {
+        }
+      ] ctxSystemKhion;
+      expected = {
+        port = 443;
+      };
+    };
+    "test profiled surface rejects unknown profiles on inactive units" = {
+      expr = resolveProfiled [
+        {
+          hosts = [ "lumi" ];
+          mergeProfile = "missing";
+          pkg = "inactive";
+        }
+      ] ctx;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-merge-profile-unknown\\] unknown merge profile 'missing'";
+    };
+    "test default surface reserves mergeProfile without enabling it" = {
+      expr = resolve [
+        {
+          mergeProfile = "last-wins";
           pkg = "kept";
-        };
-    }
-    {
-      name = "a parent merge profile doesn't inherit into child contributors";
-      pass = throws (
-        resolveProfiled [
-          {
-            mergeProfile = "last-wins";
-            children = [
-              { port = 80; }
-              { port = 443; }
-            ];
-          }
-        ] ctx
-      );
-    }
-    {
-      name = "a unit must be an attribute set";
-      pass = throws (translate "not-a-unit");
-    }
-    {
-      name = "children must be a list of unit attribute sets";
-      pass =
-        throws (translate {
-          children = { };
-        })
-        && throws (translate {
-          children = [ 1 ];
-        });
-    }
-    {
-      name = "value escape hatch requires an attribute set";
-      pass = throws (translate {
+        }
+      ] ctx;
+      expected = {
+        pkg = "kept";
+      };
+    };
+    "test a parent merge profile doesn't inherit into child contributors" = {
+      expr = resolveProfiled [
+        {
+          mergeProfile = "last-wins";
+          children = [
+            { port = 80; }
+            { port = 443; }
+          ];
+        }
+      ] ctx;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/merge/conflict\\] conflict at port: co-owners \"unlabeled unit \\{ port \\}\" set differing values";
+    };
+    "test a unit must be an attribute set" = {
+      expr = translate "not-a-unit";
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-shape\\] a unit must be an attribute set; got string";
+    };
+    "test children must be a list" = {
+      expr = translate {
+        children = { };
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-children\\] 'children' must be a list of unit attribute sets";
+    };
+    "test children must contain unit attribute sets" = {
+      expr = translate {
+        children = [ 1 ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-children\\] 'children' must be a list of unit attribute sets";
+    };
+    "test value escape hatch requires an attribute set" = {
+      expr = translate {
         value = "not-config";
-      });
-    }
-  ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/unit-value\\] 'value' must be an attribute set; got string";
+    };
+  };
 
-  failing = builtins.filter (c: !c.pass) checks;
-
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "ownerships surface tests FAILED: ${lib.concatMapStringsSep ", " (c: c.name) failing}";
 in
 {
-  inherit results ok;
+  inherit results tests;
 }

@@ -3,11 +3,6 @@ let
   system = "x86_64-linux";
   pkgs = nixpkgs.legacyPackages.${system};
   inherit (pkgs) lib;
-  dependencies = import ../src/dependencies.nix {
-    inherit lib;
-    axiom = lexicon.inputs.axiom.lib.axiom { inherit lib; };
-    krisisSource = lexicon.inputs.krisis;
-  };
   examples = import ../examples/program-suite.nix { inherit lexicon nixpkgs; };
   minimalOutput = (import ../examples/program-minimal/flake.nix).outputs { inherit lexicon nixpkgs; };
   filesOutput = (import ../examples/program-files/flake.nix).outputs { inherit lexicon nixpkgs; };
@@ -134,13 +129,15 @@ let
   directClaimFails = fails (direct {
     users = [ "river" ];
   });
-  templateListTopClaimFails = fails (selectionProgram {
-    theme = {
-      id = "mixed-list";
-      users = [ "alice" ];
-      templates = [ ];
+  claimedTemplates =
+    templates:
+    selectionProgram {
+      theme = {
+        id = "claimed-list";
+        users = [ "alice" ];
+        inherit templates;
+      };
     };
-  });
   missingFileUserFails = fails (
     (systemDirect {
       files = [
@@ -153,66 +150,112 @@ let
       moduleArgs
   );
   ordinaryNixos = (direct { nixos.users.users.river.isNormalUser = true; }).nixos moduleArgs;
-  boundary = import ./program {
-    inherit
-      lib
-      pkgs
-      lexicon
-      ;
-    inherit (dependencies) axiom krisis;
-  };
   fileManifest = filesOutput.nixosConfigurations.file.config.lexicon.furnish.manifestData;
   firstFile = builtins.head fileManifest;
-  cases = {
-    minimal =
-      samples."minimal.result" == {
+  tests = {
+    "test minimal" = {
+      expr = samples."minimal.result";
+      expected = {
         furnishIntegration = false;
         mode = "focused";
         outputs = [ "nixos" ];
       };
-    predictableEdit = samples."minimal.changed".mode == "quiet";
-    sparsePackage = samples."capabilities.package".outputs == [ "homeManager" ];
-    sparseImports = samples."capabilities.imports".outputs == [ "homeManager" ];
-    sparseNixos =
-      samples."capabilities.nixos" == {
+    };
+    "test predictable edit" = {
+      expr = samples."minimal.changed".mode;
+      expected = "quiet";
+    };
+    "test sparse package" = {
+      expr = samples."capabilities.package".outputs;
+      expected = [ "homeManager" ];
+    };
+    "test sparse imports" = {
+      expr = samples."capabilities.imports".outputs;
+      expected = [ "homeManager" ];
+    };
+    "test sparse nixos" = {
+      expr = samples."capabilities.nixos";
+      expected = {
         furnishRuntime = false;
         normalUser = true;
         outputs = [ "nixos" ];
       };
-    sparseEmpty = samples."capabilities.empty".outputs == [ ];
-    emptyTemplateListIsInert = builtins.attrNames emptyTemplateList == [ ];
-    templateListTopClaimsRejected = templateListTopClaimFails;
-    studioHomeModuleGraph =
-      samples."studio.result".package == "helix"
-      && samples."studio.result".editor == "hx"
-      && samples."studio.result".homeUser == "river"
-      && samples."studio.result".homeDirectory == "/home/river"
-      && samples."studio.result".homeStateVersion == "26.05";
-    fileAutomatic =
-      samples."files.file".outputs == [ "nixos" ]
-      && samples."files.file".furnishEnabled
-      && samples."files.file".serviceEnabled
-      &&
-        firstFile.authority == {
-          scope = "user";
-          identity = "river";
-        }
-      && firstFile.managedRoot == "/home/river"
-      && firstFile.filesystemIdentity.namespace == "${system}/studio";
-    ownershipSelection =
-      samples."ownerships.result".alice.files == [ "/home/alice/.config/helix/config.toml" ]
-      && samples."ownerships.result".bob.files == [ ];
-    denBoundary =
-      samples."den.result".entryCount == 1 && samples."den.result".authority.identity == "river";
-    directClaimsRejected = directClaimFails;
-    fileTargetRequired = missingFileUserFails;
-    ordinaryNixosOpaque = (builtins.head ordinaryNixos.imports).users.users.river.isNormalUser;
-    callbackCompatibility = boundary.ok;
+    };
+    "test sparse empty" = {
+      expr = samples."capabilities.empty".outputs;
+      expected = [ ];
+    };
+    "test empty template list is inert" = {
+      expr = builtins.attrNames emptyTemplateList;
+      expected = [ ];
+    };
+    "test a claim beside an empty template list stays inert" = {
+      expr = builtins.attrNames (claimedTemplates [ ]);
+      expected = [ ];
+    };
+    "test a claim beside templates selects the whole theme through ownerships" = {
+      expr =
+        (claimedTemplates [
+          {
+            renderers.dms = {
+              source = ./program/fixtures/sample-tree/safe-render.nix;
+              output = ".config/editor/dms-palette";
+            };
+          }
+        ]).nixos
+          moduleArgs;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit '\\$\\.theme': axis 'user' is narrowed on by claim \\{ set = \\[ \"alice\" \\]; tag = \"include\"; \\}";
+    };
+    "test studio home module graph" = {
+      expr =
+        samples."studio.result".package == "helix"
+        && samples."studio.result".editor == "hx"
+        && samples."studio.result".homeUser == "river"
+        && samples."studio.result".homeDirectory == "/home/river"
+        && samples."studio.result".homeStateVersion == "26.05";
+      expected = true;
+    };
+    "test file automatic" = {
+      expr =
+        samples."files.file".outputs == [ "nixos" ]
+        && samples."files.file".furnishEnabled
+        && samples."files.file".serviceEnabled
+        &&
+          firstFile.authority == {
+            scope = "user";
+            identity = "river";
+          }
+        && firstFile.managedRoot == "/home/river"
+        && firstFile.filesystemIdentity.namespace == "${system}/studio";
+      expected = true;
+    };
+    "test ownership selection" = {
+      expr =
+        samples."ownerships.result".alice.files == [ "/home/alice/.config/helix/config.toml" ]
+        && samples."ownerships.result".bob.files == [ ];
+      expected = true;
+    };
+    "test den boundary" = {
+      expr = samples."den.result".entryCount == 1 && samples."den.result".authority.identity == "river";
+      expected = true;
+    };
+    "test direct claims rejected" = {
+      expr = directClaimFails;
+      expected = true;
+    };
+    "test file target required" = {
+      expr = missingFileUserFails;
+      expected = true;
+    };
+    "test ordinary nixos opaque" = {
+      expr = (builtins.head ordinaryNixos.imports).users.users.river.isNormalUser;
+      expected = true;
+    };
   };
-  failing = builtins.filter (name: !cases.${name}) (builtins.attrNames cases);
 in
 {
-  inherit samples cases;
+  inherit samples tests;
   inventories = {
     constructors = constructorNames;
     claims = claimFields;
@@ -254,9 +297,4 @@ in
     "direct.claim"
     "direct.file-without-user"
   ];
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "Program examples failed: ${lib.concatStringsSep ", " failing}";
 }

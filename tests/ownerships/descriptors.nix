@@ -136,10 +136,9 @@ let
     builtins.filter (descriptor: descriptor.name == "user") axes.descriptors
   );
 
-  cases = [
-    {
-      name = "set axis selection leaves a skipped roster member tail opaque";
-      pass =
+  tests = {
+    "test set axis selection leaves a skipped roster member tail opaque" = {
+      expr =
         let
           ownerships = import ../../src/ownerships {
             inherit
@@ -170,30 +169,30 @@ let
           ctx == {
           selected = true;
         };
-    }
-    {
-      name = "suggestion helpers retain thresholds and the first tied candidate";
-      pass =
+      expected = true;
+    };
+    "test suggestion helpers retain thresholds and the first tied candidate" = {
+      expr =
         axes.editDistance "kitten" "sitting" == 3
         && axes.suggest [ "bat" "car" ] "cat" == "bat"
         && axes.suggest [ "far" ] "cat" == null
         && axes.suggest [ "sitting" ] "kitten" == "sitting"
         && axes.suggestionFor [ "bat" "car" ] "cat" == " -- did you mean 'bat'?"
         && axes.suggestionFor [ "far" ] "cat" == "";
-    }
-    {
-      name = "descriptor preparation transports opaque extension fields";
-      pass =
+      expected = true;
+    };
+    "test descriptor preparation transports opaque extension fields" = {
+      expr =
         (axes.compileDescriptors [
           (roleDescriptor // { extensionPayload = throw "opaque descriptor extension payload"; })
-        ]).claimKeys == [
-          "roles"
-          "exceptRoles"
-        ];
-    }
-    {
-      name = "descriptor shape failures accumulate before duplicate registration";
-      pass =
+        ]).claimKeys;
+      expected = [
+        "roles"
+        "exceptRoles"
+      ];
+    };
+    "test descriptor shape failures accumulate before duplicate registration" = {
+      expr =
         let
           diagnostics = diagnosticAxes.validateDescriptors [
             (removeAttrs roleDescriptor [ "parse" ])
@@ -210,26 +209,25 @@ let
             message = "axis descriptor 'role' is missing required field 'axisFor'";
           }
         ];
-    }
-    {
-      name = "descriptor collision diagnostics retain registry and authored order";
-      pass =
-        map (diagnostic: diagnostic.code) (
-          diagnosticAxes.validateDescriptors [
-            roleDescriptor
-            roleDescriptor
-          ]
-        ) == [
-          "ownerships/descriptor-duplicate-name"
-          "ownerships/descriptor-duplicate-key"
-          "ownerships/descriptor-duplicate-key"
-          "ownerships/descriptor-duplicate-order"
-          "ownerships/descriptor-duplicate-order"
-        ];
-    }
-    {
-      name = "compiled descriptors retain ordered syntax and roster projections";
-      pass =
+      expected = true;
+    };
+    "test descriptor collision diagnostics retain registry and authored order" = {
+      expr = map (diagnostic: diagnostic.code) (
+        diagnosticAxes.validateDescriptors [
+          roleDescriptor
+          roleDescriptor
+        ]
+      );
+      expected = [
+        "ownerships/descriptor-duplicate-name"
+        "ownerships/descriptor-duplicate-key"
+        "ownerships/descriptor-duplicate-key"
+        "ownerships/descriptor-duplicate-order"
+        "ownerships/descriptor-duplicate-order"
+      ];
+    };
+    "test compiled descriptors retain ordered syntax and roster projections" = {
+      expr =
         let
           compiled = axes.compileDescriptors descriptors;
         in
@@ -246,101 +244,98 @@ let
             "user"
             "role"
           ];
-    }
-    {
-      name = "relation stages follow satisfiability in registry order";
-      pass =
-        map (stage: stage.name or null) (resolveLib.engineArgsFor relationRoster).stages == [
-          null
-          null
-          "host-user-membership"
-          "host-role-membership"
-        ];
-    }
-    {
-      name = "production descriptors remain host, user, and when";
-      pass =
-        map (descriptor: descriptor.name) axes.descriptors == [
-          "host"
-          "user"
-          "when"
-        ];
-    }
-    {
-      name = "one role descriptor adds include and exclude author keys";
-      pass =
-        surface.claimKeys == [
-          "hosts"
-          "users"
-          "exceptHosts"
-          "exceptUsers"
-          "when"
-          "roles"
-          "exceptRoles"
-        ];
-    }
-    {
-      name = "test-only host/role relation accepts a known compatible pair";
-      pass =
-        resolve [
-          {
-            hosts = [ "khion" ];
-            roles = [ "desktop" ];
-            enabled = true;
-          }
-        ] ctx == {
+      expected = true;
+    };
+    "test relation stages follow satisfiability in registry order" = {
+      expr = map (stage: stage.name or null) (resolveLib.engineArgsFor relationRoster).stages;
+      expected = [
+        null
+        null
+        "host-user-membership"
+        "host-role-membership"
+      ];
+    };
+    "test production descriptors remain host, user, and when" = {
+      expr = map (descriptor: descriptor.name) axes.descriptors;
+      expected = [
+        "host"
+        "user"
+        "when"
+      ];
+    };
+    "test one role descriptor adds include and exclude author keys" = {
+      expr = surface.claimKeys;
+      expected = [
+        "hosts"
+        "users"
+        "exceptHosts"
+        "exceptUsers"
+        "when"
+        "roles"
+        "exceptRoles"
+      ];
+    };
+    "test test-only host/role relation accepts a known compatible pair" = {
+      expr = resolve [
+        {
+          hosts = [ "khion" ];
+          roles = [ "desktop" ];
           enabled = true;
-        };
-    }
-    {
-      name = "test-only host/role relation rejects a known incompatible pair";
-      pass = throws (
-        resolve [
-          {
-            hosts = [ "khion" ];
-            roles = [ "laptop" ];
-            enabled = true;
-          }
-        ] ctx
-      );
-    }
-    {
-      name = "test-only host/role relation skips a global host side";
-      pass = resolve [ missingRoleUnit ] ctx == { enabled = true; };
-    }
-    {
-      name = "role include selects its matching standalone context";
-      pass = resolve [ missingRoleUnit ] ctx == { enabled = true; };
-    }
-    {
-      name = "role include drops a non-matching standalone context";
-      pass = resolve [ missingRoleUnit ] (ctx // { role.name = "laptop"; }) == { };
-    }
-    {
-      name = "role exclude keeps a context outside the excluded set";
-      pass =
-        resolve [
-          {
-            exceptRoles = [ "laptop" ];
-            enabled = true;
-          }
-        ] ctx == {
+        }
+      ] ctx;
+      expected = {
+        enabled = true;
+      };
+    };
+    "test test-only host/role relation rejects a known incompatible pair" = {
+      expr = resolve [
+        {
+          hosts = [ "khion" ];
+          roles = [ "laptop" ];
           enabled = true;
-        };
-    }
-    {
-      name = "role exclude drops a context inside the excluded set";
-      pass =
-        resolve [
-          {
-            exceptRoles = [ "desktop" ];
-            enabled = true;
-          }
-        ] ctx == { };
-    }
-    {
-      name = "role projection extends the standalone roster through define.role";
-      pass =
+        }
+      ] ctx;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ enabled \\}: no role in \\{ laptop \\} belongs to any host in \\{ standalone/khion \\} \\(axes host, ro";
+    };
+    "test test-only host/role relation skips a global host side" = {
+      expr = resolve [ missingRoleUnit ] ctx;
+      expected = {
+        enabled = true;
+      };
+    };
+    "test role include selects its matching standalone context" = {
+      expr = resolve [ missingRoleUnit ] ctx;
+      expected = {
+        enabled = true;
+      };
+    };
+    "test role include drops a non-matching standalone context" = {
+      expr = resolve [ missingRoleUnit ] (ctx // { role.name = "laptop"; });
+      expected = { };
+    };
+    "test role exclude keeps a context outside the excluded set" = {
+      expr = resolve [
+        {
+          exceptRoles = [ "laptop" ];
+          enabled = true;
+        }
+      ] ctx;
+      expected = {
+        enabled = true;
+      };
+    };
+    "test role exclude drops a context inside the excluded set" = {
+      expr = resolve [
+        {
+          exceptRoles = [ "desktop" ];
+          enabled = true;
+        }
+      ] ctx;
+      expected = { };
+    };
+    "test role projection extends the standalone roster through define.role" = {
+      expr =
         roster.roles == [
           "desktop"
           "laptop"
@@ -356,116 +351,109 @@ let
             "users"
             "usersWithUnknownMembership"
           ];
-    }
-    {
-      name = "missing role context throws through the structured engine diagnostic path";
-      pass =
+      expected = true;
+    };
+    "test missing role context throws through the structured engine diagnostic path" = {
+      expr =
         throws (resolve [ missingRoleUnit ] ctxWithoutRole)
         &&
           renderedMissingRole
           == "ownerships: 1 ownership error(s):\n  - unlabeled unit { enabled }: ${missingRoleReason} (axis 'role', claim ${
             lib.generators.toPretty { multiline = false; } missingRoleLeaf.claim
           })";
-    }
-    {
-      name = "system scope rejects a nested role claim through the generic recursive guard";
-      pass = throws (
-        resolveSystem [
-          {
-            children = [
-              {
-                roles = [ "desktop" ];
-                enabled = true;
-              }
-            ];
-          }
-        ] { host.name = "khion"; }
-      );
-    }
-    {
-      name = "role system-scope message is pinned";
-      pass =
-        roleDescriptor.scopeError "system" "roles" [ "desktop" ]
-        == "ownerships: a system-scope unit sets 'roles' = [\"desktop\"] -- this ownership axis is unavailable in system scope";
-    }
-    {
-      name = "user system-scope message remains byte-identical";
-      pass =
-        userDescriptor.scopeError "system" "users" [ "feltfomo" ]
-        == "ownerships: a system-scope (host-only) unit sets 'users' = [\"feltfomo\"] -- a host-only slice binds no user, so it cannot narrow on users. drop the user claim or resolve this unit at user scope.";
-    }
-    {
-      name = "descriptor registration rejects malformed, duplicate-name, duplicate-key, and duplicate-order entries";
-      pass =
-        let
-          duplicateKey = roleDescriptor // {
-            name = "other";
-          };
-          duplicateOrder = roleDescriptor // {
-            name = "other";
-            authorKeys = [
-              (
-                (builtins.elemAt roleDescriptor.authorKeys 0)
-                // {
-                  name = "otherRoles";
-                }
-              )
-              (
-                (builtins.elemAt roleDescriptor.authorKeys 1)
-                // {
-                  name = "otherExceptRoles";
-                }
-              )
-            ];
-          };
-        in
-        throws (axes.validateDescriptors [ { } ])
-        && throws (
-          axes.validateDescriptors [
-            roleDescriptor
-            roleDescriptor
-          ]
-        )
-        && throws (
-          axes.validateDescriptors [
-            roleDescriptor
-            duplicateKey
-          ]
-        )
-        && throws (
-          axes.validateDescriptors [
-            roleDescriptor
-            duplicateOrder
-          ]
-        );
-    }
-    {
-      name = "relation registration rejects malformed, duplicate-name, and unknown-axis entries";
-      pass =
-        throws (axes.validateRelations descriptors [ (removeAttrs hostRoleRelation [ "reason" ]) ])
-        && throws (
-          axes.validateRelations descriptors [
-            hostRoleRelation
-            (hostRoleRelation // { rightAxis = "user"; })
-          ]
-        )
-        && throws (
-          axes.validateRelations descriptors [
-            (hostRoleRelation // { rightAxis = "missing"; })
-          ]
-        );
-    }
-  ];
+      expected = true;
+    };
+    "test system scope rejects a nested role claim through the generic recursive guard" = {
+      expr = resolveSystem [
+        {
+          children = [
+            {
+              roles = [ "desktop" ];
+              enabled = true;
+            }
+          ];
+        }
+      ] { host.name = "khion"; };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: a system-scope unit sets 'roles' = \\[\"desktop\"\\] -- this ownership axis is unavailable in system sco";
+    };
+    "test role system-scope message is pinned" = {
+      expr = roleDescriptor.scopeError "system" "roles" [ "desktop" ];
+      expected = "ownerships: a system-scope unit sets 'roles' = [\"desktop\"] -- this ownership axis is unavailable in system scope";
+    };
+    "test user system-scope message remains byte-identical" = {
+      expr = userDescriptor.scopeError "system" "users" [ "feltfomo" ];
+      expected = "ownerships: a system-scope (host-only) unit sets 'users' = [\"feltfomo\"] -- a host-only slice binds no user, so it cannot narrow on users. drop the user claim or resolve this unit at user scope.";
+    };
+    "test descriptor registration rejects malformed, duplicate-name, duplicate-key, and duplicate-order entries" =
+      {
+        expr =
+          let
+            duplicateKey = roleDescriptor // {
+              name = "other";
+            };
+            duplicateOrder = roleDescriptor // {
+              name = "other";
+              authorKeys = [
+                (
+                  (builtins.elemAt roleDescriptor.authorKeys 0)
+                  // {
+                    name = "otherRoles";
+                  }
+                )
+                (
+                  (builtins.elemAt roleDescriptor.authorKeys 1)
+                  // {
+                    name = "otherExceptRoles";
+                  }
+                )
+              ];
+            };
+          in
+          throws (axes.validateDescriptors [ { } ])
+          && throws (
+            axes.validateDescriptors [
+              roleDescriptor
+              roleDescriptor
+            ]
+          )
+          && throws (
+            axes.validateDescriptors [
+              roleDescriptor
+              duplicateKey
+            ]
+          )
+          && throws (
+            axes.validateDescriptors [
+              roleDescriptor
+              duplicateOrder
+            ]
+          );
+        expected = true;
+      };
+    "test relation registration rejects a relation without a reason" = {
+      expr = axes.validateRelations descriptors [ (removeAttrs hostRoleRelation [ "reason" ]) ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/relation-malformed\\] relation 'host-role-membership' is missing required field 'reason'";
+    };
+    "test relation registration rejects a duplicate relation name" = {
+      expr = axes.validateRelations descriptors [
+        hostRoleRelation
+        (hostRoleRelation // { rightAxis = "user"; })
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/relation-duplicate-name\\] duplicate relation name 'host-role-membership'";
+    };
+    "test relation registration rejects an unknown axis" = {
+      expr = axes.validateRelations descriptors [
+        (hostRoleRelation // { rightAxis = "missing"; })
+      ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/relation-unknown-axis\\] relation 'host-role-membership' references unknown axis 'missing' as rightA";
+    };
+  };
 
-  failing = builtins.filter (case: !case.pass) cases;
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "ownerships descriptor tests FAILED: ${
-        lib.concatMapStringsSep ", " (case: case.name) failing
-      }";
 in
 {
-  inherit cases ok;
+  inherit tests;
 }

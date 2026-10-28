@@ -7,7 +7,6 @@ let
   engine = import ../../src/ownerships/engine.nix { inherit lib krisis axiom; };
   axes = import ../../src/ownerships/axes.nix { inherit lib krisis axiom; };
   merge = import ../../src/ownerships/merge.nix { inherit lib krisis axiom; };
-  importUnitTests = import ./import-units.nix { inherit lib krisis axiom; };
 
   inherit (axes)
     include
@@ -385,113 +384,129 @@ let
     }
   ];
 
-  cases = [
-    {
-      name = "prepared stage registrations reject malformed carriers and unregistered records";
-      pass =
-        throws (engine.check { _ownershipStages = 1; } registry [ ])
-        && throws (engine.check { for = _: [ ]; } registry [ ])
-        && throws (
-          engine.check {
-            _ownershipStages = _: [ ];
-            extra = throw "unused extra registration";
-          } registry [ ]
-        )
-        && throws (engine.check 1 registry [ ])
-        && engine.check (engine.prepareStages [ ]) registry [ ] == [ ];
-    }
-    {
-      name = "registered host/user relation is byte-identical to the frozen membership check";
-      pass =
+  impossibleArgs = {
+    inherit registry ctx;
+    merge = defaultMerge;
+  };
+  impossibleUnit = {
+    claim.host = include [ "nobody" ];
+    value.x = 1;
+  };
+
+  tests = {
+    "test prepared stage carriers reject a non-function stage field" = {
+      expr = engine.check { _ownershipStages = 1; } registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: invalid prepared stage registration";
+    };
+    "test prepared stage carriers reject an unregistered record" = {
+      expr = engine.check { for = _: [ ]; } registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "axiom: phases registrations must be a list; got set";
+    };
+    "test prepared stage carriers reject extra fields without forcing them" = {
+      expr = engine.check {
+        _ownershipStages = _: [ ];
+        extra = throw "unused extra registration";
+      } registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: invalid prepared stage registration";
+    };
+    "test prepared stage carriers reject a non-record registration" = {
+      expr = engine.check 1 registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "axiom: phases registrations must be a list; got int";
+    };
+    "test an empty prepared stage set checks clean" = {
+      expr = engine.check (engine.prepareStages [ ]) registry [ ];
+      expected = [ ];
+    };
+    "test registered host/user relation is byte-identical to the frozen membership check" = {
+      expr =
         hostUserRelation.unknown.left == [ ]
         && hostUserRelation.unknown.right == [ "nomad" ]
         && lib.all (
           entry: relationCheck relationRegistry entry.leaf == legacyRelationCheck relationRegistry entry.leaf
         ) relationMatrix;
-    }
-    {
-      name = "registered relation pins the exact known-none diagnostic and rendered string";
-      pass =
+      expected = true;
+    };
+    "test registered relation pins the exact known-none diagnostic and rendered string" = {
+      expr =
         relationCheck relationRegistry knownNoneLeaf == [ knownNoneExpected ]
         &&
           knownNoneExpected.reason
           == "no user in { grandpa } lives on any host in { khion } -- this host/user co-ownership can never apply"
         && engine.renderDiags [ knownNoneExpected ] == knownNoneRendered;
-    }
-    {
-      name = "relation diagnostics identify a poison-carrying leaf without forcing its payload";
-      pass =
+      expected = true;
+    };
+    "test relation diagnostics identify a poison-carrying leaf without forcing its payload" = {
+      expr =
         let
           leaf = relationLeaf (include [ "khion" ]) (include [ "grandpa" ]);
           rendered = engine.renderDiags (relationCheck relationRegistry leaf);
         in
         (builtins.tryEval (builtins.deepSeq rendered rendered)).success;
-    }
-    {
-      name = "pre-select tree validity rejects a greeter claimed for vm before selection";
-      pass = throws (
-        engine.resolve stageArgs {
-          label = "vm greeter";
-          claim.host = include [ "vm" ];
-          value.greeter = true;
+      expected = true;
+    };
+    "test pre-select tree validity rejects a greeter claimed for vm before selection" = {
+      expr = engine.resolve stageArgs {
+        label = "vm greeter";
+        claim.host = include [ "vm" ];
+        value.greeter = true;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'vm greeter': a greeter cannot be owned by vm";
+    };
+
+    "test post-select coverage ignores an inactive bootloader" = {
+      expr = engine.resolve stageArgs {
+        claim.host = include [ "lumi" ];
+        value.bootloader = true;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'bootloader coverage': this build must have exactly one bootloader survivor";
+    };
+
+    "test post-select coverage accepts exactly one active bootloader" = {
+      expr = engine.resolve stageArgs {
+        claim.host = include [ "khion" ];
+        value.bootloader = true;
+      };
+      expected = {
+        bootloader = true;
+      };
+    };
+
+    "test tree diagnostics aggregate in registration order independent of cross-view list position" = {
+      expr = map (diagnostic: diagnostic.reason) (
+        engine.stageDiagnostics "tree" orderedTreeStages {
+          registry = stageRegistry;
+          leaves = [ ];
         }
       );
-    }
+      expected = [
+        "first tree diagnostic"
+        "second tree diagnostic"
+      ];
+    };
 
-    {
-      name = "post-select coverage ignores an inactive bootloader";
-      pass = throws (
-        engine.resolve stageArgs {
-          claim.host = include [ "lumi" ];
-          value.bootloader = true;
-        }
-      );
-    }
-
-    {
-      name = "post-select coverage accepts exactly one active bootloader";
-      pass =
-        engine.resolve stageArgs {
-          claim.host = include [ "khion" ];
-          value.bootloader = true;
-        } == {
-          bootloader = true;
-        };
-    }
-
-    {
-      name = "tree diagnostics aggregate in registration order independent of cross-view list position";
-      pass =
-        map (diagnostic: diagnostic.reason) (
-          engine.stageDiagnostics "tree" orderedTreeStages {
-            registry = stageRegistry;
-            leaves = [ ];
+    "test an unknown stage view throws instead of silently failing open" = {
+      expr = engine.resolve {
+        inherit registry ctx;
+        merge = defaultMerge;
+        stages = [
+          {
+            view = "survivior";
+            run = _args: [ ];
           }
-        ) == [
-          "first tree diagnostic"
-          "second tree diagnostic"
         ];
-    }
+      } { value.x = 1; };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: unknown stage view \"survivior\"";
+    };
 
-    {
-      name = "an unknown stage view throws instead of silently failing open";
-      pass = throws (
-        engine.resolve {
-          inherit registry ctx;
-          merge = defaultMerge;
-          stages = [
-            {
-              view = "survivior";
-              run = _args: [ ];
-            }
-          ];
-        } { value.x = 1; }
-      );
-    }
-
-    {
-      name = "all stage views and their trace reports preserve payload laziness";
-      pass =
+    "test all stage views and their trace reports preserve payload laziness" = {
+      expr =
         let
           unit.value = {
             pkg = poisonDerivation;
@@ -520,33 +535,32 @@ let
         && map (report: report.view) observed.stageReports.leaf == [ "leaf" ]
         && map (report: report.view) observed.stageReports.tree == [ "tree" ]
         && map (report: report.view) observed.stageReports.survivors == [ "survivors" ];
-    }
-    {
-      name = "host+user nest resolves";
-      pass =
-        resolve { } {
-          claim.host = include [
-            "khion"
-            "lumi"
-          ];
-          children = [
-            { value.packages = [ "a" ]; }
-            {
-              claim.user = include [ "feltfomo" ];
-              value.packages = [ "b" ];
-            }
-          ];
-        } == {
-          packages = [
-            "a"
-            "b"
-          ];
-        };
-    }
+      expected = true;
+    };
+    "test host+user nest resolves" = {
+      expr = resolve { } {
+        claim.host = include [
+          "khion"
+          "lumi"
+        ];
+        children = [
+          { value.packages = [ "a" ]; }
+          {
+            claim.user = include [ "feltfomo" ];
+            value.packages = [ "b" ];
+          }
+        ];
+      };
+      expected = {
+        packages = [
+          "a"
+          "b"
+        ];
+      };
+    };
 
-    {
-      name = "third axis (role) composes with no core change";
-      pass =
+    "test third axis (role) composes with no core change" = {
+      expr =
         engine.resolve
           {
             registry = registry // {
@@ -568,69 +582,66 @@ let
           {
             claim.role = include [ "desktop" ];
             value.enable = true;
-          } == {
-          enable = true;
-        };
-    }
+          };
+      expected = {
+        enable = true;
+      };
+    };
 
-    {
-      name = "disjoint nest -> impossible";
-      pass = throws (
-        resolve { } {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.host = include [ "lumi" ];
-              value.x = 1;
-            }
-          ];
-        }
-      );
-    }
+    "test disjoint nest -> impossible" = {
+      expr = resolve { } {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.host = include [ "lumi" ];
+            value.x = 1;
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis 'host',";
+    };
 
-    {
-      name = "nested blocks merge";
-      pass =
-        resolve { } {
-          children = [
-            {
-              value = {
-                a.b = [ 1 ];
-                c = "keep";
-              };
-            }
-            {
-              value = {
-                a.b = [ 2 ];
-                d = "also";
-              };
-            }
-          ];
-        } == {
-          a.b = [
-            1
-            2
-          ];
-          c = "keep";
-          d = "also";
-        };
-    }
+    "test nested blocks merge" = {
+      expr = resolve { } {
+        children = [
+          {
+            value = {
+              a.b = [ 1 ];
+              c = "keep";
+            };
+          }
+          {
+            value = {
+              a.b = [ 2 ];
+              d = "also";
+            };
+          }
+        ];
+      };
+      expected = {
+        a.b = [
+          1
+          2
+        ];
+        c = "keep";
+        d = "also";
+      };
+    };
 
-    {
-      name = "scalar clash -> conflict";
-      pass = throws (
-        resolve { } {
-          children = [
-            { value.port = 80; }
-            { value.port = 443; }
-          ];
-        }
-      );
-    }
+    "test scalar clash -> conflict" = {
+      expr = resolve { } {
+        children = [
+          { value.port = 80; }
+          { value.port = 443; }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/merge/conflict\\] conflict at port: co-owners \"unlabeled unit \\{ port \\}\" set differing values";
+    };
 
-    {
-      name = "tracked merge preserves unlocked values and nested attr/list contributors";
-      pass =
+    "test tracked merge preserves unlocked values and nested attr/list contributors" = {
+      expr =
         let
           merger = merge.mkMerge { };
           contributor = identity: owners: { inherit identity owners; };
@@ -688,11 +699,11 @@ let
           ]
         && (builtins.head provenance.nest.children.items.contributors).owners == ownersA
         && (builtins.elemAt provenance.nest.children.items.contributors 1).owners == ownersB;
-    }
+      expected = true;
+    };
 
-    {
-      name = "tracked scalar conflict policy receives both contributing units";
-      pass =
+    "test tracked scalar conflict policy receives both contributing units" = {
+      expr =
         let
           merger = merge.mkMerge {
             conflictPolicy =
@@ -722,11 +733,11 @@ let
             "unit 'a'"
             "unit 'b'"
           ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "ordinary resolve leaves merge provenance unforced";
-      pass =
+    "test ordinary resolve leaves merge provenance unforced" = {
+      expr =
         let
           args = {
             inherit registry ctx;
@@ -740,11 +751,11 @@ let
           traced = engine.trace args unit;
         in
         plain == { nested.answer = 42; } && throws traced.mergeProvenance;
-    }
+      expected = true;
+    };
 
-    {
-      name = "single-writer lock accepts its declared writer";
-      pass =
+    "test single-writer lock accepts its declared writer" = {
+      expr =
         let
           merger = merge.mkMerge {
             lockFor = path: if path == "port" then contributor: contributor.identity == "unit 'a'" else null;
@@ -762,11 +773,11 @@ let
         merged.value == {
           port = 80;
         };
-    }
+      expected = true;
+    };
 
-    {
-      name = "single-writer lock rejects an equal foreign write before scalar equality";
-      pass =
+    "test single-writer lock rejects an equal foreign write before scalar equality" = {
+      expr =
         let
           merger = merge.mkMerge {
             lockFor = path: if path == "port" then contributor: contributor.identity == "unit 'a'" else null;
@@ -792,11 +803,11 @@ let
               };
             }
           ]).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "single-writer lock applies the caller's subtree predicate to descendants";
-      pass =
+    "test single-writer lock applies the caller's subtree predicate to descendants" = {
+      expr =
         let
           merger = merge.mkMerge {
             lockFor =
@@ -817,11 +828,11 @@ let
               };
             }
           ]).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "default merge doesn't force contributor identity or owners";
-      pass =
+    "test default merge doesn't force contributor identity or owners" = {
+      expr =
         let
           merged = (merge.mkMerge { }).mergeTracked [
             {
@@ -834,11 +845,11 @@ let
           ];
         in
         merged.value == { answer = 42; } && throws merged.provenance;
-    }
+      expected = true;
+    };
 
-    {
-      name = "golden attributed conflict and lock diagnostics name safe identities, not values";
-      pass =
+    "test golden attributed conflict and lock diagnostics name safe identities, not values" = {
+      expr =
         let
           a = {
             identity = "unit 'a'";
@@ -870,11 +881,11 @@ let
             ];
           }
         );
-    }
+      expected = true;
+    };
 
-    {
-      name = "merge trace attributes every nested path and keeps lists terminal";
-      pass =
+    "test merge trace attributes every nested path and keeps lists terminal" = {
+      expr =
         let
           traced =
             engine.trace
@@ -924,11 +935,11 @@ let
           ]
         && (builtins.head items.contributors).owners.host == global
         && (builtins.elemAt items.contributors 1).owners.host == include [ "khion" ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "plain and trace pin the same rendered impossible diagnostic string";
-      pass =
+    "test plain and trace pin the same rendered impossible diagnostic string" = {
+      expr =
         let
           args = {
             inherit registry ctx;
@@ -950,27 +961,26 @@ let
         plainRendered == traceRendered
         && throws (engine.resolve args unit)
         && throws (engine.trace args unit);
-    }
+      expected = true;
+    };
 
-    {
-      name = "inactive leaf drops silently";
-      pass =
-        resolve { } {
-          children = [
-            { value.shared = true; }
-            {
-              claim.host = include [ "lumi" ];
-              value.lumiOnly = true;
-            }
-          ];
-        } == {
-          shared = true;
-        };
-    }
+    "test inactive leaf drops silently" = {
+      expr = resolve { } {
+        children = [
+          { value.shared = true; }
+          {
+            claim.host = include [ "lumi" ];
+            value.lumiOnly = true;
+          }
+        ];
+      };
+      expected = {
+        shared = true;
+      };
+    };
 
-    {
-      name = "dedup-union opt-in strategy registers";
-      pass =
+    "test dedup-union opt-in strategy registers" = {
+      expr =
         engine.resolve
           {
             inherit registry ctx;
@@ -1000,22 +1010,22 @@ let
                 };
               }
             ];
-          } == {
-          tags = [
-            "x"
-            "y"
-            "z"
-          ];
-          log = [
-            1
-            2
-          ];
-        };
-    }
+          };
+      expected = {
+        tags = [
+          "x"
+          "y"
+          "z"
+        ];
+        log = [
+          1
+          2
+        ];
+      };
+    };
 
-    {
-      name = "top identity law per axis";
-      pass =
+    "test top identity law per axis" = {
+      expr =
         let
           samples = [
             (include [ "khion" ])
@@ -1038,30 +1048,30 @@ let
             members = [ "laptop" ];
           })
         ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "polarity meet: identity law, exhaustive over {a,b,c}";
-      pass = lib.all (
+    "test polarity meet: identity law, exhaustive over {a,b,c}" = {
+      expr = lib.all (
         v: eqPolarity (lawAxis.narrow lawAxis.top v) v && eqPolarity (lawAxis.narrow v lawAxis.top) v
       ) lawValues;
-    }
+      expected = true;
+    };
 
-    {
-      name = "polarity meet: commutativity law, exhaustive over {a,b,c}";
-      pass = lib.all (
+    "test polarity meet: commutativity law, exhaustive over {a,b,c}" = {
+      expr = lib.all (
         a: lib.all (b: eqPolarity (lawAxis.narrow a b) (lawAxis.narrow b a)) lawValues
       ) lawValues;
-    }
+      expected = true;
+    };
 
-    {
-      name = "polarity meet: idempotence law, exhaustive over {a,b,c}";
-      pass = lib.all (v: eqPolarity (lawAxis.narrow v v) v) lawValues;
-    }
+    "test polarity meet: idempotence law, exhaustive over {a,b,c}" = {
+      expr = lib.all (v: eqPolarity (lawAxis.narrow v v) v) lawValues;
+      expected = true;
+    };
 
-    {
-      name = "polarity meet: associativity law, exhaustive over {a,b,c}";
-      pass = lib.all (
+    "test polarity meet: associativity law, exhaustive over {a,b,c}" = {
+      expr = lib.all (
         a:
         lib.all (
           b:
@@ -1070,11 +1080,11 @@ let
           ) lawValues
         ) lawValues
       ) lawValues;
-    }
+      expected = true;
+    };
 
-    {
-      name = "ctx missing a set axis's key still throws when a claim narrows on it";
-      pass = throws (
+    "test ctx missing a set axis's key still throws when a claim narrows on it" = {
+      expr =
         engine.resolve
           {
             inherit registry;
@@ -1088,29 +1098,28 @@ let
           {
             claim.user = include [ "feltfomo" ];
             value.x = 1;
-          }
-      );
-    }
-
-    {
-      name = "untagged claim tolerates a null-or-absent ctx entity";
-      pass =
-        engine.resolve {
-          inherit registry;
-          merge = defaultMerge;
-          # exactly what a bare program.nix caller passes -- keys present, null.
-          ctx = {
-            host = null;
-            user = null;
           };
-        } { value.x = 1; } == {
-          x = 1;
-        };
-    }
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: axis 'user' is narrowed on by claim \\{ set = \\[ \"feltfomo\" \\]; tag = \"include\"; \\} but the";
+    };
 
-    {
-      name = "predicate axis needs no ctx entity of its own";
-      pass =
+    "test untagged claim tolerates a null-or-absent ctx entity" = {
+      expr = engine.resolve {
+        inherit registry;
+        merge = defaultMerge;
+        # exactly what a bare program.nix caller passes -- keys present, null.
+        ctx = {
+          host = null;
+          user = null;
+        };
+      } { value.x = 1; };
+      expected = {
+        x = 1;
+      };
+    };
+
+    "test predicate axis needs no ctx entity of its own" = {
+      expr =
         engine.resolve
           {
             registry = registry // {
@@ -1122,14 +1131,14 @@ let
           {
             claim.when = c: c.host.name == "khion";
             value.enable = true;
-          } == {
-          enable = true;
-        };
-    }
+          };
+      expected = {
+        enable = true;
+      };
+    };
 
-    {
-      name = "a throwing selector fails through the generic contextual axis boundary";
-      pass = throws (
+    "test a throwing selector fails through the generic contextual axis boundary" = {
+      expr =
         engine.resolve
           {
             registry = registry // {
@@ -1142,13 +1151,13 @@ let
             label = "evil-predicate";
             claim.when = _ctx: throw "boom, this predicate is evil";
             value.enable = true;
-          }
-      );
-    }
+          };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "boom, this predicate is evil";
+    };
 
-    {
-      name = "host-narrowed claim resolves with the user entity explicitly null";
-      pass =
+    "test host-narrowed claim resolves with the user entity explicitly null" = {
+      expr =
         engine.resolve
           {
             inherit registry;
@@ -1168,34 +1177,34 @@ let
           {
             claim.host = include [ "khion" ];
             value.x = 1;
-          } == {
-          x = 1;
-        };
-    }
+          };
+      expected = {
+        x = 1;
+      };
+    };
 
-    {
-      name = "safeShape identifies a derivation by name, never touches its fields";
-      pass = safeShape poisonDerivation == "<derivation poison-pkg>";
-    }
+    "test safeShape identifies a derivation by name, never touches its fields" = {
+      expr = safeShape poisonDerivation;
+      expected = "<derivation poison-pkg>";
+    };
 
-    {
-      name = "safeShape lists attribute names only, never forces their values";
-      pass = safeShape poisonSecret == "{ token }";
-    }
+    "test safeShape lists attribute names only, never forces their values" = {
+      expr = safeShape poisonSecret;
+      expected = "{ token }";
+    };
 
-    {
-      name = "safeRender identifies a derivation by name, never touches its fields";
-      pass = safeRender poisonDerivation == "<derivation poison-pkg>";
-    }
+    "test safeRender identifies a derivation by name, never touches its fields" = {
+      expr = safeRender poisonDerivation;
+      expected = "<derivation poison-pkg>";
+    };
 
-    {
-      name = "safeRender falls back safely on a value that throws when serialized";
-      pass = safeRender poisonSecret == "<unrenderable value>";
-    }
+    "test safeRender falls back safely on a value that throws when serialized" = {
+      expr = safeRender poisonSecret;
+      expected = "<unrenderable value>";
+    };
 
-    {
-      name = "compose carries label/source as leaf-sibling fields; strip drops them before merge";
-      pass =
+    "test compose carries label/source as leaf-sibling fields; strip drops them before merge" = {
+      expr =
         let
           leaves = engine.compose registry {
             label = "my-unit";
@@ -1207,67 +1216,65 @@ let
         leaf.label == "my-unit"
         && leaf.source == "modules/foo.nix"
         && engine.strip leaves == [ { x = 1; } ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "a leaf's label rides through compose without disrupting an impossible resolve";
-      pass = throws (
-        resolve { } {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.host = include [ "lumi" ];
-              label = "conflicting-unit";
-              value.x = 1;
-            }
-          ];
-        }
-      );
-    }
+    "test a leaf's label rides through compose without disrupting an impossible resolve" = {
+      expr = resolve { } {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.host = include [ "lumi" ];
+            label = "conflicting-unit";
+            value.x = 1;
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'conflicting-unit': axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis 'hos";
+    };
 
-    {
-      name = "impossible claim on a unit carrying a secret-shaped value still throws";
-      pass = throws (
-        resolve { } {
-          claim.host = include [ "khion" ];
-          children = [
-            {
-              claim.host = include [ "lumi" ];
-              value = {
-                secret = poisonSecret;
-              };
-            }
-          ];
-        }
-      );
-    }
+    "test impossible claim on a unit carrying a secret-shaped value still throws" = {
+      expr = resolve { } {
+        claim.host = include [ "khion" ];
+        children = [
+          {
+            claim.host = include [ "lumi" ];
+            value = {
+              secret = poisonSecret;
+            };
+          }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ secret \\}: axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis 'h";
+    };
 
-    {
-      name = "merge conflict between a plain value and a derivation-shaped value still throws";
-      pass = throws (
-        resolve { } {
-          children = [
-            { value.pkg = "not-a-package"; }
-            { value.pkg = poisonDerivation; }
-          ];
-        }
-      );
-    }
+    "test merge conflict between a plain value and a derivation-shaped value still throws" = {
+      expr = resolve { } {
+        children = [
+          { value.pkg = "not-a-package"; }
+          { value.pkg = poisonDerivation; }
+        ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/merge/conflict\\] conflict at pkg: co-owners \"unlabeled unit \\{ pkg \\}\" set differing values";
+    };
 
-    {
-      name = "golden error: renderDiags exactly renders 2 diagnostics (unlabeled poison-carrying unit + labeled unit) without forcing either payload";
-      pass =
-        let
-          rendered = engine.renderDiags goldenDiags;
-        in
-        builtins.length goldenDiags == 2
-        && (builtins.tryEval (builtins.deepSeq rendered rendered)).success
-        && rendered == goldenExpected;
-    }
+    "test golden error: renderDiags exactly renders 2 diagnostics (unlabeled poison-carrying unit + labeled unit) without forcing either payload" =
+      {
+        expr =
+          let
+            rendered = engine.renderDiags goldenDiags;
+          in
+          builtins.length goldenDiags == 2
+          && (builtins.tryEval (builtins.deepSeq rendered rendered)).success
+          && rendered == goldenExpected;
+        expected = true;
+      };
 
-    {
-      name = "trace and resolve share one selected output";
-      pass =
+    "test trace and resolve share one selected output" = {
+      expr =
         let
           unit = {
             claim.host = include [ "khion" ];
@@ -1284,11 +1291,11 @@ let
         && leaf.selected
         && leaf.axisResults.host.details.materializedMembers == [ "khion" ]
         && leaf.axisResults.host.decision == "selected";
-    }
+      expected = true;
+    };
 
-    {
-      name = "trace observes names and value shape without forcing payload fields";
-      pass =
+    "test trace observes names and value shape without forcing payload fields" = {
+      expr =
         let
           unit = {
             claim.host = include [ "khion" ];
@@ -1342,11 +1349,11 @@ let
             required = true;
             available = true;
           };
-    }
+      expected = true;
+    };
 
-    {
-      name = "trace reports identity, context requirements, and the exact rejecting axis";
-      pass =
+    "test trace reports identity, context requirements, and the exact rejecting axis" = {
+      expr =
         let
           args = {
             inherit registry ctx;
@@ -1369,11 +1376,11 @@ let
         && leaf.rejectedBy == [ "host" ]
         && leaf.axisResults.host.decision == "rejected"
         && leaf.preMergeContribution == null;
-    }
+      expected = true;
+    };
 
-    {
-      name = "predicate observation reports its decision without fabricated members";
-      pass =
+    "test predicate observation reports its decision without fabricated members" = {
+      expr =
         let
           traced =
             engine.trace
@@ -1391,27 +1398,22 @@ let
           result = (builtins.head traced.trace).axisResults.when;
         in
         !result.selected && result.decision == "rejected" && !(result.details ? materializedMembers);
-    }
+      expected = true;
+    };
 
-    {
-      name = "plain and traced impossible claims both preserve the error outcome";
-      pass =
-        let
-          args = {
-            inherit registry ctx;
-            merge = defaultMerge;
-          };
-          unit = {
-            claim.host = include [ "nobody" ];
-            value.x = 1;
-          };
-        in
-        throws (engine.resolve args unit) && throws (engine.trace args unit);
-    }
+    "test plain resolve preserves the impossible claim error" = {
+      expr = engine.resolve impossibleArgs impossibleUnit;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis 'host',";
+    };
+    "test traced resolve preserves the impossible claim error" = {
+      expr = engine.trace impossibleArgs impossibleUnit;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ x \\}: axis 'host' claim can never be satisfied \\(disjoint nest or unknown name\\) \\(axis 'host',";
+    };
 
-    {
-      name = "default merger remains strict ordered and keeps contributor shape";
-      pass =
+    "test default merger remains strict ordered and keeps contributor shape" = {
+      expr =
         let
           merger = merge.mkMerge { };
           entries = [
@@ -1456,11 +1458,11 @@ let
             "identity"
             "owners"
           ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "different unit profiles on disjoint attrs fall back to deep cleanly";
-      pass =
+    "test different unit profiles on disjoint attrs fall back to deep cleanly" = {
+      expr =
         let
           merged = (merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1485,11 +1487,11 @@ let
           left = 1;
           right = 2;
         };
-    }
+      expected = true;
+    };
 
-    {
-      name = "unanimous last-wins units deep-merge disjoint attrs";
-      pass =
+    "test unanimous last-wins units deep-merge disjoint attrs" = {
+      expr =
         let
           merged = (merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1514,11 +1516,11 @@ let
           left = 1;
           right = 2;
         };
-    }
+      expected = true;
+    };
 
-    {
-      name = "different explicit profiles on one scalar throw loud";
-      pass =
+    "test different explicit profiles on one scalar throw loud" = {
+      expr =
         throws
           ((merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1538,11 +1540,11 @@ let
               };
             }
           ]).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "unanimous last-wins units select the right scalar";
-      pass =
+    "test unanimous last-wins units select the right scalar" = {
+      expr =
         let
           merged = (merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1564,11 +1566,11 @@ let
           ];
         in
         merged.value.port == 443;
-    }
+      expected = true;
+    };
 
-    {
-      name = "one last-wins unit cannot override an unprofiled scalar co-owner";
-      pass =
+    "test one last-wins unit cannot override an unprofiled scalar co-owner" = {
+      expr =
         throws
           ((merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1587,11 +1589,11 @@ let
               };
             }
           ]).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "one last-wins list contributor cannot silently merge with an unprofiled co-owner";
-      pass =
+    "test one last-wins list contributor cannot silently merge with an unprofiled co-owner" = {
+      expr =
         throws
           ((merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1610,11 +1612,11 @@ let
               };
             }
           ]).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "path profile is authoritative and isolated to its selected paths";
-      pass =
+    "test path profile is authoritative and isolated to its selected paths" = {
+      expr =
         let
           merger = merge.mkMerge {
             profiles = merge.builtinProfiles;
@@ -1653,11 +1655,11 @@ let
           ];
           stable = true;
         };
-    }
+      expected = true;
+    };
 
-    {
-      name = "last-wins attrset treatment reuses the right tracked subtree";
-      pass =
+    "test last-wins attrset treatment reuses the right tracked subtree" = {
+      expr =
         let
           merger = merge.mkMerge {
             profiles = merge.builtinProfiles;
@@ -1701,11 +1703,11 @@ let
             "port"
             "right"
           ];
-    }
+      expected = true;
+    };
 
-    {
-      name = "unknown contributor and path profile names fail closed";
-      pass =
+    "test unknown contributor and path profile names fail closed" = {
+      expr =
         throws
           ((merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1741,11 +1743,11 @@ let
                 }
               ]
             ).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "lock authorization still precedes last-wins policy";
-      pass =
+    "test lock authorization still precedes last-wins policy" = {
+      expr =
         throws
           (
             (merge.mkMerge {
@@ -1770,11 +1772,11 @@ let
               }
             ]
           ).value;
-    }
+      expected = true;
+    };
 
-    {
-      name = "profiled merge doesn't force values, identity, or owners";
-      pass =
+    "test profiled merge doesn't force values, identity, or owners" = {
+      expr =
         let
           merged = (merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked [
             {
@@ -1809,11 +1811,11 @@ let
             "secret"
           ]
         );
-    }
+      expected = true;
+    };
 
-    {
-      name = "profiled resolve keeps poison payloads and contributor metadata lazy";
-      pass =
+    "test profiled resolve keeps poison payloads and contributor metadata lazy" = {
+      expr =
         let
           profiledMerge = (merge.mkMerge { profiles = merge.builtinProfiles; }).mergeTracked;
           value =
@@ -1850,10 +1852,10 @@ let
             "secret"
           ]
         );
-    }
-    {
-      name = "equal derivations merge as terminal values";
-      pass =
+      expected = true;
+    };
+    "test equal derivations merge as terminal values" = {
+      expr =
         let
           left = {
             type = "derivation";
@@ -1868,10 +1870,10 @@ let
           merged = (merge.mkMerge { }).mergeTwo "pkg" left right;
         in
         merged.outPath == left.outPath;
-    }
-    {
-      name = "different derivations conflict without forcing their internals";
-      pass =
+      expected = true;
+    };
+    "test different derivations conflict without forcing their internals" = {
+      expr =
         let
           left = {
             type = "derivation";
@@ -1885,27 +1887,30 @@ let
           };
         in
         throws ((merge.mkMerge { }).mergeTwo "pkg" left right);
-    }
-    {
-      name = "function-valued co-owners use the ownership conflict path";
-      pass = throws ((merge.mkMerge { }).mergeTwo "handler" (_: 1) (_: 2));
-    }
-    {
-      name = "stage validation rejects a missing or non-function callback";
-      pass =
-        throws (engine.check [ { view = "leaf"; } ] registry [ ])
-        && throws (
-          engine.check [
-            {
-              view = "tree";
-              run = 1;
-            }
-          ] registry [ ]
-        );
-    }
-    {
-      name = "activated malformed merge profiles fail through ownerships validation";
-      pass =
+      expected = true;
+    };
+    "test function-valued co-owners use the ownership conflict path" = {
+      expr = (merge.mkMerge { }).mergeTwo "handler" (_: 1) (_: 2);
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/merge/conflict\\] conflict at handler: co-owners \"unattributed unit\" set differing values";
+    };
+    "test stage validation rejects a missing callback" = {
+      expr = engine.check [ { view = "leaf"; } ] registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: stage for view 'leaf' must provide a 'run' function";
+    };
+    "test stage validation rejects a non-function callback" = {
+      expr = engine.check [
+        {
+          view = "tree";
+          run = 1;
+        }
+      ] registry [ ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: stage for view 'tree' must provide a 'run' function";
+    };
+    "test activated malformed merge profiles fail through ownerships validation" = {
+      expr =
         let
           profiles = merge.builtinProfiles // {
             broken = {
@@ -1926,10 +1931,10 @@ let
           ];
         in
         throws merged.value.answer;
-    }
-    {
-      name = "unused malformed merge profile registrations stay lazy";
-      pass =
+      expected = true;
+    };
+    "test unused malformed merge profile registrations stay lazy" = {
+      expr =
         let
           profiles = merge.builtinProfiles // {
             broken = throw "forced an unused merge profile";
@@ -1945,10 +1950,10 @@ let
           ];
         in
         merged.value.answer == 1;
-    }
-    {
-      name = "activated non-function list strategies fail before application";
-      pass = throws (
+      expected = true;
+    };
+    "test activated non-function list strategies fail before application" = {
+      expr =
         (merge.mkMerge {
           strategies = merge.builtinStrategies // {
             broken = 1;
@@ -1957,19 +1962,13 @@ let
         }).mergeTwo
           "items"
           [ 1 ]
-          [ 2 ]
-      );
-    }
-  ];
+          [ 2 ];
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/merge/strategy-type\\] merge strategy 'broken' at items must be a function";
+    };
+  };
 
-  failing = builtins.filter (c: !c.pass) cases;
-
-  ok =
-    if failing == [ ] && importUnitTests.ok then
-      true
-    else
-      throw "ownerships tests FAILED: ${lib.concatMapStringsSep ", " (c: c.name) failing}";
 in
 {
-  inherit cases ok;
+  inherit tests;
 }
