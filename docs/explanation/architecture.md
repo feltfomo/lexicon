@@ -7,8 +7,9 @@ each step may force, where extensions plug in, which invariants hold it together
 cites it as `audit:<section>` and keeps only what the audit supports.
 
 Everything here is an **accepted target**, approved by the owner on 2026-10-27, unless marked
-**Current** (the tree does it today) or **Deferred** (decided against building in this effort). Statements
-inferred rather than read in source are marked **Assumption**.
+**Current** (the tree does it today). Every accepted target names the band that builds it on
+[the effort page](../efforts/restructure.md), through the spec's status column; nothing here is
+deferred or conditional. Statements inferred rather than read in source are marked **Assumption**.
 
 ## Purpose and boundaries
 
@@ -93,15 +94,17 @@ evaluation over tracked source, not import-from-derivation.
 | `core/identity.nix` | canonical names and identity keys formerly from Axiom |
 | `systems/engine/` | node constructors, registration, traversal, contribution envelopes, the class and plan registries, the engine catalog |
 | `systems/ownerships/` | axes as algebras, descriptors, roster, selection kernel, merge kernel, inspection matrix |
-| `systems/settings/` | schema leaves, layer fold, provenance, the settings reference generator, the module-system edge adapter (when one exists) |
+| `systems/settings/` | schema leaves, layer fold, provenance, the settings reference generator, and `edge.nix`, the module-system edge adapter for host-bound leaves |
 | `systems/services/contract.nix` | the service record shape |
 | `systems/services/coordinator/` | the coordinator's wire contract (manifest, ledger, executors, strategies) and package binding |
-| `systems/services/toml/` | TOML encoder and renderer kernels, the build-time merge and the runtime publisher |
+| `systems/services/render/registry.nix` | the file-source format registry and the format record shape |
+| `systems/services/render/toml/` | TOML encoder, renderer and Nix-side validator; the build-time merge and runtime publisher (`publisher.py`) |
+| `systems/services/render/json/` | JSON encoder and pretty-printer, both Nix |
 | `subsystems/native/` | `package`, `homeManager` and `nixos` blocks, the ownership-unit adapter, the `nixos` and `homeManager` class registrations |
 | `subsystems/furnish/` | files, directories, links, lifecycle, the slice settle stage, and `services/coordinator.nix`, the NixOS module that compiles a host's declarations and holds the collision index |
 | `subsystems/theme/` | theme block, adapters as a registry, composition, matugen and composition runtime services |
 | `subsystems/praxis/` | the command compiler, `surfaces.praxis`, the Rust runtime as a service |
-| `subsystems/compose/` | the portable aspect model, the plain walker, exclusion, batteries for the plain host, fleet declarations (`lib.registry`) |
+| `subsystems/compose/` | the portable aspect model, the plain walker, the module-file merge, the quirk registry and collection (`quirks.nix`), batteries for the plain host, fleet declarations (`lib.registry`) |
 | `hosts/den/` | roster, principals, `mkTarget`, `hostAspects`, `drop`, the Den bridge |
 | `hosts/plain/` | entity kinds, principals, `nixosSystem` instantiation |
 | `legacy/` | `program*` translation and old-extension conversion, removed in a reviewed change |
@@ -150,7 +153,7 @@ graph LR
 | 4 | select | engine over the ownerships kernel | prepared tree, slice context, requested output | `Selected` with `origins`, `metadata`, `prepared` | claims, roster entries, context keys registered axes request; callbacks of selected nodes for the requested projection | inactive branches, unrequested projections, callbacks of unselected nodes |
 | 5 | validate | engine with Krisis `T` | `Selected` | `Checked Valid` | selected domain fields to the depth their type requires | `T.Any` fields, native payloads |
 | 6 | lower | each block's kernel, wrapped by the engine's envelope check | valid value, block settings, prepared | `Contributions { classes; plans; }` | whatever that block's `lower` demands | other blocks |
-| 7 | settle slice | `subsystems/furnish` with theme's plan kind | this slice's plans, principals | native modules plus `lexicon.furnish.declarations` entries for each principal | theme fields of selected theme plans, inventories of selected directories | sources that need no inventory, other slices |
+| 7 | settle slice | `subsystems/furnish` with theme's plan kind | this slice's plans, principals | native modules plus `lexicon.furnish.declarations` entries for each principal, with format sources rendered to `writeText` derivations | theme fields of selected theme plans, inventories of selected directories, each selected `source` to weak head normal form and a format source's value when its derivation is demanded | sources that need no inventory, other slices |
 | 8 | reduce host | `subsystems/furnish/services/coordinator.nix` | the merged `lexicon.furnish.declarations` of one host | manifest, collision verdict | destinations and identities of every declaration on the host | file contents, generated sources (retained as derivations) |
 
 Stage 2 is today's `bound.prepare raw` (`src/lexicon/default.nix:113`). Stages 4 to 7 are today's
@@ -199,10 +202,12 @@ callback-produced records lives at slice lifetime. Nothing in a slice survives i
 | Battery | aspect value or aspect function, portable subset only | `batteries` |
 | Host | the host contract below | `hosts/` |
 | Benchmark marker | identity lambda in the owner's `markers.nix` | the owner's directory |
+| Quirk | `{ name; doc; }`; aspects emit on the key, class modules receive the scope's list | `quirks` in a record, or a plain-host module file's `quirks` |
+| File-source format | `{ name; type; render; publisher ? null; }` where `render` is a Nix kernel from a valid value to text | `formats` in a record |
 
 Subsystem record fields, all lazy: `name` (kebab-case), `requires`, `settings`, `blocks`,
-`annotations`, `classes`, `plans`, `services`, `surfaces`, `batteries`, `exports`, `catalog`,
-`docs`. The toolkit is `{ lib, core, T, setting, node, ownerships, catalog, requires }`. Third
+`annotations`, `classes`, `plans`, `services`, `surfaces`, `batteries`, `quirks`, `formats`,
+`exports`, `catalog`, `docs`. The toolkit is `{ lib, core, T, setting, node, ownerships, catalog, requires }`. Third
 parties and built-ins get the same toolkit.
 
 Host contract:
@@ -214,7 +219,8 @@ Host contract:
   roster; # Ownerships roster from the host's entities
   principals = { files; userNames; }; # today's filePrincipals and hostUserNames
   classes; # { <class> = { kind; }; } where each class lands
-  layers; # host settings layers, empty until D8 decides otherwise
+  settingsModule; # the edge adapter's NixOS module for this environment, attached to every host
+  quirks; # quirk names the host registers; the Den host reads them from `den.quirks`
 }
 ```
 
@@ -235,9 +241,12 @@ an attrset. `includes` is a DAG. Class payloads are native modules and stay opaq
 after entity kinds are pre-applied in flat form and the rest are advertised with
 `lib.setFunctionArgs`, as Den does (`D/nix/lib/aspects/fx/class-module.nix:106-118`). Dedup is by
 `scope/identity`, where identity is the name chain plus context id, matching Den's key
-(`D/nix/lib/aspects/fx/handlers/check-dedup.nix:17-23`). Unnamed includes never dedup. Traversal
-order must match Den on the portable subset; **Assumption**: Den visits includes depth-first
-pre-order (not found in source this pass; S2 settles it).
+(`D/nix/lib/aspects/fx/handlers/check-dedup.nix:17-23`). Unnamed includes never dedup. The plain
+walker reproduces Den v0.19.0's include order on the portable subset, whatever that order is; S2 is
+the first conformance fixture band 6 writes, and its result fixes the walker's order rather than
+gating anything. `lexicon { }` passes through `name`, `includes` (P1) and the host's registered
+quirk keys; a pass-through key colliding with a block or annotation name fails when the host is
+bound.
 
 ### The plain host
 
@@ -292,8 +301,10 @@ scope and every user scope, the role `den.default` plays in `/etc/skadi/modules/
 are `host` with child `user`. Classes land by kind: `nixos` content from a host or one of its users
 lands in that host's `nixosSystem`; `homeManager` content from a user lands in
 `home-manager.users.<userName>`; `homeManager` content at host scope fans out to each user, as a
-host-scope `{ user, ... }` body does in Den (`parametric.mdx:56-60`). **Assumption**: a `default`
-aspect's `nixos` content is collected once per host, not once per user; S2 checks this against Den.
+host-scope `{ user, ... }` body does in Den (`parametric.mdx:56-60`). A `default` aspect's class
+content follows the same landing rule as any aspect, so its `nixos` content walked at a user scope
+lands on the host again; that matches Den only if Den does the same, and the conformance fixture for
+`default` fixes the plain walker to Den's observed behavior in band 6.
 
 Instantiation, per host:
 
@@ -322,8 +333,57 @@ exactly these three (`/etc/skadi/modules/users/feltfomo.nix:8-10`, `owner.nix:5-
 built into instantiation rather than a battery. Den's other batteries (`hjem`, `maid`, `wsl`,
 `tty-autologin` and the rest) aren't shipped until a consumer needs one.
 
-Left out: installer targets and `drop` for the plain host, `excludes`, policies, quirks and
-`provides`. `trace` records inert bodies with their scope (D5).
+Left out, and listed in the spec's "What Lexicon doesn't do": installer targets and `drop` for the
+plain host, `excludes`, policies, pipes, `provides`. `trace` records inert bodies with their scope
+(D5).
+
+### Quirks
+
+Accepted target, band 6 (D10). The smallest equivalent of Den's same-scope quirk collection, the
+only quirk use in skadi: host-scope aspects emit `persistence.directories` and one `nixos` module
+takes `persistence` as an argument (`/etc/skadi/modules/den.nix:16`, `system/networking.nix:3`,
+`desktop/display-managers/sddm.nix:3`, `system/impermanence.nix:10,18`). No skadi code uses a pipe.
+
+| Concern | Rule |
+| --- | --- |
+| Registration | A quirk is `{ name; doc; }`, registered by a plain-host module file's `quirks` key (fleet vocabulary, like skadi's `den.quirks.persistence`) or a subsystem record's `quirks` field (library vocabulary). One registry in `subsystems/compose/quirks.nix`, built with `core.registry`; a name colliding with another quirk, a class, a structural aspect key (`name`, `includes`, `description`) or a module argument (`config`, `options`, `pkgs`, `lib`, `modulesPath`, `host`, `user`) fails naming both origins |
+| Emission | An aspect sets the quirk's key to any value. A list value contributes its elements; any other value contributes itself (Den's flattening, `D/nix/lib/aspects/fx/assemble-pipes.nix:17-26`) |
+| Aggregation | One pool per entity scope (each host, each user). A value lands in the pool of the scope where its aspect is walked. Pools never cross scopes |
+| Delivery | A class module whose formal arguments name a quirk receives its scope's pool, pre-applied in flat form with `host` and `user`; an empty pool is `[ ]` |
+| Order | Pool order is walk order after dedup, so a deduplicated aspect contributes once. A consumer sees every producer in its scope wherever it sits in `includes`, because pools are computed from the finished walk |
+| Laziness | Classification forces only aspect attribute names. A pool is built when a consumer demands it; flattening forces each value to weak head normal form then, and no element further |
+| Den host | Den's quirks keep working unchanged. `hosts.den` reads the registered names with `builtins.attrNames den.quirks`, so `lexicon { }` can pass them through; Lexicon never collects under Den |
+| Conformance | `tests/subsystems/compose/conformance.nix` runs a skadi-shaped persistence fixture, with the consumer listed before its producers, through Den v0.19.0 and the plain walker and compares the delivered pools |
+
+### File-source formats
+
+Accepted target, band 7 (P4 and the JSON addition). A Furnish file `source` is classified with K2:
+a path, a string, a derivation, or a one-key record whose key is a registered format. Formats live in
+one registry, `systems/services/render/registry.nix`, so TOML and JSON are two entries, not two
+special cases. A format record is `{ name; type; render; publisher ? null; }`: `type` is the Krisis
+type of an admissible value, `render` a Nix kernel from a valid value to text, and `publisher` the
+runtime merge service if the format has one. Stage 7 renders a format source to
+`pkgs.writeText <destination basename> text` with the host's `pkgs`; nothing else runs.
+
+| Format | Render | Validation | Runtime publisher |
+| --- | --- | --- | --- |
+| `toml` | today's `src/toml/render.nix` fragments, joined once | parse the output back with `builtins.fromTOML` and compare with the input; each `literal` fragment is checked against TOML 1.0's value grammar with `builtins.match`, because both pinned evaluators reject TOML dates and times in `fromTOML` (evaluated on Lix 2.95.4 and CppNix 2.34.8) | the existing publisher, for theme composition merges |
+| `json` | a Nix pretty-printer: two-space indentation, keys in Nix's sorted order, a trailing newline; every scalar is written with `builtins.toJSON`, so escaping and float spelling are the evaluator's own (identical on Lix 2.95.4 and CppNix 2.34.8 for the probes `0.1`, `1e+20`, `1e-07`, `1/3`, evaluated) | admissibility by `type`: null, booleans, integers, floats, strings (context kept), lists and attrsets; functions, paths and derivations are rejected at their path | none: no consumer merges JSON at runtime; theme composition rejects a JSON output with `theme/merge-unsupported-format` |
+
+The pretty-printer over `builtins.toJSON` beats bare `builtins.toJSON`, which writes one line, and
+beats `pkgs.formats.json`, which runs `jq` in a build. Managed and writable JSON files are read and
+diffed by people, and the printer only lays out structure while the evaluator owns every scalar's
+bytes. Its cost is one fragment list per value, joined once.
+
+TOML parity is band 7's verification, not a gate. It's defined over the renderer's output grammar,
+which Lexicon controls (D17): for every fixture under `tests/toml/` on both evaluators, the Nix
+validator accepts exactly the documents today's Python validator accepts, with equal parsed values. A difference is fixed in the renderer or the validator in that band. The check is
+`checks.<system>.toml-parity`, which evaluates the fixture set with `pkgs.lix` and
+`bench-evaluator` inside one build and compares their results in Nix.
+
+Catalog codes: `toml/unsupported-value`, `toml/invalid-literal`, `toml/round-trip`,
+`json/unsupported-value`, `furnish/source-format-unknown`, `furnish/source-shape`,
+`theme/merge-unsupported-format`.
 
 ## Settings
 
@@ -342,11 +402,58 @@ is lazy. Layers are `{ origin; value; }`, least specific first: schema defaults 
 `explain.<subsystem>.<leaf>` lists `{ origin; value; kept; }` per contributing layer, lazily. A
 settings error names the winning origin as primary and the others as Krisis `related` entries.
 
-Host-bound leaves are Deferred (D8). If one is built later, its edge adapter declares an ordinary
-NixOS option and reads `options.<loc>.definitionsWithLocations` and `options.<loc>.highestPrio`
-(`NP/lib/modules.nix:1150-1153`). It never uses a custom merge that changes the option's value, and
-it documents that `mkIf`/`mkMerge` are discharged, `mkOverride` filters before Lexicon sees anything
-and `mkBefore`/`mkAfter` reorder definitions (`NP/lib/modules.nix:1190-1214`, audit: lead claim 6).
+### Host-bound settings and the edge adapter
+
+Accepted target, band 5 (D8). A leaf opts in with `setting { ...; bind = "host"; }`; the default is
+`bind = "environment"`.
+
+Which leaves may bind per host. `enable` never can, and neither can a leaf assembly reads: stage 0
+and 1 receive host-bound leaves as throwing sentinels, so a schema that needs one at assembly fails
+its own tests. A host-bound leaf is read only by slice stages (4 to 7) and by service modules.
+
+Options. `systems/settings/edge.nix` turns the environment into one NixOS module, attached to every
+host (the plain host adds it at instantiation; under Den it arrives, key-deduplicated, through the
+NixOS bridge of any `lexicon { }` aspect, like the service modules). For every leaf of every enabled
+subsystem it declares `options.lexicon.settings.<subsystem>.<leaf path>` with:
+
+- `description` from `doc`;
+- a generated type whose `check` accepts anything (validation is Lexicon's, once), whose
+  `emptyValue` is the environment-resolved value (defaults then `configure`), and whose `merge`
+  folds that environment value followed by the host definitions with the leaf's strategy, through
+  the same `core.foldLayers` the environment uses. With no host definitions `mergeDefinitions`
+  returns `emptyValue` (`NP/lib/modules.nix:1262-1263`), so `config.lexicon.settings` always shows
+  the value Lexicon uses for that host;
+- for an environment-bound leaf, a merge that throws `settings/binding-time` naming each defining
+  file, since any definition there is a mistake.
+
+The host layer. Lexicon builds it from `options.lexicon.settings.<...>.definitionsWithLocations`
+and `highestPrio` (`NP/lib/modules.nix:1150-1153`): one layer per host, one entry per definition,
+origin from `file`, priority recorded in `explain`. By then nixpkgs has discharged `mkIf` and
+`mkMerge`, kept only the winning priority and stripped `mkOverride`, and sorted by `mkOrder`
+(`:1190-1214`), so `mkDefault` and `mkForce` behave as in any NixOS option and Lexicon adds no rule
+of its own about them. Each definition is validated against the leaf's Krisis type with its file as
+the location.
+
+| Strategy | Host layer |
+| --- | --- |
+| `replace` | one definition wins; two definitions with different values at the winning priority are `settings/host-conflict` naming both files; equal values (`==`) are fine; values containing functions never compare equal, so two such definitions conflict |
+| `append` | the environment value, then host definitions in nixpkgs order: `mkBefore` (500), plain (1000), `mkAfter` (1500), module order within a priority |
+| `union` | as `append`, first occurrence kept |
+| `attrs` | per key as `replace`, with the conflict rule per key |
+| custom | `op` folded over the environment value then host definitions in nixpkgs order |
+
+Reading. The NixOS bridge reads host-bound values from `config.lexicon.settings`, the Home Manager
+bridge from `osConfig.lexicon.settings` when Home Manager runs inside NixOS, as it does under both
+hosts. Outside a host (`forTarget`, standalone Home Manager), a host-bound leaf has its environment
+value. Provenance merges both: `explain` lists defaults, the `configure` layer and each host
+definition.
+
+Tests, in `tests/systems/settings/edge.nix`: one option per leaf; environment-bound definition
+fails with `settings/binding-time`; `replace` conflict names both files; equal definitions pass;
+`mkForce` beats a plain definition and `explain` records its priority; `mkBefore` and `mkAfter` order
+an `append` leaf; the host layer beats the `configure` layer; `config.lexicon.settings` equals the
+value the slice receives; assembly with host-bound sentinels doesn't throw; Home Manager reads
+through `osConfig`. `lexicon.furnish.state` stays a coordinator option and is not a leaf.
 
 ## Krisis contract
 
@@ -365,7 +472,7 @@ the initialized Krisis.
 | K7 | `k.report.finish { formatter ? null; } report -> a` | returns the success value without inspecting it; on failure throws one message rendering every visible diagnostic, and every hidden one if none is visible; on success each visible warning goes once through `lib.warn` rendered by `render.plain` (or `formatter`) when the result is forced, so warnings are seen without failing | every bridge; `configure`; surfaces such as `toml.generate` and `praxis` |
 | K8 | `k.path.fromAttrPos attrs name -> Location or null` | wraps `builtins.unsafeGetAttrPos`; null when Nix has no position; `source` and a point `range` otherwise | settings provenance; configure layer origins |
 | K9 | no new function; a cost law on `report.emit`, `report.fail`, `diagnostic.make` and `validation.check` | one emission builds and checks its envelope once; envelope and namespace checks are plain predicates, never the nix-effects type kernel; a factory's namespace is checked once per factory | every stage. Evidence: the praxis profile found 576 envelope builds for 128 diagnostics and 2,792 of 3,079 samples in that validation (`verification/praxis-diagnostic-profile.md:1-14,177-215`) |
-| K10 | `k.report.run { dedupe ? null; }` with `dedupe = diagnostic: key` | first occurrence of a key kept, later ones counted but hidden | deferred until S5 shows duplicates after K6 |
+| K10 | `k.report.run { dedupe ? null; }` with `dedupe = diagnostic: key` | first occurrence of a key kept, later ones counted but hidden | an internal decision band 2 makes from S5's count; the spec promises nothing about duplicate diagnostics, so either outcome ships the spec |
 
 ### Acceptance on the Krisis side
 
@@ -388,7 +495,7 @@ below are the cases to add; failures use nix-unit's `expectedError`.
 | K7 | `tests/integration.nix` | `test-finish-success-opaque`, `test-finish-renders-every-visible`, `test-finish-hidden-only-failure`, `test-finish-warnings-succeed`, `test-finish-warns-visible-once` |
 | K8 | `tests/baseline.nix` | `test-from-attr-pos-location`, `test-from-attr-pos-null` |
 | K9 | new flake check `checks.<system>.emission-cost`, fixture `tests/cost/emission.nix` | the measurable law below |
-| K10 | `tests/extensions.nix` | `test-dedupe-first-kept`, `test-dedupe-counts-hidden`, only if S5 opens it |
+| K10 | `tests/extensions.nix` | `test-dedupe-first-kept`, `test-dedupe-counts-hidden`, when band 2 decides to add it |
 
 K9's measurable form. The fixture builds one factory with a namespace and emits N error
 diagnostics under `report.run { }` collecting, demanding only the report summary. The check
@@ -422,7 +529,7 @@ Krisis lands the items in two batches, each on Krisis's main through `krisis-gat
 
 - Batch 1, before restructure step 1: K1, K4, K6, K7, K9. These remove the compatibility files.
 - Batch 2, before step 2: K2, K3, K5, K8. These replace Axiom's types and paths.
-- K10 only if S5 shows duplicates.
+- K10: band 2 measures S5 and records the decision in this page; no consumer-visible promise depends on it.
 
 After a batch is on Krisis main, Lexicon moves `inputs.krisis.url` to that commit, refreshes
 `flake.lock` and runs its own gate in the same change. During S4, a Lexicon spike branch or
@@ -496,6 +603,10 @@ Each rule names the check that holds it. Test paths are targets under the nix-un
 | I13 | The portable aspect subset behaves the same under both hosts | `tests/subsystems/compose/conformance.nix` runs shared fixtures through Den v0.19.0 and the plain walker and compares class module identities per entity |
 | I14 | Compatibility lives in `legacy/` and the host alias files only | `tests/architecture/layers.nix` forbids old names elsewhere |
 | I15 | Benchmark markers are identity functions with distinct source positions | `tests/bench/markers.nix` |
+| I16 | Quirks: scope-local pools, list flattening, `[ ]` when empty, order-independent availability, values unforced without a consumer, registry collisions reported | `tests/subsystems/compose/quirks.nix`; conformance in I13 |
+| I17 | Host-bound settings follow the edge adapter rules above, and assembly never reads a host-bound leaf | `tests/systems/settings/edge.nix`; `tests/systems/settings/static.nix` |
+| I18 | A file source is classified once; format sources render in Nix; an unknown format or a multi-key record fails at the authored path | `tests/subsystems/furnish/sources.nix`; `tests/systems/services/render/{toml,json}.nix` |
+| I19 | TOML validation in Nix accepts exactly what today's validator accepts on every fixture of the renderer's output, on Lix and CppNix | `checks.<system>.toml-parity` |
 
 I5 is held by construction, not by counting constructor calls. A call-count assertion needs an
 instrumented evaluator, which nix-unit can't run, and the defect it would catch, `dependenciesFor`
@@ -517,7 +628,7 @@ dependency sets per skadi evaluation (`flake.nix:29-39,57`, I5).
 | `systems/services/toml/publisher.py` (today `src/toml/runtime.py` publish and merge) | activation, user and build time | keep publish (locks, atomic writes, reloads) and merge of file sources (derivation sources, format retention); validation moves to Nix |
 | theme hook scripts and systemd units | runtime | keep |
 | `tests/praxis/terminal.py` | test | keep: drives a real PTY |
-| `tests/toml/*.py` | test | keep only the publish and merge cases; rendering cases become nix-unit |
+| `tests/toml/*.py` | test | keep only the publish and merge cases; rendering cases become nix-unit, and parity becomes `checks.toml-parity` |
 | `tests/system/harness/` (Go), `tests/system/*.sh` | test | keep: VM and running-system tests |
 | `verification/components/*.py` | test and measurement | replaced: contract and observation checks by nix-unit; measurement by `bench/` |
 
@@ -541,6 +652,9 @@ dependency sets per skadi evaluation (`flake.nix:29-39,57`, I5).
 | declare | structural errors accumulate into the declaration's static report, replayed in every slice (K6) | force domain payloads to find vocabulary |
 | select, validate, lower, settle slice | independent errors accumulate; dependent work is skipped; the bridge throws through `report.finish` at the forced expression | return a partial module for a failed slice; convert a callback exception into a diagnostic |
 | reduce host | the coordinator module throws naming every claimant of a destination | let one declaration's collision pass because another wasn't forced |
+| host settings | a bad or conflicting host definition throws at the forced option value with `settings/*` codes naming each file | pick a winner between conflicting `replace` definitions |
+| quirk registration and walk | collisions fail when the plain host is bound; an aspect key that's neither structural, a class nor a quirk fails at walk naming the aspect | collect an unregistered key |
+| format source | unknown format, multi-key record, or unrepresentable value fails at the authored path during stage 7 | fall back to writing the value some other way |
 | walk (plain) | unknown formal arguments fail; unreachable kinds are inert and traced | guess a binding |
 | legacy alias called with an override that no longer applies (`axiom`, or a per-call `lib`, `krisis` or `mkCoordinator`) | the value is ignored, and the alias emits a Krisis warning, `lexicon/ignored-override` from `lexicon.*`, `den` and `furnishRuntime`, or `program/ignored-override` from `program*`, naming the argument and saying why (Axiom is removed; dependencies are set once per environment through `configure`); evaluation continues and the warning surfaces through K7 | drop a caller's argument silently |
 | runtime | the coordinator refuses unproven destinations; publishers fail at activation or user time | affect evaluation |
@@ -716,8 +830,12 @@ a pinned evaluator outside the check sandbox and a second revision.
 | `src/furnish/contract.nix` | `systems/services/coordinator/contract.nix` | wire format only |
 | `src/furnish/runtime.nix` | `subsystems/furnish/services/coordinator.nix` | imports Furnish core, so it can't be a system (audit: file table) |
 | `src/furnish/target.nix` | `systems/services/coordinator/target.nix` | target records; `externalPath` to `core/paths.nix` |
-| `src/toml/encode.nix`, `render.nix`, `default.nix` | `systems/services/toml/` | `generate` validates by `builtins.fromTOML` round trip in Nix (S3) |
-| `src/toml/runtime.py` | `systems/services/toml/publisher.py` | publish and file-source merge only |
+| `src/toml/encode.nix`, `render.nix`, `default.nix` | `systems/services/render/toml/` | `generate` validates in Nix: `builtins.fromTOML` round trip plus a literal grammar check; `lib.toml` surface kept |
+| none | `systems/services/render/registry.nix`, `systems/services/render/json/`, `lib.json` | new format registry and JSON format |
+| none | `systems/settings/edge.nix` | host-bound settings adapter |
+| none | `subsystems/compose/quirks.nix` | quirk registry and pools |
+| none | `tests/systems/settings/edge.nix`, `tests/subsystems/compose/quirks.nix`, `tests/subsystems/furnish/sources.nix`, `tests/systems/services/render/`, `checks.toml-parity` | new tests |
+| `src/toml/runtime.py` | `systems/services/render/toml/publisher.py` | publish and file-source merge only |
 | `src/program/theme/*` | `subsystems/theme/` | adapters as a `core.registry`; runtime modules under `services/` |
 | `src/program/directories.nix`, `program/fields.nix` | `subsystems/furnish/directories.nix`, `subsystems/furnish/lifecycle.nix` | drop `tryEval`; reject sources with derivation context |
 | `src/program.nix`, `src/program/*.nix` (rest) | `legacy/` | |
@@ -746,13 +864,18 @@ The owner approved every recommendation below on 2026-10-27.
 | D5 | Unknown formal arguments in plain-host bodies | error at walk; unreachable kinds inert and traced | Lexicon's walker has the kind schema Den lacks; Den behavior is unchanged |
 | D6 | Disabled required subsystem | error naming both ends | auto-enable hides a dependency |
 | D7 | Field from a disabled subsystem | unknown-field code with help naming the disabled subsystem | keeps `restructure.md:76-77`'s code and gives a better message |
-| D8 | Host-bound settings and the edge adapter | defer; build it when a leaf needs it | no leaf needs it: `lexicon.furnish.state` is service configuration skadi reads back |
+| D8 | Host-bound settings and the edge adapter | build it in band 5 as specified under Settings | owner ruling: every spec statement ships; `lexicon.furnish.state` stays a coordinator option |
 | D9 | Block scope vocabulary | keep `user`, `system`, `split` this effort; map them to host kinds in the host contract | replacing the enum touches every block and buys only a future flake manager |
-| D10 | Standalone quirk-like collection | out of scope | no plain-host consumer needs it yet |
-| D11 | Alias end dates | removal after skadi stops referencing an alias and one release has carried it | the owner sets the dates |
+| D10 | Standalone quirk equivalent | build same-scope quirks in band 6; no pipes | owner ruling; same-scope collection is all skadi uses |
+| D11 | Alias end dates | no date in the spec; each removal is its own owner-approved API change | the no-exceptions rule can't hold a promise whose trigger is outside the roadmap |
 | D12 | Benchmark budgets in a gate | separate `bench` gate on counters after calibration; default gate unchanged | counters are deterministic but need a pinned evaluator and a second revision |
-| D14 | Consumer API proposals P1 to P4 in spec.md | adopt P1, P2 and P3; adopt P4 after S3 | each removes a wart in real skadi code; P4 changes Furnish's source laziness |
 | D13 | `verification/components` measurement scripts | replace with `bench/` and delete the Python | the pure-Nix rule; the suite covers their function |
+| D14 | Consumer API changes P1 to P4 on the capabilities page | P1 to P3 in band 5; P4 in band 7, unconditionally | each removes a wart in real skadi code; P4 changes Furnish's source laziness |
+| D15 | JSON output form | Nix pretty-printer over `builtins.toJSON` scalars | readable managed files, evaluator-owned scalar bytes, no build-time `jq` |
+| D16 | Who registers quirks | plain-host module files and subsystem records, one registry | fleet vocabulary belongs to the consumer, library vocabulary to its subsystem |
+| D17 | What TOML parity covers | the renderer's output grammar, not every TOML document | Lexicon can't repair the evaluator's TOML parser without writing one in Nix; it can always change what it emits |
+| D18 | Den hosts without a Lexicon NixOS bridge | P3 and host-bound settings reach a Den host only through a Lexicon NixOS bridge on it, stated in the spec | every skadi host has one through `base`; a host without one imports the coordinator module explicitly, as today |
+| D19 | Den version for conformance | Den v0.19.0; a newer Den moves the conformance pin in a reviewed change | the suite compares against a fixed Den, so the guarantee names it |
 
 ## Spikes
 
@@ -762,14 +885,13 @@ Each is bounded and settles one open point.
 | --- | --- | --- | --- |
 | S1 | D4 conversion | convert the bookmarks extension and `src/praxis/fields.nix` Axiom specs to Krisis `T` and through the alias converter | the extension fixture's diagnostics match today's codes and paths |
 | S2 | walker order and D2 | three fixtures (an include DAG with a diamond, host-scope fan-out to users, a root include like `den.default`) through Den v0.19.0 and a plain walker under 200 lines | class module identity lists per entity match, or every difference is named |
-| S3 | TOML validation in Nix | round-trip `tests/toml` fixtures through `builtins.fromTOML` at the pinned evaluators and compare with tomlkit's parse | parity on every fixture, or the differing cases listed |
+| S3 | TOML parity, as band 7's verification | `checks.toml-parity` over every `tests/toml` fixture on Lix and CppNix against today's validator | parity on every fixture; any difference is fixed in band 7 |
 | S4 | K5 to K7 shape | implement them on a Krisis branch and run the declaration tests against it | tests pass with paths, replay and finish from Krisis alone |
-| S5 | K10 | count diagnostics per host evaluation for a fleet fixture with one static error after K6 | the duplicate count is known |
+| S5 | K10, internal | count diagnostics per host evaluation for a fleet fixture with one static error after K6, in band 2 | the count is recorded and band 2 records the K10 decision |
 | S6 | marker overhead | run `fleet.den` with and without markers | the marker-entry count and counter delta are recorded |
 
 ## Assumptions
 
-- Den visits includes depth-first pre-order (S2).
 - Whether `lexicon { includes = ...; }` is rejected or ignored today wasn't evaluated.
 - The pinned nix-unit can assert error messages.
 - A fixed-hash `builtins.fetchTree` of Den in tests is acceptable instead of a flake input.

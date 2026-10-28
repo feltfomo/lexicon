@@ -20,8 +20,9 @@ the repository in `~/Documents/Plans/Lexicon/`, whose primary copy is on lumi.
 ## Decisions
 
 The owner approved every recommendation in the architecture's decisions table on 2026-10-27,
-D1 to D14, including consumer API changes P1 to P4. P4 lands only after spike S3 shows TOML
-validation in Nix matches the current validator.
+D1 to D19, including consumer API changes P1 to P4. Everything the capabilities page promises
+ships by the end of this effort. Each promise is Current or assigned to a band, and a promise
+leaves the page only through an owner-approved change, never by deferral.
 
 ## Bands and merge order
 
@@ -35,9 +36,9 @@ merge in this order. Bands on the same line can run at the same time.
 | 2 | Native Krisis in Lexicon, one dependency owner; Krisis batch 2 (K2, K3, K5, K8) | lexicon, krisis | 1 |
 | 3 | Axiom removed | lexicon | 2 |
 | 4 | Target layout and architecture tests, no behavior change | lexicon | 3 |
-| 5 | Subsystem records, settings, assembly, hosts, aliases, P1 to P3 | lexicon | 4 |
-| 6 | Composition subsystem and the plain host | lexicon | 5 |
-| 7 | Pure-Nix cleanup, P4, kernel audit | lexicon | 6 |
+| 5 | Subsystem records, settings with host binding, assembly, hosts, aliases, P1 to P3 | lexicon | 4 |
+| 6 | Composition subsystem, quirks and the plain host | lexicon | 5 |
+| 7 | Pure-Nix cleanup, the format registry with TOML and JSON, P4, kernel audit | lexicon | 6 |
 
 ## Interfaces this effort changes
 

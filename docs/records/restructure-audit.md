@@ -351,3 +351,33 @@ Read for the benchmark suite ruling:
 - Den batteries skadi uses: `define-user`, `primary-user`, `user-shell` (`users/*.nix`). Den's
   Home Manager battery forwards user content to `home-manager.users.<userName>`
   (`D/modules/aspects/batteries/home-manager.nix:12-16`).
+
+## Round-three scope evidence
+
+- Den quirks: registered in `den.quirks`, collected scope-locally, delivered to class modules that
+  name them as arguments, list values flattened, include order irrelevant to availability, and no
+  cross-scope flow without a pipe policy
+  (`D/docs/src/content/docs/explanation/quirks-and-pipes.mdx:83,90,105,121-125,149-160,232`;
+  flattening at `D/nix/lib/aspects/fx/assemble-pipes.nix:17-26`). Config-dependent quirk values are
+  resolved against the producer's config (`quirks-and-pipes.mdx:237-247`).
+- skadi's quirk use is same-scope only: `den.quirks.persistence` (`modules/den.nix:16`), producers at
+  host-scope aspects (`system/networking.nix:3`, `system/tailscale.nix:5`,
+  `desktop/display-managers/sddm.nix:3`, `desktop/shells/noctalia/greeter.nix:10`), one consumer
+  (`system/impermanence.nix:10,18,52`). No pipe policy appears in skadi.
+- `builtins.fromTOML` rejects dates and times on both evaluators ("Dates and times are not
+  supported", evaluated on Lix 2.95.4 and CppNix 2.34.8). CppNix parses them only with the
+  experimental `parse-toml-timestamps` feature, which Lix lacks and which Lexicon can't enable for
+  a consumer. `tests/toml/rendering.nix:169` renders a date literal, so a plain round trip can't
+  reach parity; literal fragments need a Nix grammar check.
+- `builtins.toJSON` gives identical bytes on Lix 2.95.4 and CppNix 2.34.8 for
+  `[ 0.1 1.5 1.0e20 1.0e-7 (1.0 / 3.0) 100.0 "x" ]` (evaluated). skadi writes JSON today with
+  `builtins.toFile` and `builtins.toJSON` (`desktop/shells/serpantinum/default.nix:57-58`,
+  `desktop/shells/end4-pc.nix:26`).
+- TOML's runtime publisher merges a base document with a runtime theme document
+  (`src/toml/runtime.py:204-240`); theme composition targets TOML outputs only
+  (`src/program/theme/composition-runtime.nix:153`). No JSON runtime merge exists or is consumed.
+- The coordinator and settings modules can reach every Den host only through a Lexicon NixOS bridge
+  on that host; Lexicon has no other way to add a module to every Den host without a skadi edit.
+- Every skadi host (`khion`, `lumi`, `vm`, `generic`) includes `base`, and `base` includes `audio`, a
+  `lexicon { }` aspect with a `nixos` field (`system/base.nix:14-22`, `system/audio.nix:3-5`), so each
+  host has a Lexicon NixOS bridge through which service and settings modules arrive.
