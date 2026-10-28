@@ -102,8 +102,6 @@ These obligations passed qualification for the corrected execution candidate
 `2b594482e8d88cc4b7930935f3044911d8ef9e59b949f0b3efc5d29f0780ed16`.
 The retained routine operation includes 88 admitted semantic, poison, exception,
 sharing and terminal records, followed by the successful combined gate. The
-[capability record](nix-effects/capabilities.md#combined-integration-candidate)
-identifies the source, proof and documentation-only applicability delta. No
-unchanged gate replay is needed for that delta. Functional contracts remain
-required; immediate and assembled performance acceptance is deferred in full,
-with failures and missing results preserved and no future audit authorized.
+maintained fixtures pin those functional obligations. This historical qualification does not
+establish performance bounds; the diagnostic cost and profile reports describe the measured
+limitations separately.

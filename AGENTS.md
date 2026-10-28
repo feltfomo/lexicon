@@ -7,7 +7,7 @@ changing internals. Read the relevant source, callers and tests before editing.
 
 The [philosophy](docs/philosophy.md) holds the laws, and
 [functional design](docs/explanation/functional-design.md) explains their vocabulary.
-Work toward the target layout follows the [restructure effort](docs/efforts/restructure.md).
+The [architecture](docs/explanation/architecture.md) describes the target layout and contracts.
 
 Read [declaration syntax](src/lexicon/syntax.md) and the
 [definition contract](src/lexicon/definitions.md) before extending the DSL.
@@ -84,6 +84,11 @@ work that runs outside evaluation and that Nix can't do, such as the furnish
 coordinator or the Praxis runtime.
 
 ## Writing and verification
+
+Keep public contracts, technical architecture, usage documentation and identified engineering
+evidence in this repository. Research drafts, review packets, roadmaps, execution status and
+worktree custody belong in the external planning repository. Public docs must not depend on
+private planning paths or contain agent-routing and approval instructions.
 
 Use the technical-writing skill and Odyssey's
 [writing guide](../odyssey/docs/writing.md) for docs and comments, and its

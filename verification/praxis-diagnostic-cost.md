@@ -6,12 +6,8 @@ before demanding diagnostics was insufficient for this frozen candidate. The
 experiment stopped during raw size 64 when a foreign `nix` process appeared at a
 release check. Raw size 64 has no complete median comparison.
 
-This is a bounded diagnostic result. It doesn't establish a dependency cause,
-correction owner, unavoidable cost or accepted cost exception. Migration
-acceptance remains open and production integration remains unstarted pending an
-architectural ruling. The [published specification](nix-effects/spec.md),
-[architecture](nix-effects/architecture.md), [effort contract](nix-effects/efforts.md)
-and [capabilities](nix-effects/capabilities.md) retain those boundaries.
+This is a bounded diagnostic result. It does not establish a dependency cause, unavoidable cost
+or accepted cost exception. The stopped cell has no complete median comparison.
 
 ## Question and method
 
@@ -64,23 +60,17 @@ attempt. Evaluators were bounded at 60 seconds and the runner at 600 seconds.
 No setup subtraction, tracing, reduced demand, source override, production
 priming or successful-check bypass was used.
 
-## Identities and authority
+## Measurement identities
 
-The report worktree is
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree` on
-`effort/nix-effects-diagnostic`, created from published contract commit
-`b370ee14c7d272c7b11106210dd2ee4b16034576`. Original custody remains on
-`preserve/nix-effects-candidate` at
-`11204c6592fdf4693075d08f44115751c3cc7881`, with exactly thirty unstaged candidate
-paths and an empty index. Publication remains clean on main at the contract
-commit. No candidate was imported into this worktree.
+The measurement basis was `b370ee14c7d272c7b11106210dd2ee4b16034576`. The frozen
+candidate and immediate baseline are identified separately below.
 
 | Input | Identity |
 | --- | --- |
-| Frozen candidate | `/home/feltfomo/Projects/lexicon/.runtime/praxis-production-integration/final-candidate/source` |
+| Frozen candidate | `praxis-production-integration/final-candidate/source` |
 | Candidate canonical 356-file content/kind/executable manifest SHA-256 | `4bd1bd91e8ae08bb07120b8039d8bebb755020568567a06c9579204c6d03bbe1` |
 | Candidate lock SHA-256 | `5677cbb7fb467a68922190375bbcb9b48e8850a87d6d1930a029de5926b4107e` |
-| Immediate baseline | `/home/feltfomo/Projects/lexicon/.runtime/praxis-final/immediate`, revision `11204c6592fdf4693075d08f44115751c3cc7881` |
+| Immediate baseline | `praxis-final/immediate`, revision `11204c6592fdf4693075d08f44115751c3cc7881` |
 | Immediate baseline lock SHA-256 | `0becfd8dc0e64bd9269e44198379e6affb1c2610f155e0d5076b35838b02d2e1` |
 | Krisis | Clean checkout at `c48e40834fe90299096d2988433b17f650c30c8a`; qualified Fx unchanged |
 | Evaluator | Nix 2.34.8, binary SHA-256 `f7eaf4e186b1a1baa9ac5f5c21dfc3226436e703e7e92b830ca62758ded9e84b` |
@@ -91,10 +81,8 @@ commit. No candidate was imported into this worktree.
 | Reviewed readiness SHA-256 | `8e217b02be9ce8a0ae3b9da058c0f825fafcefae89390c82a06a1d67bccc9e5d` |
 | Reviewed `identities.json` SHA-256 | `c13469090fe81cd91b9f8b4b3f3be7f6a6eb023c558f8e67577b522fbb0985e7` |
 
-The evaluator was resolved through the documented path-based development shell,
-not selected from a historical store path. The shell and frozen candidate have
-the same locked nixpkgs identity. The actual runner invocation was
-`nix develop path:. --no-write-lock-file -c python3 /home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree/.runtime/praxis-diagnostic-cost/run.py --authorization /home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree/.runtime/praxis-diagnostic-cost/launch-authority.json`.
+The evaluator was selected through the documented development shell, whose locked nixpkgs
+identity matched the frozen candidate.
 
 Before launch, readiness bound every observer command, complete evaluator
 expression, source, initialization flag and output destination. Each evaluator
@@ -113,12 +101,8 @@ or additional priming. The inherited unknown-feature warnings remain in complete
 stderr. The initial identity-only shell capture's exit status wasn't retrieved;
 its identity file was verified. No fresh preparatory version query was issued.
 
-The orchestrator independently reviewed the packet and relayed explicit authority
-for one invocation and at most 24 attempted workloads, with metadata separately
-capped at 25 queries. `launch-authority.json` retains the packet identities and
-the exact user instruction, "try go ahead if the lsp is still up just kill it."
-The one prelaunch language-server inspection found no candidates and sent no
-signals. The recorded earlier LSP hold was released subject to host admission.
+The campaign was bounded to 24 workload attempts and 25 metadata queries. The prelaunch
+language-server check found no candidates and sent no signals.
 
 ## Completed comparisons
 
@@ -226,13 +210,13 @@ was subtracted. The one invocation used fewer than 24 launches and 25 queries,
 and no evaluator or runner timeout occurred. Unused capacity grants no retry.
 
 All packet and result evidence is retained locally under
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-worktree/.runtime/praxis-diagnostic-cost`.
+`nix-effects-diagnostic-worktree/.runtime/praxis-diagnostic-cost`.
 These ignored runtime files aren't shipped in a repository clone.
 
 | Record | Purpose |
 | --- | --- |
 | `readiness.json`, `identities.json` | Reviewed identities, exact schedule and commands, input inventories, control reuse and policies |
-| `launch-authority.json`, `launch-invocation.json`, `launch-completion.json` | User authority, actual invocation and observed exit 1 with complete runner output hashes |
+| `launch-invocation.json`, `launch-completion.json` | Actual invocation and observed exit 1 with complete runner output hashes |
 | `toolchain.json`, `toolchain-command.json`, `environment.json`, `lsp-admission-actions.json` | Runtime resolution, settings, initial environmental hold and launch-time LSP inspection |
 | `admission.json`, per-attempt `.admission.json` and `.release.json` | Host-visible checkpoint observations, including the foreign-workload stop |
 | `lock-admission.json`, `lock-release.json` | Shared machine lock acquisition and release |
@@ -300,35 +284,11 @@ this result.
 Inherited platform and evidence constraints remain unchanged. Two-system pure
 evaluation isn't native aarch64 execution. The x86-only consumer example,
 unavailable aarch64 theme builder and two early combined-only worker-log records
-remain the exact disclosed constraints in the published capabilities. This phase
+remain disclosed limitations of this experiment. This phase
 ran no new functional or platform gate and makes no additional support claim.
 
-The architectural decision remains open. The recommendation is to review a
-materially different observation method before assigning correction ownership or
-requesting a product cost tradeoff. No further launch follows automatically.
-Integration requires this report merged, the architect's ruling, and any required
-dependency correction qualified, committed and verified portably published before
-Lexicon refreshes its immutable pin/lock and requalifies affected evidence.
-Separate Krisis work requires amended published contracts first. Any new cost
-exception requires explicit user approval.
+## Scope of evidence
 
-## Probe disposition and report gate
-
-| Probe or component | Disposition |
-| --- | --- |
-| Frozen `observe.py`, `workload.nix`, `praxis.nix`, output contracts and snapshot convention | Maintained owners used unchanged; retained identities bind the actual measured versions |
-| Original stopped preparation, runner and verifier | Historical evidence retained unchanged; replaced only for this invocation's administrative custody checks and accounting |
-| New `prepare.py`, `verification.py`, `finalize.py` | Disposable worktree-local packet preparation and identity verification; no production or maintained-tool capability added |
-| New `run.py` | Disposable finite sensitivity runner; single authorized invocation consumed and stopped; no retry or recurring measurement service |
-| Tool identity and host/LSP/lock observations | Disposable administrative evidence for this invocation's tool and host boundary |
-| `audit-results.py` and report verification | Disposable offline evidence checks; replay maintained output contracts and recompute recorded results without new evaluator execution |
-
-All probes and failed evidence are retained. No cleanup or deletion is authorized.
-The report-only gate is offline identity/custody verification, maintained
-complete-output contract replay, exact schedule and stop verification, arithmetic
-checks and report/evidence reconciliation. Those checks passed after the stop.
-No maintained tooling changed, so no product build or additional Praxis gate
-was run for this report. Report review, independent quality review, the corrective
-pass and explicit commit approval remain required before the report phase can
-close. A reviewed report commit can close this bounded phase while migration
-acceptance remains open.
+This report records the stopped historical experiment and its admitted results. It did not
+establish a correction, new platform support or performance acceptance. Later integration
+and benchmark results do not turn its missing observations into measured passes.

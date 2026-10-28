@@ -119,5 +119,4 @@ parallel path is removed in the same change. Get the algorithm and data layout r
 optimizing, and measure before doing anything unusual.
 
 [Functional design](explanation/functional-design.md) explains the vocabulary these laws use.
-[The restructure effort](efforts/restructure.md) is the planned move from today's layout to this
-one.
+[The architecture](explanation/architecture.md) describes the target owners and contracts.

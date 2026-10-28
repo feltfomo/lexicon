@@ -1,13 +1,10 @@
 # Dependency boundary
 
-The remaining migration contracts are published as the
-[spec](nix-effects/spec.md), [architecture](nix-effects/architecture.md),
-[effort ownership and candidate custody](nix-effects/efforts.md), and
-[capabilities and acceptance evidence](nix-effects/capabilities.md).
-They distinguish delivered behavior, the functionally qualified uncommitted Praxis
-candidate, and performance acceptance deferred in full to a separate future
-user-directed audit. Failed/missing cost evidence no longer blocks migration review
-or architectural acceptance; no audit execution or performance pass is implied.
+This page records the current dependency construction and compatibility boundaries.
+The [public API](../reference.md), [definition contract](../src/lexicon/definitions.md) and
+[functional design](../docs/explanation/functional-design.md) describe the contracts consumers
+and extensions rely on. Historical diagnostic measurements are in the
+[cost report](praxis-diagnostic-cost.md) and [profile](praxis-diagnostic-profile.md).
 
 `src/dependencies.nix` initializes one corrected nix-effects value with the selected
 library, then native Krisis with `{ lib, fx }`. The public factories, fixture

@@ -16,12 +16,8 @@ The cost is a product of factors whose source boundaries have different owners.
 Kernel work per validation and validations per recorded emission are in Krisis.
 Recorded emissions per final diagnostic come from the candidate's Praxis
 adaptation. This profile doesn't choose a correction, assign the total cost, or
-establish an accepted or unavoidable cost. Correction ownership stays open,
-migration acceptance stays open, and production integration stays unstarted. The
-[specification](nix-effects/spec.md), [architecture](nix-effects/architecture.md),
-[effort contract](nix-effects/efforts.md) and [capabilities](nix-effects/capabilities.md)
-keep those boundaries. The earlier [cost report](praxis-diagnostic-cost.md)
-measured the regression this profile locates.
+establish an accepted or unavoidable cost. The earlier [cost report](praxis-diagnostic-cost.md) measured the regression this profile locates.
+These are historical measurements, not a claim about later dependency revisions.
 
 ## Question and method
 
@@ -51,39 +47,28 @@ The tables cover Krisis `validation.nix` (one table per revision, because the
 per-value lambda moved), Krisis `report.nix`, and the lexicon `effects.nix` and
 `src/praxis/type-checks.nix`. Whole-file and directory rules cover the rest.
 
-## Identities and authority
+## Measurement identities
 
-The profile worktree is
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree` on
-`effort/nix-effects-diagnostic-profile` at published contract commit
-`a9b303293eb17c3d6f669b35acb0896eccc239e6`. Original custody stayed on
-`preserve/nix-effects-candidate` at `11204c6592fdf4693075d08f44115751c3cc7881`
-with its recorded thirty unstaged paths and an empty index.
+The measurement basis was `a9b303293eb17c3d6f669b35acb0896eccc239e6`. The frozen
+candidate and immediate baseline are identified separately below.
 
 | Input | Identity |
 | --- | --- |
-| Frozen candidate | `/home/feltfomo/Projects/lexicon/.runtime/praxis-production-integration/final-candidate/source`, 356-file manifest SHA-256 `4bd1bd91e8ae08bb07120b8039d8bebb755020568567a06c9579204c6d03bbe1` |
+| Frozen candidate | `praxis-production-integration/final-candidate/source`, 356-file manifest SHA-256 `4bd1bd91e8ae08bb07120b8039d8bebb755020568567a06c9579204c6d03bbe1` |
 | Candidate lock SHA-256 | `5677cbb7fb467a68922190375bbcb9b48e8850a87d6d1930a029de5926b4107e` |
-| Immediate baseline | `/home/feltfomo/Projects/lexicon/.runtime/praxis-final/immediate`, revision `11204c6592fdf4693075d08f44115751c3cc7881` |
+| Immediate baseline | `praxis-final/immediate`, revision `11204c6592fdf4693075d08f44115751c3cc7881` |
 | Baseline lock SHA-256 | `0becfd8dc0e64bd9269e44198379e6affb1c2610f155e0d5076b35838b02d2e1` |
 | Krisis | Candidate `c48e40834fe90299096d2988433b17f650c30c8a`, baseline `c8c71c0a81012ebfc2d82a5c65da5ed8b8c195f0`; between them only `src/validation.nix` differs |
 | Evaluator | Nix 2.34.8, binary SHA-256 `f7eaf4e186b1a1baa9ac5f5c21dfc3226436e703e7e92b830ca62758ded9e84b`, source read at `f3f1c3c5b8ad91850e0f7c590cf177f7ab022024` |
 | Frozen dispatcher and fixture SHA-256 | `80373f43e545962798cd49553f69284e5da64c917f04c67ecc9495202cfc0244`, `3fa7155e9a8a53731f19fb1120665c44ceab5d9c19931d442aa91c41e407a98f` |
 | Executed readiness and `identities.json` SHA-256 | `2a54a119e2210d46ab7664bbe2ce4ba390a3d896dacfb2c85e454bf3272d7a6d`, `f223d860b64dbf011cca99557765846726a9fda15cc20be504cc13e2be1588df` |
-| Launch authority SHA-256 | `489e701a9ea8eb167d2e876fff6ca13d361676b6c663018c4346842023183a19` |
 
-The first authorized invocation, against readiness
-`cefbdfe69bbba0ce4541b751022ad3652aba7770bb3710fa801a340892a1aa4c`, stopped at host
-admission on a foreign `cargo` process before any workload. It added 1.1077095000073314
-runner seconds and no workloads or queries. Its records stay in place and bound.
-The continuation packet changed only run-scoped paths, starting accounting and
-history binding. After path substitution its eighteen-item schedule is identical.
-The user confirmed the foreign work had finished and approved the second
-invocation, which ran through the documented development shell:
-`nix develop path:. --no-write-lock-file -c python3 /home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/attempt-2/run.py --authorization /home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/attempt-2/launch-authority.json`.
-It took the shared `lexicon-gate` lock without contention. Host admission, every
-per-attempt admission and release check, and the final release found no foreign
-process.
+The first capture attempt, against readiness
+`cefbdfe69bbba0ce4541b751022ad3652aba7770bb3710fa801a340892a1aa4c`, stopped on a foreign
+`cargo` process before any workload. It added 1.1077095000073314 runner seconds and no
+workloads or queries. The completed attempt used the same eighteen-item schedule after
+run-scoped path substitution and acquired the shared gate lock without contention. Host
+admission, per-attempt checks and final release found no foreign process.
 
 ### Tooling identities
 
@@ -347,7 +332,7 @@ Lix 2.95.4, whose source isn't local, so this cancellation explanation isn't
 independently established.
 
 The second full gate ran once from an independent local clone at
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/gate-clone`.
+`nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/gate-clone`.
 The clone was made with `--no-local --no-checkout`, has a real `.git` directory
 and no alternates, and was checked out detached at the published basis. The four
 reviewed files were copied with their modes. Its 359 admitted files equal the
@@ -360,12 +345,11 @@ The gate passed with exit 0 in 309.824 s. Formatting changed none of 276 files,
 all ten flake checks passed, and `praxis-installed-consumer` built and completed.
 That derivation differs from the first gate's, because the snapshot differs, so
 the earlier one never built. The check omitted `aarch64-linux`. Afterwards the
-clone's manifest was unchanged, the lock had no holder, and custody and the four
-worktrees were intact.
+clone's manifest was unchanged, the lock had no holder, and recorded source identities were intact.
 
 That gate verified the executed tool bytes. The third full gate verified the
 corrected ones. It ran once from a second independent clone,
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/gate-clone-2`,
+`nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile/gate-clone-2`,
 made the same way. It held the corrected `profile-contracts.py`
 (`3fea7360015544ba474b48d73c5dee78c5eabcf170679e73077406c2163f4f55`), the README
 (`8cf2f10e288bb77e2157456057f3e905868cc9a1ffce7ec6d8b51fdfce248037`), the unchanged
@@ -377,7 +361,7 @@ the lock and `flake.nix` matched.
 The gate passed with exit 0 in 444.323 s. Formatting changed none of 276 files,
 all ten flake checks passed, and `praxis-installed-consumer` built. The check
 omitted `aarch64-linux`. The clone's manifest was unchanged afterwards. The lock
-had no holder, and custody and the four worktrees were intact. A foreign
+had no holder, and recorded source identities were intact. A foreign
 `nix flake check` from another project started during the gate's last 306 s. It
 didn't hold the shared lock and wasn't signalled. This gate isn't a timing
 measurement, so its duration isn't comparable with the second gate's.
@@ -430,7 +414,7 @@ the log retrieval shell (about 4.42 s, exit 0, with two `nix log` queries exitin
 0 and 1), the second gate (309.824 s, exit 0) and the third (444.323 s, exit 0).
 
 Evidence is kept locally under
-`/home/feltfomo/Projects/lexicon/.runtime/nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile`.
+`nix-effects-diagnostic-profile-worktree/.runtime/praxis-diagnostic-profile`.
 These ignored runtime files aren't shipped in a repository clone.
 
 | Record | Purpose |
@@ -447,33 +431,8 @@ These ignored runtime files aren't shipped in a repository clone.
 | `ledger.json`, `host/`, `packet-3/` and siblings at the top level | The stopped first invocation |
 | `offline/`, `attempt-2/offline/`, `superseded/` | Offline qualification, runner, compatibility and classification checks, and superseded attempts kept as evidence |
 
-### Disposition
+## Scope of evidence
 
-Everything below stays in place. No cleanup is authorized.
-
-- The campaign's tool identities and archived copies. The maintained observer, corrected
-  `profile-contracts.py` and README were subsequently retired in favor of `bench/`.
-- Scratch helpers: `common.py`, `prepare.py`, `run.py`, `classify.py`,
-  `analyze.py`, `runner-check.py`, `legacy-check.py`, `classify-check.py` and
-  their attempt-2 copies, plus `corrective-1` scripts.
-- Superseded probes and packets under `superseded/`.
-- The spent first runner, which still refuses to run again.
-- The Nix 2.34.8 source clone under `upstream/`.
-- Ignored `__pycache__` directories.
-- Both gate clones.
-- The store snapshot from the first gate.
-
-## Remaining
-
-The commit needs the user's go. No production, Krisis or dependency correction was made or authorized here.
-
-While attribution and correction ownership stay unresolved, the orchestrator
-supplies an architect decision packet with this evidence. The packet names the
-open decision between the Krisis validation factors and the candidate emission
-factor. After the ruling, the orchestrator supplies the applicable integration
-opener, or a dependency opener plus a held-integration opener if dependency
-ownership is established. Integration needs this report merged, that ruling and
-resolved correction ownership. A dependency correction needs amended published
-Krisis contracts, qualification, an immutable commit and verified portable
-publication before Lexicon's pin and lock refresh and affected requalification.
-New cost exceptions need explicit user approval. Nothing opens automatically.
+The campaign did not change production behavior or establish an accepted cost exception.
+Its measurement identities and attribution limits remain part of this record. Historical
+worktree custody, approval routing and proposed follow-up work are not technical results.

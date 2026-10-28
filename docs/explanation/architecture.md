@@ -3,13 +3,9 @@
 Lexicon compiles small declarations into native modules and runtime plans. This page is the map an
 engineer uses before changing it: who owns what, how a declaration moves through the compiler, what
 each step may force, where extensions plug in, which invariants hold it together, and how it fails.
-[The spec](../reference/capabilities.md) states what consumers get. [The audit](../records/restructure-audit.md) holds the evidence; this page
-cites it as `audit:<section>` and keeps only what the audit supports.
-
-Everything here is an **accepted target**, approved by the owner on 2026-10-27, unless marked
-**Current** (the tree does it today). Every accepted target names the band that builds it on
-[the effort page](../efforts/restructure.md), through the spec's status column; nothing here is
-deferred or conditional. Statements inferred rather than read in source are marked **Assumption**.
+[The spec](../reference/capabilities.md) distinguishes current behavior from accepted target
+interfaces. A target is a planned technical contract, not a claim that it is already implemented.
+Statements that still need qualification are marked **Assumption**.
 
 ## Purpose and boundaries
 
@@ -115,8 +111,7 @@ One concern, one owner. Two places that decide the same thing are a defect in on
 
 ## The compile pipeline
 
-The proposal's single pipeline from walk to emit doesn't match where work runs (audit: forDen and
-the bridges; plan settle order). Lexicon's compile path runs inside the class module functions a
+Lexicon's compile path runs inside the class module functions a
 host receives, and the only place two declarations meet is the coordinator module after the module
 system merges them. So the pipeline has four lifetimes.
 
@@ -167,7 +162,7 @@ is one projection of it, so the built-in bridges keep their behavior.
 Settle order inside stage 7 is the topological order of plan kinds' `after` lists, computed once at
 assembly. Today that's one edge, `theme` before `directory` (directory expansion reads normalized
 themes). File and link plans have no dependency on directories; their output order stays file plans
-then directory files (audit: plan settle order). Contextual callbacks, the dynamic part, ran in
+then directory files. Contextual callbacks, the dynamic part, ran in
 stage 4, so no plan needs dynamic scheduling.
 
 Diagnostics: each stage returns `Computation (Checked a)`. Independent checks combine with
@@ -233,7 +228,7 @@ assembly.
 `name` and `includes` through and compiles the declaration's blocks into the class keys `nixos` and
 `homeManager`, whose values are the bridge module functions. The walker therefore sees one meaning
 of `nixos`: a native module. Lexicon's ownership-unit `nixos` field exists only inside the
-declaration and never reaches a walker (audit: lead claim 3).
+declaration and never reaches a walker.
 
 The portable aspect subset is: an attrset of `name`, `includes`, `description` and registered class
 keys; or a function whose formal arguments are entity kinds, optionally with `...`, returning such
@@ -242,9 +237,9 @@ after entity kinds are pre-applied in flat form and the rest are advertised with
 `lib.setFunctionArgs`, as Den does (`D/nix/lib/aspects/fx/class-module.nix:106-118`). Dedup is by
 `scope/identity`, where identity is the name chain plus context id, matching Den's key
 (`D/nix/lib/aspects/fx/handlers/check-dedup.nix:17-23`). Unnamed includes never dedup. The plain
-walker reproduces Den v0.19.0's include order on the portable subset, whatever that order is; S2 is
-the first conformance fixture band 6 writes, and its result fixes the walker's order rather than
-gating anything. `lexicon { }` passes through `name`, `includes` (P1) and the host's registered
+walker reproduces Den v0.19.0's include order on the portable subset. Conformance fixtures fix
+the plain walker's order against that implementation. `lexicon { }` passes through `name`,
+`includes` (P1) and the host's registered
 quirk keys; a pass-through key colliding with a block or annotation name fails when the host is
 bound.
 
@@ -297,14 +292,14 @@ canonical host. `filePrincipals` gives one user principal per (host, user) slice
 
 Aspects attach by name as in Den: the host's root is `aspects.<host name>` and each user's root is
 `aspects.<user name>`; a missing one is an empty aspect. `default` aspects are included at every host
-scope and every user scope, the role `den.default` plays in `/etc/skadi/modules/den.nix:19-20`. Kinds
+scope and every user scope, as `den.default` does under Den. Kinds
 are `host` with child `user`. Classes land by kind: `nixos` content from a host or one of its users
 lands in that host's `nixosSystem`; `homeManager` content from a user lands in
 `home-manager.users.<userName>`; `homeManager` content at host scope fans out to each user, as a
 host-scope `{ user, ... }` body does in Den (`parametric.mdx:56-60`). A `default` aspect's class
 content follows the same landing rule as any aspect, so its `nixos` content walked at a user scope
 lands on the host again; that matches Den only if Den does the same, and the conformance fixture for
-`default` fixes the plain walker to Den's observed behavior in band 6.
+`default` fixes the plain walker to Den's observed behavior.
 
 Instantiation, per host:
 
@@ -327,9 +322,8 @@ closes over its file's `inputs` argument.
 Batteries on day one, as portable aspect functions of `{ host, user }`: `define-user`
 (`users.users.<userName>` with `isNormalUser` and `home`, plus Home Manager `home.username` and
 `home.homeDirectory`), `primary-user` (`wheel` and `networkmanager` groups) and `user-shell shell`
-(enables the shell for the system and the user and sets the login shell). skadi's users include
-exactly these three (`/etc/skadi/modules/users/feltfomo.nix:8-10`, `owner.nix:5-6`,
-`grandpa.nix:6`), and a standalone flake can't define a usable user without the first. Hostname is
+(enables the shell for the system and the user and sets the login shell). A standalone flake
+needs user creation before it can define a usable user. Hostname is
 built into instantiation rather than a battery. Den's other batteries (`hjem`, `maid`, `wsl`,
 `tty-autologin` and the rest) aren't shipped until a consumer needs one.
 
@@ -339,10 +333,9 @@ plain host, `excludes`, policies, pipes, `provides`. `trace` records inert bodie
 
 ### Quirks
 
-Accepted target, band 6 (D10). The smallest equivalent of Den's same-scope quirk collection, the
-only quirk use in skadi: host-scope aspects emit `persistence.directories` and one `nixos` module
-takes `persistence` as an argument (`/etc/skadi/modules/den.nix:16`, `system/networking.nix:3`,
-`desktop/display-managers/sddm.nix:3`, `system/impermanence.nix:10,18`). No skadi code uses a pipe.
+Accepted target (D10). Same-scope quirk collection lets host-scope aspects emit values such as
+`persistence.directories` and a class module consume their collected `persistence` argument.
+It does not require a pipe system.
 
 | Concern | Rule |
 | --- | --- |
@@ -357,7 +350,7 @@ takes `persistence` as an argument (`/etc/skadi/modules/den.nix:16`, `system/net
 
 ### File-source formats
 
-Accepted target, band 7 (P4 and the JSON addition). A Furnish file `source` is classified with K2:
+Accepted target (P4 and the JSON addition). A Furnish file `source` is classified with K2:
 a path, a string, a derivation, or a one-key record whose key is a registered format. Formats live in
 one registry, `systems/services/render/registry.nix`, so TOML and JSON are two entries, not two
 special cases. A format record is `{ name; type; render; publisher ? null; }`: `type` is the Krisis
@@ -375,9 +368,10 @@ beats `pkgs.formats.json`, which runs `jq` in a build. Managed and writable JSON
 diffed by people, and the printer only lays out structure while the evaluator owns every scalar's
 bytes. Its cost is one fragment list per value, joined once.
 
-TOML parity is band 7's verification, not a gate. It's defined over the renderer's output grammar,
+TOML parity is defined over the renderer's output grammar,
 which Lexicon controls (D17): for every fixture under `tests/toml/` on both evaluators, the Nix
-validator accepts exactly the documents today's Python validator accepts, with equal parsed values. A difference is fixed in the renderer or the validator in that band. The check is
+validator accepts exactly the documents today's Python validator accepts, with equal parsed values.
+Any difference must be corrected in the renderer or validator. The check is
 `checks.<system>.toml-parity`, which evaluates the fixture set with `pkgs.lix` and
 `bench-evaluator` inside one build and compares their results in Nix.
 
@@ -404,7 +398,7 @@ settings error names the winning origin as primary and the others as Krisis `rel
 
 ### Host-bound settings and the edge adapter
 
-Accepted target, band 5 (D8). A leaf opts in with `setting { ...; bind = "host"; }`; the default is
+Accepted target (D8). A leaf opts in with `setting { ...; bind = "host"; }`; the default is
 `bind = "environment"`.
 
 Which leaves may bind per host. `enable` never can, and neither can a leaf assembly reads: stage 0
@@ -471,14 +465,14 @@ the initialized Krisis.
 | K6 | `k.report.replay report -> Computation (Checked a)` | re-emits the report's diagnostics in order with their recorded codes, severities and primaries, applying only the running prefix and never the namespace, severity or primary defaults; a failed replayed outcome fails the running report even when no replayed event is an error under the running policy, and strict mode throws the last replayed event; returns Valid with the success value when the outcome succeeded, Invalid otherwise; a `Checked b` result flattens through `validation.andThen`; forces no presentation; implemented as the Krisis-owned effect `krisis.replay`, one effect per replay | engine static checks computed once per declaration and reported in every slice |
 | K7 | `k.report.finish { formatter ? null; } report -> a` | returns the success value without inspecting it; on failure throws one message rendering every visible diagnostic, and every hidden one if none is visible; on success each visible warning goes once through `lib.warn` rendered by `render.plain` (or `formatter`) when the result is forced, so warnings are seen without failing; failure renders effective severity, so a promoted warning prints as an error; an invalid formatter is rejected eagerly; a failure without diagnostics throws `krisis: failed report without diagnostics`; `finish` stays generic and Lexicon's engine eliminates `Checked` itself. There's no report header: a subsystem that grouped diagnostics under one, such as Ownerships, puts the unit in the primary location and the axis and claims in notes | every bridge; `configure`; surfaces such as `toml.generate` and `praxis` |
 | K8 | `k.path.fromAttrPos attrs name -> Location or null` | wraps `builtins.unsafeGetAttrPos`; null when Nix has no position; `source` and a point `range` otherwise | settings provenance; configure layer origins |
-| K9 | no new function; a cost law on `report.emit`, `report.fail`, `diagnostic.make` and `validation.check` | one emission builds and checks its envelope once; envelope and namespace checks are plain predicates, never the nix-effects type kernel; a factory's namespace is checked once per factory | every stage. Evidence: the praxis profile found 576 envelope builds for 128 diagnostics and 2,792 of 3,079 samples in that validation (`verification/praxis-diagnostic-profile.md:1-14,177-215`) |
-| K10 | `k.report.run { dedupe ? null; }` with `dedupe = diagnostic: key` | first occurrence of a key kept, later ones counted but hidden | an internal decision band 2 makes from S5's count; the spec promises nothing about duplicate diagnostics, so either outcome ships the spec |
+| K9 | no new function; a cost law on `report.emit`, `report.fail`, `diagnostic.make` and `validation.check` | one emission builds and checks its envelope once; envelope and namespace checks are plain predicates, never the nix-effects type kernel; a factory's namespace is checked once per factory | every stage. Evidence: the praxis profile found 576 envelope builds for 128 diagnostics and 2,792 of 3,079 samples in that validation ([diagnostic profile](../../verification/praxis-diagnostic-profile.md)) |
+| K10 | `k.report.run { dedupe ? null; }` with `dedupe = diagnostic: key` | first occurrence of a key kept, later ones counted but hidden | optional deduplication; no consumer-visible contract depends on it |
 
 ### Acceptance on the Krisis side
 
 Each item lands with nix-unit cases in Krisis's existing suites, registered in `tests/default.nix`,
-run by `krisis-test` and the full `krisis-gate` (`/home/feltfomo/Projects/krisis/AGENTS.md`,
-`docs/development.md`). Suites are chosen by what they already own: `baseline.nix` diagnostic
+run by `krisis-test` and the full `krisis-gate` using Krisis's documented toolchain. Suites are
+chosen by what they already own: `baseline.nix` diagnostic
 construction and factories, `extensions.nix` report operations and `withContext`, `boundaries.nix`
 validation boundaries with poison values, `qualification/types.nix` admitted types,
 `integration.nix` consumption at the edge (`nix.module`), `presentation.nix` rendering. Test names
@@ -495,7 +489,7 @@ below are the cases to add; failures use nix-unit's `expectedError`.
 | K7 | `tests/integration.nix` | `test-finish-success-opaque`, `test-finish-renders-every-visible`, `test-finish-hidden-only-failure`, `test-finish-warnings-succeed`, `test-finish-warns-visible-once` |
 | K8 | `tests/baseline.nix` | `test-from-attr-pos-location`, `test-from-attr-pos-null` |
 | K9 | new flake check `checks.<system>.emission-cost`, fixture `tests/cost/emission.nix` | the measurable law below |
-| K10 | `tests/extensions.nix` | `test-dedupe-first-kept`, `test-dedupe-counts-hidden`, when band 2 decides to add it |
+| K10 | `tests/extensions.nix` | `test-dedupe-first-kept`, `test-dedupe-counts-hidden`, if deduplication is provided |
 
 K9's measurable form. The fixture builds one factory with a namespace and emits N error
 diagnostics under `report.run { }` collecting, demanding only the report summary. The check
@@ -525,25 +519,14 @@ files:
 
 Lexicon checks the same law from its side with the bench suite's `subsystem.praxis.diagnostics`
 workload, whose applications per added diagnostic stood at about 128,500 in the profiled candidate
-(`verification/praxis-diagnostic-profile.md:131-134`).
+([diagnostic profile](../../verification/praxis-diagnostic-profile.md)).
 
-### Pin flow
+### Dependency updates
 
-Krisis lands the items in two batches, each on Krisis's main through `krisis-gate`:
-
-- Batch 1, before restructure step 1: K1, K4, K5, K6, K7, K9. These remove the compatibility files. K5 joins batch 1 because K6 replays under the running prefix (spike S4).
-- Batch 2, before step 2: K2, K3, K8. These replace Axiom's types and source positions.
-- K10: band 2 measures S5 and records the decision in this page; no consumer-visible promise depends on it.
-
-After a batch is on Krisis main, Lexicon moves `inputs.krisis.url` to that commit, refreshes
-`flake.lock` and runs its own gate in the same change. During S4, a Lexicon spike branch or
-worktree may point at a Krisis branch revision; that branch never merges. Lexicon's main only ever
-pins commits reachable from Krisis main, which the reviewer checks with
-`git merge-base --is-ancestor <rev> main` in the Krisis checkout before approving a pin move.
-
-Handler-name collision checks for Lexicon's own effects (`lexicon/<subsystem>/...`) live in
-`core/effects.nix`; they aren't a diagnostic capability. Lexicon builds structured Krisis paths
-itself in `core/paths.nix`, replacing rendered labels; that needs no Krisis change.
+Krisis updates use immutable revisions and refresh the input declaration and lockfile together.
+Consumers qualify the required public interfaces before adopting an update. Handler-name
+collision checks for Lexicon effects belong to its effect owner; structured authored paths
+belong to its path owner.
 
 ### Catalog namespaces
 
@@ -580,7 +563,7 @@ translator keeps `program/*` unchanged.
 | `core.meet` | `Axis -> claim -> claim -> claim` | meet-semilattice with `top` as identity, so ancestor narrowing is order-independent and a child can't widen | one axis call; the axis records already carry `top` and `narrow` (`src/ownerships/axes.nix:109-110,135-136`) |
 | `core.carry` / `core.uncarry` | `a -> Thunk a` / `Thunk a -> a` | values that must stay lazy cross effect state only inside carriers | one closure per value |
 
-`core.closure` is breadth-first by construction (audit: headline 9), so the plain walker, which must
+`core.closure` is breadth-first by construction, so the plain walker, which must
 match Den's order, is `compose`'s own kernel, not `core.closure`. Kernels take algebras, records of
 functions, never effects. `match` replaces an `if` chain only where the chain encodes a domain
 vocabulary: node kinds (`src/declarations/definitions.nix:408-421`,
@@ -805,96 +788,28 @@ The suite reports by default. A separate `bench` gate fails on counter regressio
 tier after a calibration run sets budgets (D12). It isn't part of the default gate, because it needs
 a pinned evaluator outside the check sandbox and a second revision.
 
-## Current files and their new homes
-
-| Current | New home | Notes |
-| --- | --- | --- |
-| `src/dependencies.nix` | `core/effects.nix` | applied once in `flake.nix`'s outputs `let`, replacing per-call `dependenciesFor` (`flake.nix:29-39,57`); Axiom and compatibility merges go |
-| `flake.nix` | `flake.nix` | adds `packages.<system>.bench-evaluator = pkgs.nixVersions.nix_2_34` |
-| `src/effects.nix` | deleted | replaced by K4, K6, K7 |
-| `src/diagnostic-compatibility.nix` | deleted | K1, K7; `throwDiagnostics` in `drop` becomes a catalog diagnostic |
-| `src/inspection-compatibility.nix` | deleted | Krisis `inspect.value`, `inspect.shape`, `inspect.identity` |
-| `src/type-compatibility.nix` | deleted | Krisis `T`; `renderPath` becomes `core/paths.nix` plus `k.path.render` |
-| `src/declarations/default.nix` | `systems/engine/compile.nix` | stages 2 and 4 to 6 |
-| `src/declarations/definitions.nix` | `systems/engine/registration.nix`, `systems/engine/node.nix` | node kinds as a `core.sum` |
-| `src/declarations/traversal.nix` | `systems/engine/traversal.nix` | `Node.match` inside `core.foldWith` |
-| `src/declarations/outputs.nix` | `systems/engine/contributions.nix` | envelope over class and plan registries |
-| `src/declarations/report.nix` | `systems/engine/catalog.nix` | codes only |
-| `src/lexicon/default.nix` | `lexicon.nix` (configure), `systems/engine/bridge.nix` (`bind`, the two bridges, `forRoster`, `forTarget`, `withResolvers`), `hosts/den/default.nix` (`forDen`) | bindings serve every host |
-| `src/lexicon/builtins.nix` | `subsystems/native/blocks.nix`, `subsystems/furnish/block.nix`, `subsystems/theme/block.nix` | each block with its owner |
-| `src/lexicon/system.nix` | `subsystems/native/units.nix` | |
-| `src/lexicon/resources.nix` | `subsystems/furnish/settle.nix` (validation, file and link lowering, order), `subsystems/theme/plan.nix` (theme normalization), `subsystems/furnish/directories.nix` (expansion) | |
-| `src/lexicon/links.nix` | `subsystems/furnish/links.nix` | path predicates to `core/paths.nix` |
-| `src/lexicon/runtime.nix` | `subsystems/furnish/emit.nix` | per-slice emit of declarations per principal; theme fan-out moves to theme's plan kind |
-| `src/lexicon/target.nix` | `systems/engine/target.nix` | direct-mode target, used by `forTarget` |
-| `src/lexicon/legacy.nix` | `legacy/translate.nix` | |
-| `src/lexicon/*.md` | `docs/reference/`, `systems/engine/reference.md` | |
-| `src/ownerships/*` | `systems/ownerships/*` | `matrix.nix` to `inspect.nix`; `import-units.nix` stays until a discovery subsystem exists |
-| `src/furnish/default.nix`, `core.nix`, `files.nix` | `subsystems/furnish/` | collision index uses `core.registry` |
-| `src/furnish/contract.nix` | `systems/services/coordinator/contract.nix` | wire format only |
-| `src/furnish/runtime.nix` | `subsystems/furnish/services/coordinator.nix` | imports Furnish core, so it can't be a system (audit: file table) |
-| `src/furnish/target.nix` | `systems/services/coordinator/target.nix` | target records; `externalPath` to `core/paths.nix` |
-| `src/toml/encode.nix`, `render.nix`, `default.nix` | `systems/services/render/toml/` | `generate` validates in Nix: `builtins.fromTOML` round trip plus a literal grammar check; `lib.toml` surface kept |
-| none | `systems/services/render/registry.nix`, `systems/services/render/json/`, `lib.json` | new format registry and JSON format |
-| none | `systems/settings/edge.nix` | host-bound settings adapter |
-| none | `subsystems/compose/quirks.nix` | quirk registry and pools |
-| none | `tests/systems/settings/edge.nix`, `tests/subsystems/compose/quirks.nix`, `tests/subsystems/furnish/sources.nix`, `tests/systems/services/render/`, `checks.toml-parity` | new tests |
-| `src/toml/runtime.py` | `systems/services/render/toml/publisher.py` | publish and file-source merge only |
-| `src/program/theme/*` | `subsystems/theme/` | adapters as a `core.registry`; runtime modules under `services/` |
-| `src/program/directories.nix`, `program/fields.nix` | `subsystems/furnish/directories.nix`, `subsystems/furnish/lifecycle.nix` | drop `tryEval`; reject sources with derivation context |
-| `src/program.nix`, `src/program/*.nix` (rest) | `legacy/` | |
-| `src/praxis.nix`, `src/praxis/*` | `subsystems/praxis/` | `fromDen` to `hosts/den/praxis.nix` |
-| `src/den.nix` | `hosts/den/default.nix`; the roster builder (`:185-211`) to `systems/ownerships/roster.nix`, fed an entity list by either host | `drop` stays here: it filters a Den host's includes for the installer |
-| `src/registry.nix`, `src/registry/*` | `subsystems/compose/fleet/` | `lib.registry` surface |
-| Axiom `schema.compile`, `registry.compile`, `canonical`, `sets`, `requirements`, `phases`, `identity` | Krisis `T` and `validation`; `core/registry.nix`; `core/identity.nix`; `core/paths.nix`; `requirements` and `phases` folded into their single callers | audit: file table |
-| `tests/*` | `tests/` mirroring the tree as nix-unit cases | |
-| `tests/toml/test.py`, `protocol.py` | `tests/systems/services/toml/` | rendering cases to nix-unit; publish and merge cases stay Python |
-| none, the Python contract drivers are deleted (D13) | `tests/` nix-unit cases beside each fixture, and `checks.observation-events` over `tests/events/` | nix-unit pins values and whole exception messages; callback counts, call order and error contexts need captured traces, so a flake check reads them |
-| none, the measurement scripts and their workloads are deleted (D13) | `bench/workloads/`, `bench/runner/` (shell), `bench/analysis/` (Nix) | |
-| none | `bench/budgets.nix`, `bench/reference.md`, `tests/bench/` | new |
-| none | `tests/architecture/{layers,purity,allowlist}.nix` | new |
-
 ## Decisions
 
-The owner approved every recommendation below on 2026-10-27.
+These choices explain the target contracts and their compatibility constraints.
 
-| # | Decision | Recommendation | Reason |
+| # | Decision | Choice | Reason |
 | --- | --- | --- | --- |
-| D1 | Who walks under the Den host | Den, with no end date while the Den host exists | skadi's batteries, quirks and `den.default` are Den features (`/etc/skadi/modules/den.nix:16,19-20`); a date means dropping the Den host or losing them (audit: lead claim 4) |
+| D1 | Who walks under the Den host | Den, while the Den host exists | Den owns its batteries, quirks and root aspect behavior |
 | D2 | What `lexicon { }` returns, and the plain host built on it | an aspect fragment with class keys in every host; the plain host as specified in [its section](#the-plain-host) | one meaning of `nixos` at the aspect level; compilation identical across hosts; it's what Den already receives |
 | D3 | How a failed slice surfaces | throw through K7 at the forced bridge expression; `k.nix.module` for warnings only | keeps today's consumer-visible behavior; assertions need a fallback module per failed slice |
 | D4 | Extension field shapes after Axiom | new records use Krisis `T`; the `extensions` alias converts Axiom-shaped field specs once | Axiom field specs are the current public contract (`definitions.md:14,30`) |
 | D5 | Unknown formal arguments in plain-host bodies | error at walk; unreachable kinds inert and traced | Lexicon's walker has the kind schema Den lacks; Den behavior is unchanged |
 | D6 | Disabled required subsystem | error naming both ends | auto-enable hides a dependency |
-| D7 | Field from a disabled subsystem | unknown-field code with help naming the disabled subsystem | keeps `restructure.md:76-77`'s code and gives a better message |
-| D8 | Host-bound settings and the edge adapter | build it in band 5 as specified under Settings | owner ruling: every spec statement ships; `lexicon.furnish.state` stays a coordinator option |
+| D7 | Field from a disabled subsystem | unknown-field code with help naming the disabled subsystem | preserves the error category while identifying the unavailable provider |
+| D8 | Host-bound settings and the edge adapter | use the module-edge adapter described under Settings | `lexicon.furnish.state` stays a coordinator option |
 | D9 | Block scope vocabulary | keep `user`, `system`, `split` this effort; map them to host kinds in the host contract | replacing the enum touches every block and buys only a future flake manager |
-| D10 | Standalone quirk equivalent | build same-scope quirks in band 6; no pipes | owner ruling; same-scope collection is all skadi uses |
+| D10 | Standalone quirk equivalent | same-scope quirk collection without pipes | class modules need collected scope values, not a second policy system |
 | D11 | Alias end dates | no date in the spec; each removal is its own owner-approved API change | the no-exceptions rule can't hold a promise whose trigger is outside the roadmap |
 | D12 | Benchmark budgets in a gate | separate `bench` gate on counters after calibration; default gate unchanged | counters are deterministic but need a pinned evaluator and a second revision |
 | D13 | `verification/components` measurement scripts | replace with `bench/` and delete the Python | the pure-Nix rule; the suite covers their function |
-| D14 | Consumer API changes P1 to P4 on the capabilities page | P1 to P3 in band 5; P4 in band 7, unconditionally | each removes a wart in real skadi code; P4 changes Furnish's source laziness |
+| D14 | Consumer API changes P1 to P4 on the capabilities page | provide the specified declaration, host and file-source interfaces | P4 changes Furnish's source laziness and requires explicit classification |
 | D15 | JSON output form | Nix pretty-printer over `builtins.toJSON` scalars | readable managed files, evaluator-owned scalar bytes, no build-time `jq` |
 | D16 | Who registers quirks | plain-host module files and subsystem records, one registry | fleet vocabulary belongs to the consumer, library vocabulary to its subsystem |
 | D17 | What TOML parity covers | the renderer's output grammar, not every TOML document | Lexicon can't repair the evaluator's TOML parser without writing one in Nix; it can always change what it emits |
 | D18 | Den hosts without a Lexicon NixOS bridge | P3 and host-bound settings reach a Den host only through a Lexicon NixOS bridge on it, stated in the spec | every skadi host has one through `base`; a host without one imports the coordinator module explicitly, as today |
 | D19 | Den version for conformance | Den v0.19.0; a newer Den moves the conformance pin in a reviewed change | the suite compares against a fixed Den, so the guarantee names it |
-
-## Spikes
-
-Each is bounded and settles one open point.
-
-| # | Settles | Work | Done when |
-| --- | --- | --- | --- |
-| S1 | D4 conversion | convert the bookmarks extension and `src/praxis/fields.nix` Axiom specs to Krisis `T` and through the alias converter | the extension fixture's diagnostics match today's codes and paths |
-| S2 | walker order and D2 | three fixtures (an include DAG with a diamond, host-scope fan-out to users, a root include like `den.default`) through Den v0.19.0 and a plain walker under 200 lines | class module identity lists per entity match, or every difference is named |
-| S3 | TOML parity, as band 7's verification | `checks.toml-parity` over every `tests/toml` fixture on Lix and CppNix against today's validator | parity on every fixture; any difference is fixed in band 7 |
-| S4 | K5 to K7 shape | implement them on a Krisis branch and run the declaration tests against it | tests pass with paths, replay and finish from Krisis alone |
-| S5 | K10, internal | count diagnostics per host evaluation for a fleet fixture with one static error after K6, in band 2 | the count is recorded and band 2 records the K10 decision |
-| S6 | marker overhead | run `fleet.den` with and without markers | the marker-entry count and counter delta are recorded |
-
-## Assumptions
-
-- Whether `lexicon { includes = ...; }` is rejected or ignored today wasn't evaluated.
-- The pinned nix-unit can assert error messages.
-- A fixed-hash `builtins.fetchTree` of Den in tests is acceptable instead of a flake input.
