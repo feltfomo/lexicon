@@ -5,16 +5,39 @@
   problem,
 }:
 rec {
-  inherit (axiom) validation types sets;
-  inherit
-    (
-      (krisis.mkReporter {
-        formatHeader = count: "praxis: ${toString count} declaration error(s)";
-        formatDiagnostic = krisis.renderPlain;
-      })
-    )
-    finish
-    ;
+  inherit lib;
+  inherit (krisis) effects;
+  checked = effects.native.validation;
+  mapChecked = f: checked.andThen (value: effects.accept (f value));
+  map2Checked =
+    f: left: right:
+    mapChecked (values: f (builtins.elemAt values 0) (builtins.elemAt values 1)) (
+      checked.all [
+        left
+        right
+      ]
+    );
+  reject = diagnostics: effects.fromDiagnostics diagnostics null;
+  checkedClosed =
+    kind: subject: fields: value:
+    effects.fromAxiom (closed kind subject fields value);
+  finishChecked = effects.finishWithReporter (
+    krisis.effects.reporter {
+      formatHeader = count: "praxis: ${toString count} declaration error(s)";
+      formatDiagnostic = krisis.renderPlain;
+    }
+  );
+  inherit (axiom) sets;
+  typeChecks = import ./type-checks.nix {
+    inherit
+      lib
+      axiom
+      krisis
+      diagnostic
+      nonEmpty
+      name
+      ;
+  };
   text = value: if builtins.isBool value then (if value then "true" else "false") else toString value;
   envKey = value: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] value);
   diagnostic =
@@ -27,14 +50,6 @@ rec {
     inherit validate;
     onInvalid = _: _: diagnostic subject code message;
   };
-  validateType =
-    subject: code: type:
-    krisis.validateType {
-      inherit type;
-      code = krisis.qualifyCode "praxis" code;
-      label = subject;
-    };
-  typed = subject: code: type: { parse = validateType subject code type; };
   required =
     subject: code: message: validate:
     field subject code message validate

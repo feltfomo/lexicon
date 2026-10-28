@@ -2,9 +2,10 @@
 let
   inherit (fields)
     field
-    closed
+    checkedClosed
     diagnostic
-    validation
+    effects
+    checked
     nullable
     ;
   boolean =
@@ -14,23 +15,23 @@ let
     name: field "praxis" name "${name} must be an attribute set" builtins.isAttrs // { default = { }; };
   project =
     raw:
-    validation.andThen
+    checked.andThen
       (
         spec:
-        validation.fromDiagnostics (validation.collect [
-          (validation.optional (spec.atRoot && (spec.cwd != null || spec.discoverRoot != null)) (
+        effects.fromDiagnostics (builtins.concatLists [
+          (lib.optional (spec.atRoot && (spec.cwd != null || spec.discoverRoot != null)) (
             diagnostic "praxis" "root-policy" "atRoot cannot be combined with cwd or discoverRoot"
           ))
-          (validation.optional (spec.check && (spec.commands ? check || spec.tasks ? check)) (
+          (lib.optional (spec.check && (spec.commands ? check || spec.tasks ? check)) (
             diagnostic "praxis" "check-conflict" "choose check = true or your own check declaration"
           ))
-          (validation.optional (spec.ownership == null && spec.units != [ ]) (
+          (lib.optional (spec.ownership == null && spec.units != [ ]) (
             diagnostic "praxis.units" "ownership" "units require an ownership configuration"
           ))
         ]) spec
       )
       (
-        closed "project" "praxis" {
+        checkedClosed "project" "praxis" {
           pkgs = {
             required = true;
             onMissing = _: diagnostic "praxis" "pkgs" "pkgs is required";

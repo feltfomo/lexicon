@@ -14,12 +14,18 @@ let
       ;
   };
   inherit (fields)
-    validation
+    effects
+    checked
+    mapChecked
+    reject
     diagnostic
     field
     required
     closed
     ;
+  argumentCheck = (fields.typeChecks "args-shape").arguments;
+  executionCheck = (fields.typeChecks "exec-shape").arguments;
+  environmentCheck = (fields.typeChecks "env-value").environment;
   nonEmptyString = fields.nonEmpty;
   relativePath = fields.relative;
   commandName = fields.name;
@@ -91,17 +97,17 @@ let
         };
       } raw;
     in
-    validation.andThen (
+    checked.andThen (
       spec:
-      validation.fromDiagnostics (validation.collect [
-        (validation.optional (spec.cwd != null && spec.discoverRoot != null) (
+      effects.fromDiagnostics (builtins.concatLists [
+        (lib.optional (spec.cwd != null && spec.discoverRoot != null) (
           diagnostic "praxis" "root-policy" "choose cwd or discoverRoot, not both"
         ))
-        (validation.optional (spec.requireRoot && spec.root == null) (
+        (lib.optional (spec.requireRoot && spec.root == null) (
           diagnostic "praxis" "root-policy" "requireRoot needs root for the flake.nix guard"
         ))
       ]) spec
-    ) shape;
+    ) (effects.fromAxiom shape);
 
   step =
     subject: fallbackLabel: autoForward: input:
@@ -131,7 +137,10 @@ let
         interpreter = { };
         rootRelative = field subject "script-root" "rootRelative must be boolean" builtins.isBool;
         label = field subject "label-shape" "label must be a non-empty string" nonEmptyString;
-        args = fields.typed "${subject}.args" "args-shape" parameters.argumentsType // {
+        args = {
+          parse = argumentCheck "${subject}.args";
+        }
+        // {
           default = [ ];
         };
         cwd = cwdField subject;
@@ -149,83 +158,102 @@ let
           default = autoForward && !(record && raw ? prompt);
         };
       } raw;
-      structural = validation.collect [
-        shape.diagnostics
-        (validation.optional (record && builtins.length forms != 1) (
+      structural = builtins.concatLists [
+        (lib.optional (record && builtins.length forms != 1) (
           diagnostic subject "execution-form" "define exactly one of run, exec, script, command or prompt"
         ))
-        (validation.optional (record && raw ? interpreter && !(raw ? script)) (
+        (lib.optional (record && raw ? interpreter && !(raw ? script)) (
           diagnostic subject "interpreter-form" "interpreter is only valid with script"
         ))
-        (validation.optional (record && raw ? rootRelative && !(raw ? script)) (
+        (lib.optional (record && raw ? rootRelative && !(raw ? script)) (
           diagnostic subject "script-root" "rootRelative is only valid with script"
         ))
       ];
     in
-    validation.andThen (
-      spec:
-      let
-        kind = builtins.head forms;
-        checks = {
-          run = nonEmptyString;
-          script = relativePath;
-          command = fields.routeName;
-        };
-        execution =
-          if kind == "prompt" then
-            interaction.prompt subject spec.prompt
-          else if kind == "exec" then
-            validation.andThen (
-              args:
-              validation.fromDiagnostics (validation.optional (
-                args == [ ] || !nonEmptyString (builtins.head args)
-              ) (diagnostic subject "exec-shape" "exec must start with a non-empty executable string")) args
-            ) (fields.validateType "${subject}.exec" "exec-shape" parameters.argumentsType spec.exec)
-          else
-            validation.fromDiagnostics (validation.optional (!(checks.${kind} spec.${kind})) (
-              diagnostic subject (
-                if kind == "script" then "script-path" else "${kind}-shape"
-              ) "invalid ${kind} value"
-            )) spec.${kind};
-        diagnostics = validation.collect [
-          execution.diagnostics
-          (validation.optional (spec ? interpreter && !nonEmptyString spec.interpreter) (
-            diagnostic subject "interpreter-shape" "interpreter must be one executable name or path"
-          ))
-          (validation.optional
-            (
-              kind == "prompt"
-              && (spec.args != [ ] || spec.forwardArgs || spec.interactive || spec.confirm != null)
+    checked.andThen
+      (
+        spec:
+        let
+          kind = builtins.head forms;
+          checks = {
+            run = nonEmptyString;
+            script = relativePath;
+            command = fields.routeName;
+          };
+          execution =
+            if kind == "prompt" then
+              interaction.prompt subject spec.prompt
+            else if kind == "exec" then
+              checked.andThen (
+                args:
+                effects.fromDiagnostics (lib.optional (args == [ ] || !nonEmptyString (builtins.head args)) (
+                  diagnostic subject "exec-shape" "exec must start with a non-empty executable string"
+                )) args
+              ) (effects.fromAxiom (executionCheck "${subject}.exec" spec.exec))
+            else
+              effects.fromDiagnostics (lib.optional (!(checks.${kind} spec.${kind})) (
+                diagnostic subject (
+                  if kind == "script" then "script-path" else "${kind}-shape"
+                ) "invalid ${kind} value"
+              )) spec.${kind};
+          diagnostics = builtins.concatLists [
+            (lib.optional (spec ? interpreter && !nonEmptyString spec.interpreter) (
+              diagnostic subject "interpreter-shape" "interpreter must be one executable name or path"
+            ))
+            (lib.optional
+              (
+                kind == "prompt"
+                && (spec.args != [ ] || spec.forwardArgs || spec.interactive || spec.confirm != null)
+              )
+              (diagnostic subject "prompt" "prompt steps cannot take args, forwardArgs, interactive or confirm")
             )
-            (diagnostic subject "prompt" "prompt steps cannot take args, forwardArgs, interactive or confirm")
+            (lib.optional (kind == "command" && spec.interactive) (
+              diagnostic subject "interactive" "put interactive on the executable step, not a command reference"
+            ))
+            (environmentDiagnostics subject spec.env)
+          ];
+        in
+        mapChecked
+          (
+            value:
+            (
+              spec
+              // {
+                inherit kind;
+                # shell argument placement belongs to the authored source
+                ${kind} = value;
+                label =
+                  spec.label or (
+                    if kind == "exec" then
+                      builtins.head spec.exec
+                    else if kind == "prompt" then
+                      spec.prompt.message
+                    else if kind == "run" && (lib.hasInfix "\n" spec.run || builtins.stringLength spec.run > 80) then
+                      fallbackLabel
+                    else
+                      spec.${kind}
+                  );
+              }
+              // lib.optionalAttrs (kind == "script") { interpreter = spec.interpreter or null; }
+            )
           )
-          (validation.optional (kind == "command" && spec.interactive) (
-            diagnostic subject "interactive" "put interactive on the executable step, not a command reference"
-          ))
-          (environmentDiagnostics subject spec.env)
-        ];
-      in
-      validation.fromDiagnostics diagnostics (
-        spec
-        // {
-          inherit kind;
-          # shell argument placement belongs to the authored source
-          ${kind} = execution.value;
-          label =
-            spec.label or (
-              if kind == "exec" then
-                builtins.head spec.exec
-              else if kind == "prompt" then
-                spec.prompt.message
-              else if kind == "run" && (lib.hasInfix "\n" spec.run || builtins.stringLength spec.run > 80) then
-                fallbackLabel
-              else
-                spec.${kind}
-            );
-        }
-        // lib.optionalAttrs (kind == "script") { interpreter = spec.interpreter or null; }
+          (
+            mapChecked builtins.head (
+              checked.all [
+                execution
+                (effects.fromDiagnostics diagnostics null)
+              ]
+            )
+          )
       )
-    ) (validation.fromDiagnostics structural shape.value);
+      (
+        mapChecked builtins.head (
+          checked.all [
+            (effects.fromAxiom shape)
+            (effects.fromDiagnostics structural null)
+          ]
+        )
+      );
 
   environmentDiagnostics =
     subject: env:
@@ -234,15 +262,7 @@ let
       if !envName name then
         [ (diagnostic subject "env-name" "invalid environment name '${name}'") ]
       else
-        (krisis.validateType {
-          type = axiom.types.string;
-          code = "praxis/env-value";
-          label = subject;
-          path = [
-            "env"
-            name
-          ];
-        } env.${name}).diagnostics
+        (environmentCheck subject env name).diagnostics
     ) (builtins.attrNames env);
 
   command = normalizeCommand "commands";
@@ -339,14 +359,14 @@ let
       } raw;
     in
     if !fields.routeName name then
-      validation.failure [
+      reject [
         (diagnostic subject "command-name" "command names must match [a-zA-Z0-9][a-zA-Z0-9_-]*")
       ]
     else
-      validation.andThen (
+      checked.andThen (
         spec:
         let
-          steps = validation.sequence (
+          steps = checked.all (
             lib.imap1 (
               index:
               step "${subject}.steps[${toString index}]" "${name} (step ${toString index})" (
@@ -354,134 +374,147 @@ let
               )
             ) spec.steps
           );
-          params = validation.sequence (
-            lib.imap1 (index: parameters.parameter "${subject}.parameters[${toString index}]") spec.parameters
+          params = checked.all (
+            lib.imap1 (
+              index: value: parameters.parameter "${subject}.parameters[${toString index}]" value
+            ) spec.parameters
           );
-          groups = validation.sequence (
-            lib.imap1 (i: interaction.group "${subject}.parameterGroups[${toString i}]") spec.parameterGroups
+          groups = checked.all (
+            lib.imap1 (
+              i: value: effects.fromAxiom (interaction.group "${subject}.parameterGroups[${toString i}]" value)
+            ) spec.parameterGroups
           );
-          sensitive = lib.filter (p: p.sensitive) params.value;
-          sensitiveNames = map (p: p.name) sensitive;
-          sensitiveEnv = lib.concatMap (
-            p: [ "PRAXIS_ARG_${parameters.envKey p.name}" ] ++ lib.optional (p.env != null) p.env
-          ) sensitive;
-          diagnostics = validation.collect [
-            groups.diagnostics
+          independent = effects.fromDiagnostics (builtins.concatLists [
             (lib.concatLists (
               lib.imap1 (
                 index: input:
-                validation.optional (!lib.isDerivation input) (
+                lib.optional (!lib.isDerivation input) (
                   diagnostic subject "runtime-input" "runtimeInputs[${toString index}] must be a package derivation"
                 )
               ) spec.runtimeInputs
             ))
             (environmentDiagnostics subject spec.env)
-            steps.diagnostics
-            params.diagnostics
-          ];
-          names = map (p: p.name) params.value;
-          parameterNames = axiom.sets.index names;
-          parameterSpecs = builtins.listToAttrs (
-            map (p: {
-              inherit (p) name;
-              value = p;
-            }) params.value
-          );
-          environmentNames = builtins.groupBy parameters.envKey names;
-          # named flags do not participate in positional ordering
-          ordering =
-            builtins.foldl'
-              (
-                state: p:
-                if state.invalid || !p.positional then
-                  state
-                else if p.required then
+          ]) null;
+        in
+        checked.andThen
+          (
+            values:
+            let
+              groups = builtins.elemAt values 0;
+              steps = builtins.elemAt values 2;
+              params = builtins.elemAt values 3;
+              sensitive = lib.filter (p: p.sensitive) params;
+              sensitiveNames = map (p: p.name) sensitive;
+              sensitiveEnv = lib.concatMap (
+                p: [ "PRAXIS_ARG_${parameters.envKey p.name}" ] ++ lib.optional (p.env != null) p.env
+              ) sensitive;
+              names = map (p: p.name) params;
+              parameterNames = axiom.sets.index names;
+              parameterSpecs = builtins.listToAttrs (
+                map (p: {
+                  inherit (p) name;
+                  value = p;
+                }) params
+              );
+              environmentNames = builtins.groupBy parameters.envKey names;
+              # named flags do not participate in positional ordering
+              ordering =
+                builtins.foldl'
+                  (
+                    state: p:
+                    if state.invalid || !p.positional then
+                      state
+                    else if p.required then
+                      {
+                        inherit (state) optional;
+                        invalid = state.optional;
+                      }
+                    else
+                      {
+                        optional = true;
+                        invalid = false;
+                      }
+                  )
                   {
-                    inherit (state) optional;
-                    invalid = state.optional;
-                  }
-                else
-                  {
-                    optional = true;
+                    optional = false;
                     invalid = false;
                   }
-              )
-              {
-                optional = false;
-                invalid = false;
-              }
-              params.value;
-          shorts = builtins.filter (v: v != null) (map (p: p.short) params.value);
-          semantic = validation.collect [
-            (validation.optional (builtins.length shorts != builtins.length (axiom.sets.unique shorts)) (
-              diagnostic subject "parameter-short" "short flags must be unique"
-            ))
-            (lib.concatMap (
-              g:
-              validation.optional
-                (builtins.any (
-                  n: !(builtins.hasAttr n parameterNames) || builtins.elem n sensitiveNames
-                ) g.parameters)
-                (diagnostic subject "parameter-group" "groups must name declared, non-sensitive parameters")
-            ) groups.value)
-            (lib.concatMap (
-              s:
-              validation.collect [
-                (parameters.references subject parameterNames (
-                  map (param: { inherit param; }) (builtins.attrNames s.when.parameters)
+                  params;
+              shorts = builtins.filter (v: v != null) (map (p: p.short) params);
+              semantic = builtins.concatLists [
+                (lib.optional (builtins.length shorts != builtins.length (axiom.sets.unique shorts)) (
+                  diagnostic subject "parameter-short" "short flags must be unique"
                 ))
-                (parameters.conditionDiagnostics subject parameterSpecs s.when.parameters)
-                (validation.optional (
-                  builtins.any (a: builtins.isAttrs a && builtins.elem a.param sensitiveNames) (
-                    s.args ++ (s.exec or [ ])
-                  )
-                  || builtins.any (n: builtins.elem n sensitiveNames) (builtins.attrNames (s.when.parameters or { }))
-                ) (diagnostic subject "parameter-sensitive" "sensitive values cannot appear in argv or conditions"))
-                (validation.optional
-                  (builtins.any (
-                    n: builtins.hasAttr n s.env || builtins.hasAttr n spec.env || builtins.hasAttr n (s.when.env or { })
-                  ) sensitiveEnv)
-                  (
-                    diagnostic subject "parameter-sensitive"
-                      "sensitive environment sources cannot be overridden or inspected by conditions"
-                  )
-                )
-              ]
-            ) steps.value)
-            (validation.optional (
-              builtins.length names != builtins.length (builtins.attrNames environmentNames)
-            ) (diagnostic subject "parameter-name" "parameter names must have unique environment names"))
-            (validation.optional ordering.invalid (
-              diagnostic subject "parameter-order" "required positional arguments must precede optional ones"
-            ))
-            (validation.optional (builtins.length (builtins.filter (s: s.forwardArgs) steps.value) > 1) (
-              diagnostic subject "forward-args" "at most one step may receive pass-through arguments"
-            ))
-            (lib.concatMap (
-              s: parameters.references subject parameterNames (s.args ++ (s.exec or [ ]))
-            ) steps.value)
-          ];
-        in
-        validation.andThen (
-          _:
-          validation.fromDiagnostics semantic (
-            spec
-            // {
-              steps = map (
-                s:
-                s
-                // {
-                  when = s.when // {
-                    parameters = builtins.mapAttrs (_: fields.text) s.when.parameters;
-                  };
-                }
-              ) steps.value;
-              parameters = params.value;
-              parameterGroups = groups.value;
-            }
+                (lib.concatMap (
+                  g:
+                  lib.optional
+                    (builtins.any (
+                      n: !(builtins.hasAttr n parameterNames) || builtins.elem n sensitiveNames
+                    ) g.parameters)
+                    (diagnostic subject "parameter-group" "groups must name declared, non-sensitive parameters")
+                ) groups)
+                (lib.concatMap (
+                  s:
+                  builtins.concatLists [
+                    (parameters.references subject parameterNames (
+                      map (param: { inherit param; }) (builtins.attrNames s.when.parameters)
+                    ))
+                    (parameters.conditionDiagnostics subject parameterSpecs s.when.parameters)
+                    (lib.optional (
+                      builtins.any (a: builtins.isAttrs a && builtins.elem a.param sensitiveNames) (
+                        s.args ++ (s.exec or [ ])
+                      )
+                      || builtins.any (n: builtins.elem n sensitiveNames) (builtins.attrNames (s.when.parameters or { }))
+                    ) (diagnostic subject "parameter-sensitive" "sensitive values cannot appear in argv or conditions"))
+                    (lib.optional
+                      (builtins.any (
+                        n: builtins.hasAttr n s.env || builtins.hasAttr n spec.env || builtins.hasAttr n (s.when.env or { })
+                      ) sensitiveEnv)
+                      (
+                        diagnostic subject "parameter-sensitive"
+                          "sensitive environment sources cannot be overridden or inspected by conditions"
+                      )
+                    )
+                  ]
+                ) steps)
+                (lib.optional (builtins.length names != builtins.length (builtins.attrNames environmentNames)) (
+                  diagnostic subject "parameter-name" "parameter names must have unique environment names"
+                ))
+                (lib.optional ordering.invalid (
+                  diagnostic subject "parameter-order" "required positional arguments must precede optional ones"
+                ))
+                (lib.optional (builtins.length (builtins.filter (s: s.forwardArgs) steps) > 1) (
+                  diagnostic subject "forward-args" "at most one step may receive pass-through arguments"
+                ))
+                (lib.concatMap (s: parameters.references subject parameterNames (s.args ++ (s.exec or [ ]))) steps)
+              ];
+            in
+            effects.fromDiagnostics semantic (
+              spec
+              // {
+                steps = map (
+                  s:
+                  s
+                  // {
+                    when = s.when // {
+                      parameters = builtins.mapAttrs (_: fields.text) s.when.parameters;
+                    };
+                  }
+                ) steps;
+                parameters = params;
+                parameterGroups = groups;
+              }
+            )
           )
-        ) (validation.fromDiagnostics diagnostics null)
-      ) shape;
+          (
+            checked.all [
+              groups
+              independent
+              steps
+              params
+            ]
+          )
+      ) (effects.fromAxiom shape);
 in
 {
   inherit project command task;

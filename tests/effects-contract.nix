@@ -335,7 +335,124 @@ let
       first = (krisis.effects.finishComputation (_: poison) computation).safe;
       second = (krisis.effects.finishComputation (_: poison) computation).safe;
     };
+  mapped = krisis.effects.mappedResultFromReport;
+  warningReport = run (
+    fx.bind (native.report.emit {
+      code = "native";
+      severity = "warning";
+      message = poison;
+      context = poison;
+    }) (_: krisis.effects.accept opaque)
+  );
+  retained = {
+    code = "mapped";
+    severity = "warning";
+    message = poison;
+    primary = poison;
+    secondaryLabels = poison;
+    notes = poison;
+    help = poison;
+    context = poison;
+  };
+  mappedProbe = mapped (_: retained) warningReport;
+  malformedReports = [
+    {
+      diagnostics = [ ];
+      outcome._con = "Failure";
+    }
+    {
+      diagnostics = [ ];
+      outcome = {
+        _con = "Success";
+        value = mkThunk { _con = "Invalid"; };
+      };
+    }
+    {
+      diagnostics = [ first ];
+      outcome._con = "Unknown";
+    }
+    {
+      diagnostics = [ first ];
+      outcome = {
+        _con = "Failure";
+        value = poison;
+      };
+    }
+    {
+      diagnostics = [ first ];
+      outcome = {
+        _con = "Success";
+        value = mkThunk { _con = "Unknown"; };
+      };
+    }
+    {
+      diagnostics = [ first ];
+      outcome = {
+        _con = "Success";
+        value = mkThunk {
+          _con = "Invalid";
+          value = poison;
+        };
+      };
+    }
+    {
+      diagnostics = [ ];
+      outcome = {
+        _con = "Success";
+        value = mkThunk { _con = "Valid"; };
+      };
+    }
+    {
+      diagnostics = [ ];
+      outcome = {
+        _con = "Success";
+        value = opaque;
+      };
+    }
+  ];
+  projectionProbe = {
+    inherit ((builtins.head mappedProbe.diagnostics)) code;
+    noValue = !(mappedProbe ? value);
+    summary = krisis.summarizeDiagnostics mappedProbe.diagnostics;
+    recovered =
+      (krisis.effects.finishReport (items: {
+        safe = (builtins.head items).code == "mapped";
+        payload = poison;
+      }) (krisis.effects.run mappedProbe)).safe;
+  };
   callbackExceptions = {
+    mapper = (mapped (_: throw "effects contract mapper exception") warningReport).diagnostics;
+    mappedCode =
+      (mapped (
+        _:
+        retained
+        // {
+          code = throw "effects contract code exception";
+          severity = throw "effects contract premature severity";
+        }
+      ) warningReport).diagnostics;
+    mappedSeverity =
+      (mapped (
+        _:
+        retained
+        // {
+          code = builtins.trace "effects-contract code" "mapped";
+          severity = throw "effects contract severity exception";
+        }
+      ) warningReport).diagnostics;
+    mappedFactory =
+      (mapped (
+        _: (krisis.mkDiagnosticFactory { }) (throw "effects contract factory exception")
+      ) warningReport).diagnostics;
+    mappedEnvelope = (mapped (_: retained // { code = ""; }) warningReport).diagnostics;
+    mappedOrder =
+      (mapped (
+        d:
+        if d.code == "first" then
+          throw "effects contract first envelope exception"
+        else
+          throw "effects contract premature second envelope"
+      ) (run independent)).diagnostics;
     parse = (schema { value.parse = _: throw "effects contract parse exception"; }) { value = 1; };
     normalize = (schema { value.normalize = _: throw "effects contract normalize exception"; }) {
       value = 1;
@@ -374,6 +491,54 @@ let
       (declaration.homeManager args).imports;
   };
   tests = {
+    mapped-failure-has-no-success-value = !(mappedProbe ? value) && projectionProbe.recovered;
+    mapped-presentation-and-context-stay-deferred =
+      projectionProbe.code == "mapped" && projectionProbe.summary.total == 1;
+    mapped-success-recovers-qualified-carriers = (mapped (_: poison) transported).value.safe;
+    report-eliminators-reject-missing-evidence-and-impossible-constructors = builtins.all (
+      report:
+      rejects (builtins.seq (krisis.effects.resultFromReport report) true)
+      && rejects (builtins.seq (mapped (_: first) report) true)
+      && rejects (krisis.effects.finishReport (_: true) report)
+    ) malformedReports;
+    shared-elimination-rejects-invalid-without-evidence = rejects (
+      krisis.effects.finishComputation (_: true) (krisis.effects.share (fx.pure { _con = "Invalid"; }))
+    );
+    mapped-diagnostic-order-and-authored-content =
+      let
+        result = mapped (d: {
+          inherit (d) code;
+          inherit (d) severity;
+          message = "authored ${d.code}";
+          primary = {
+            label = "origin";
+            source = "source";
+          };
+          context.path = [
+            "authored"
+            2
+          ];
+        }) (run independent);
+      in
+      result.diagnostics == map
+        (d: {
+          inherit (d) code severity;
+          message = "authored ${d.code}";
+          primary = {
+            label = "origin";
+            source = "source";
+          };
+          context.path = [
+            "authored"
+            2
+          ];
+        })
+        [
+          first
+          second
+        ]
+      && !(result ? value);
+
     structural-terminal-projection-does-not-replace-prepared-entry =
       (builtins.head (projectedDeclaration.homeManager args).imports).safe;
     shared-validation-retains-diagnostics-and-suppresses-dependent-work =
@@ -710,6 +875,7 @@ in
     ok
     callbackProbe
     sharedProbe
+    projectionProbe
     callbackExceptions
     controlExceptions
     ;

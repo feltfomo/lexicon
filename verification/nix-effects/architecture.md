@@ -8,7 +8,12 @@ fit. Public compatibility remains at one boundary.
 
 This describes the accepted architecture. The [spec](spec.md) distinguishes
 delivered behavior from the uncommitted Praxis integration, and
-[capabilities](capabilities.md) records acceptance gaps.
+[capabilities](capabilities.md) records functional qualification, retained evidence
+constraints and deferred performance acceptance. Immediate and assembled
+performance acceptance is deferred in full to a separate future user-directed
+audit, which is not authorized by this amendment. Failed and missing rows remain
+failed and missing; they do not block functional migration review, commit preview
+or architectural acceptance.
 
 ## Dependency assembly and lifetime
 
@@ -44,7 +49,7 @@ lazy. No report initialization step belongs in production.
 | Owner | Domain responsibility | Composition and boundary |
 | --- | --- | --- |
 | Dependency assembly | Selected library, qualified source, native Krisis and compatible view | Supplies dependencies to factories and generic evaluation; consumers need no Fx argument |
-| Compatibility bridge | Safe report elimination, retained result projections, compatibility envelope demand, terminal recovery and old provider participation | Adapt Axiom results once to native Checked; share constructor elimination between existing recovery and the designed mapped-report projection |
+| Compatibility bridge | Safe report elimination, retained result projections, compatibility envelope demand, terminal recovery and old provider participation | Adapt Axiom results once to native Checked; share constructor elimination between existing recovery and the implemented mapped-report projection |
 | Ownerships | Descriptor/relation registration, claim algebra, selection, preparation, merge and coverage | Native context/validation orchestration around pure algorithms |
 | Registry and Den | Canonical fleet records, membership, checked lookups and roster/principal projection | Interpret requested validation only; do not instantiate hosts or evaluate Den user bodies |
 | Definitions and declarations | Registration, structural preparation, output/scope projection, selection and lowering | One registered traversal, native dependent validation, ordinary pure extension callbacks |
@@ -104,7 +109,7 @@ their factory, formatting, summary, error-context and recovery operations at thi
 same boundary.
 
 Praxis owns the finite type/reason vocabulary, authored blame adaptation and
-retained schema callbacks. Krisis remains validation owner. The designed
+retained schema callbacks. Krisis remains validation owner. The implemented
 correction below projects completed native reports before returning retained
 schema parse results. Scalar/list/nullable/reference checks preserve codes, paths,
 reasons and ordered union failures. Malformed reference names fail before `param` payload
@@ -114,8 +119,8 @@ result is shared by namespace lookup, reachability, manifests and summaries.
 
 ## Callback projection boundary
 
-This design is unimplemented and unqualified. Fixed type/code checkers stay outside
-value applications, with unused configuration lazy. Every demanded application
+This boundary is implemented and functionally qualified. Fixed type/code checkers
+stay outside value applications, with unused configuration lazy. Every demanded application
 keeps its own input, predicate execution, native failure state and authored blame.
 The collecting-handler configuration remains shared and immutable; each native
 interpretation produces its own report. A completed report and the retained
@@ -123,8 +128,8 @@ projection have that application's lifetime, with no input/result cache.
 
 Scalar, choices, default and environment callbacks run configured native checking
 under the existing collecting interpretation. The bridge then purely projects the
-completed native Checked report using Praxis's diagnostic mapper. A distinct
-bridge operation takes that report and mapper; its name is left to the owner.
+completed native Checked report using Praxis's diagnostic mapper. The bridge
+operation `mappedResultFromReport` takes the mapper and completed report.
 The bridge shares Outcome/Checked elimination rules with its existing operations,
 while `resultFromReport` still recovers original diagnostics from thunked context.
 Only known constructors and qualified `forceThunk` recovery permit a value.
@@ -194,8 +199,9 @@ The merged `verification/components/profile-contracts.py` owns instrumentation a
 `verification/praxis-diagnostic-profile.md` records the immutable evidence.
 [Effort ownership](efforts.md#source-position-and-sampled-stack-evidence-effort)
 binds the frozen dispatcher/fixture identities and read-only source boundary.
-The observer/README overlap with the preserved candidate is deliberate and must
-be reconciled during later integration.
+The observer/README overlap was reconciled before combined qualification.
+The maintained observer keeps the published instrumentation, deadline, record and
+validator capabilities; the reconciled guide documents the combined interface.
 
 Separate setup/checker construction, checker application, report emission and
 collection, Praxis adaptation, and graph/result transport. Preserve unclassified
@@ -223,3 +229,30 @@ A future demonstrated dependency correction requires amended published Krisis
 contracts first, then qualification, an immutable commit and verified portable publication
 before Lexicon's pin/lock refresh and affected qualification. No Krisis correction
 scope is granted here.
+
+## Functional closure and performance deferral
+
+Functional migration retains native checking, required envelope validation,
+shared command/selection results and terminal recovery. No remaining diagnostic
+validation is removed by the acceptance amendment. Axiom schemas/parse results,
+registries, phases, requirements, canonical and ordered-set operations, and
+old-facing factories/inspection/reporting remain with their actual owners in
+[dependencies](../dependencies.md). The superseded callback adapted-report and
+reference probe/replay implementation is removed; general bridge operations stay
+available to their remaining consumers.
+
+The user's decision defers all immediate and assembled performance acceptance.
+The Lumi raw-4 wall/RSS failures and missing corrected selected/raw16/raw64/assembled
+primaries remain recorded in [capabilities](capabilities.md#current-performance-gaps).
+They impose no cost-blocking closure or mandatory cost-decision-packet requirement
+on this migration. No performance pass, unavoidable-overhead claim, new exception
+or result from the future audit follows. Original bounds, exact historical
+tradeoffs, baselines and source/lock evidence remain intact.
+
+The source-only remaining-diagnostic-boundaries assessment and all performance
+investigation are stopped. Its source reads and any partial work are preserved.
+A future audit requires separate user direction and authority. It is not a formal
+dependency limit, automatic successor phase or limit-reopening opener. Functional
+findings still require ordinary correction or a precise protected-contract/scope
+ruling. Consolidated review, independent quality review, architect review,
+affected qualification and commit approval remain in this integration phase.

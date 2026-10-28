@@ -1,8 +1,14 @@
 { fields }:
+let
+  inherit (fields) lib;
+in
 name: argv:
 let
-  inherit (fields) validation diagnostic;
-  diagnostics = validation.optional (argv == [ ] || !fields.nonEmpty (builtins.head argv)) (
+  inherit (fields)
+    effects
+    diagnostic
+    ;
+  diagnostics = lib.optional (argv == [ ] || !fields.nonEmpty (builtins.head argv)) (
     diagnostic "commands.${name}" "exec-shape" "exec must start with a non-empty executable string"
   );
   # literal argv needs no parameter, task or interaction parsers
@@ -45,4 +51,4 @@ let
     ];
   };
 in
-validation.fromDiagnostics diagnostics value
+effects.fromDiagnostics diagnostics value

@@ -122,16 +122,17 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1792793189,
-        "narHash": "sha256-Pm212+lx384qNnyq6YyXnaP4+J/yuiNPtDBeTYzqD90=",
+        "lastModified": 1792834910,
+        "narHash": "sha256-mY7wl3gCuVgR0FiLTwuKU7wXf+9eTWib62J29JkUruk=",
         "owner": "feltfomo",
         "repo": "krisis",
-        "rev": "c8c71c0a81012ebfc2d82a5c65da5ed8b8c195f0",
+        "rev": "c48e40834fe90299096d2988433b17f650c30c8a",
         "type": "github"
       },
       "original": {
         "owner": "feltfomo",
         "repo": "krisis",
+        "rev": "c48e40834fe90299096d2988433b17f650c30c8a",
         "type": "github"
       }
     },

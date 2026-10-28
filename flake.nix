@@ -15,7 +15,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     axiom.url = "github:feltfomo/axiom-nix";
-    krisis.url = "github:feltfomo/krisis";
+    krisis.url = "github:feltfomo/krisis/c48e40834fe90299096d2988433b17f650c30c8a";
     # lexicon owns the coordinator version used by its manifests
     furnish-coordinator = {
       url = "github:feltfomo/furnish-coordinator";
@@ -444,7 +444,15 @@
                   path = installed;
                 }
               ];
-            praxis-pure = gate "praxis-pure-tests" praxisTests;
+            praxis-pure = gate "praxis-pure-tests" {
+              ok =
+                praxisTests.ok
+                && (import ./tests/praxis/graph-effects.nix { inherit lib axiom krisis; }).ok
+                && (import ./tests/praxis/effects.nix {
+                  inherit lib axiom krisis;
+                  krisisSource = inputs.krisis;
+                }).ok;
+            };
             praxis-public-surface = gate "praxis-public-surface" (
               import ./tests/praxis/public-surface.nix { inherit lib axiom krisis; }
             );

@@ -69,16 +69,13 @@ authorize subtracting startup from acceptance measurements.
 
 `praxis-selected` demands the selected `gate` manifest and `praxis-diagnostics`
 demands every `2*N` diagnostic code, authored path and the complete summary.
-Both need a dispatcher with the `praxis.nix` fixture. This tree's `workload.nix`
-doesn't have it, so pass a frozen dispatcher explicitly with
-`--dispatcher /absolute/workload.nix` and one `--bind NAME=SHA256` for the
-dispatcher and for each file it imports. Names are relative to the dispatcher's
-directory. A mismatch, a relative dispatcher or an unbound dispatcher exits 2
-before any evaluator starts. The bindings are hashed again after release, and a
-change rejects the sample. The default dispatcher is still the sibling
-`workload.nix`, with an unchanged command. The preserved Praxis candidate adds
-the same two validators to its own observer, so integration has to reconcile
-this file and this page with that candidate.
+The sibling `workload.nix` now includes the imported `praxis.nix` fixture and
+these validators. An external frozen dispatcher can still be selected with
+`--dispatcher /absolute/workload.nix` and one `--bind NAME=SHA256` for it and each
+imported file. Names are relative to that directory. Relative or unbound
+explicit dispatchers and mismatched bindings exit 2 before evaluation. Bindings
+are hashed again after release; drift rejects the sample. The merged observer
+retains its instrumentation, record validation and SIGKILL deadline behavior.
 
 `--instrumentation` selects one evaluator mode per process. `none` is ordinary
 capture. `flamegraph` adds `--option eval-profiler flamegraph`, a fixed
@@ -291,3 +288,22 @@ The controls and primary schedule use at most 122 evaluator/CLI launch units,
 including package setup and each candidate CLI's child. Closure queries are
 recorded separately. The schedule is expected to take minutes; thirty minutes
 or more requires readiness review.
+
+Praxis selected comparisons use `praxis-selected` and `praxis-diagnostics` at
+4, 16 and 64 commands. Each public project contains a selected task referring to
+N parameterized namespace commands, an unrelated throwing command and a throwing
+namespace sibling. Selected demand reads the complete selected manifest. Diagnostic
+demand reads ordered codes, paths and the summary for N invalid argv entries,
+without constructing packages. The ordinary `praxis` cell still demands the whole
+finite project and stays separate from selected reachability.
+
+`contracts.py --family praxis` retains public callback counts and original
+reference/normalization exceptions. These functional observations don't consume
+performance workload launches.
+
+The assembled TOML evaluator cell demands the generated derivation's output
+identity. The pure renderer changes that derivation, so `compare.py` records both
+identities and requires each to stay stable across that source's samples. It
+doesn't require identities from different implementations to match. Equal parsed
+content, context, build/render costs and closure costs belong to the separately
+retained TOML campaign. Every other component requires equal finite JSON output.

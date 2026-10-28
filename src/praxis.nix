@@ -9,7 +9,7 @@ let
     severity = "error";
     codePrefix = "praxis";
   };
-  reporter = krisis.mkReporter { formatDiagnostic = krisis.renderPlain; };
+  reporter = krisis.effects.reporter { formatDiagnostic = krisis.renderPlain; };
   fields = import ./praxis/fields.nix {
     inherit
       lib
@@ -19,7 +19,7 @@ let
       ;
   };
   surface = import ./praxis/surface.nix { inherit lib fields; };
-  spec = reporter.finish (
+  spec = krisis.effects.finishWithReporter reporter (
     surface.project (
       removeAttrs args [
         "lib"

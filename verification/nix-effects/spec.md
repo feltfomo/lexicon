@@ -2,9 +2,11 @@
 
 The accepted target is one shared qualified nix-effects instance and new Krisis,
 with Lexicon's public declarations and subsystem boundaries preserved. The first
-five migration units are delivered. Praxis is an uncommitted, functionally reviewed
-candidate with blocked performance acceptance. Publishing this contract does not
-adopt that candidate or authorize experiments.
+five migration units are delivered. Praxis and the callback correction are
+implemented and functionally qualified in the uncommitted integration candidate.
+Consolidated review and commit approval remain open. The user has deferred
+immediate and assembled performance acceptance in full to a separate future
+user-directed audit. That audit is intended but not authorized.
 
 Use [architecture](architecture.md) for owners and lifetimes,
 [efforts](efforts.md) for exact ownership and sequence, and
@@ -23,9 +25,9 @@ extension contracts.
 | Registered compiler | One registration/traversal pipeline for built-ins and external definitions, selected output bridges and shared static preparation | Delivered |
 | Resources and Furnish | Native checked composition, common destination checks, original origins and terminal recovery boundaries | Delivered |
 | TOML | One pure generated-value renderer; TOML Kit owns parsing, validation and retained-syntax merge; publisher owns live writes | Delivered under the parser fallback and standalone closure tradeoff |
-| Praxis | Native Checked ownership, normalization, schema/parameter and graph-result composition; pure reached-only traversal | Uncommitted reviewed work |
-| Native type callbacks | Fixed checker configuration shared outside applications; completed native reports projected through blame adaptation to retained results | Lexicon callback correction designed, unimplemented and unqualified; Krisis unchanged |
-| Final cost acceptance | Unchanged immediate and assembled component bounds, or separately approved precise tradeoffs | Blocked by diagnostic size 4 and missing primary results |
+| Praxis | Native Checked ownership, normalization, schema/parameter and graph-result composition; pure reached-only traversal | Functionally qualified candidate; consolidated review pending |
+| Native type callbacks | Fixed checker configuration shared outside applications; completed native reports projected through blame adaptation to retained results | Implemented and functionally qualified; Krisis unchanged |
+| Performance acceptance | Preserve original bounds, exact historical tradeoffs and all failed/missing rows | Deferred in full; does not block migration review, commit preview or architectural acceptance |
 
 ## Public entry points
 
@@ -105,28 +107,43 @@ TOML subsystem is pure.
 
 ## Remaining acceptance
 
-Final integration must reconcile every residual Axiom/old-facing operation with
-its actual protected capability owner, preserve the failure and forcing contracts
-above, and qualify the final immutable dependency graph. Immediate diagnostic
-size 4 is still a wall/RSS failure. Raw diagnostic 16, a complete raw-64 primary
-comparison and all assembled primaries are absent. A sensitivity result cannot
-substitute for raw acceptance or approve a cost exception. See
-[capabilities](capabilities.md) for exact observations and [efforts](efforts.md)
-for the correction ownership and future gates.
+Functional integration preserves the failure and forcing contracts above and
+records the actual residual Axiom/old-facing capability owners. The implemented
+candidate passed focused checks, affected semantic/poison/exception/lifecycle
+observations and the combined gate. Reuse that proof only for unchanged source,
+tools, dependencies and demanded projections. Documentation-only acceptance
+changes need offline consistency/link checks and an explicit applicability record;
+they do not require an unchanged gate replay.
+
+Remaining migration work is consolidated read-only review, independent quality
+review, architect review, necessary functional corrections with affected
+qualification, and the complete commit preview before separate user go.
+
+Immediate and assembled performance acceptance is deferred in full. Raw-4 wall
+and RSS failures remain failures; corrected selected/raw16/raw64/assembled
+primaries remain missing. They no longer block migration review, commit preview
+or architectural acceptance. This is not a performance pass, a cost exception,
+a claim of unavoidable overhead or a future audit result. The former cost-blocking
+closure and mandatory cost-decision-packet requirements are superseded for this
+migration. Original bounds, exact historical tradeoffs, baselines, own locks,
+identities and evidence remain in [capabilities](capabilities.md). No future audit,
+measurement, profiling, performance-led correction or automatic continuation is
+authorized. The future audit is not a formal dependency limit or an automatic
+successor phase; no limit-reopening opener is owed by this deferral.
 
 ## Callback report projection correction
 
 The merged [profiling report](../praxis-diagnostic-profile.md) supports removing
-the callback's intermediate adapted-diagnostic computation. This is a designed,
-unimplemented and unqualified correction. Keep configured native checking and its
+the callback's intermediate adapted-diagnostic computation. The correction is
+implemented and functionally qualified. Keep configured native checking and its
 collecting interpretation. Purely project the completed native Checked report
 through Praxis blame adaptation into the retained callback result. Remove the
 `fromDiagnostics` computation and `resultOf` interpretation used solely to build
 that result. Keep enclosing schema-to-native composition, shared command
 interpretations, graph selections and terminals.
 
-The effects bridge owns a distinct projection operation taking a native Checked
-report and a diagnostic mapper. Its name belongs to the implementation owner.
+The effects bridge owns `mappedResultFromReport`, taking a diagnostic mapper
+and a completed native Checked report.
 Share explicit Outcome/Checked constructor elimination with existing report
 operations. Recover carriers only with the qualified `forceThunk`. Existing
 `resultFromReport` continues recovering original diagnostics through thunked
@@ -162,17 +179,18 @@ thunk transport and inactive/unrelated opacity. Command/selection sharing and
 reached-only normalization remain protected. General `fromDiagnostics`,
 `fromAxiom`, `resultOf` and `share` remain available to other consumers.
 
-Historical functional, selected and profiling evidence does not qualify corrected
-source. [Integration obligations](efforts.md#integration-effort) require a complete
-distinct corrected manifest, lock/dependency identities, applicability map,
-affected observations and combined gate before fresh cost readiness. Both reports
-remain immutable history. Do not repeat profiling or initialization sensitivity,
-set an emission-count target or claim a static speedup. Instrumented costs are
-neither primary acceptance nor quantities to subtract. No priming, setup
-subtraction, reduced demand or changed bounds is permitted. New cost exceptions
-need explicit user approval.
+The corrected 363-file execution candidate is
+`2b594482e8d88cc4b7930935f3044911d8ef9e59b949f0b3efc5d29f0780ed16`, with lock
+`5677cbb7fb467a68922190375bbcb9b48e8850a87d6d1930a029de5926b4107e`.
+Its functional proof is distinct from frozen historical selected and profiling
+results. Final documentation changes and their complete manifest are recorded
+with [integration applicability](efforts.md#active-integration-source-candidate).
+Both diagnostic reports and all raw evidence remain immutable history. Do not
+repeat profiling or initialization sensitivity, set an emission-count target or
+claim a static speedup. Instrumented costs are neither primary acceptance nor
+quantities to subtract. Preserve full demand, poison and original bounds.
 
-This amendment grants no evaluator, version query, development shell, formatter,
-qualification, functional gate, workload, new checkout, candidate import,
-correction, integration, cleanup or adoption authority. Integration stays held
-until verified publication and a fresh opener with actual authority.
+This amendment opens no dependency work, future audit, measurement, checkout,
+cleanup or automatic successor phase. Functional closure stays in the existing
+integration phase. Staging and committing still require separate explicit user
+go after a complete preview; merge and push require their own authority.
