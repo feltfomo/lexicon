@@ -4,6 +4,7 @@
   krisis,
 }:
 let
+  markers = import ./markers.nix;
   registration = import ./definitions.nix { inherit lib axiom krisis; };
   report = import ./report.nix { inherit lib axiom krisis; };
   outputCompiler = import ./outputs.nix { inherit lib axiom krisis; };
@@ -245,12 +246,14 @@ let
                 ) tree.claimPaths
               )) true;
             in
-            builtins.seq tree (
-              builtins.seq directCheck {
-                validate = args: resultOf (validateComputation args);
-                compile = args: finishComputation (validateComputation args);
-                structure = declaration;
-              }
+            markers.prepareDeclaration (
+              builtins.seq tree (
+                builtins.seq directCheck {
+                  validate = args: resultOf (validateComputation args);
+                  compile = args: markers.compileDeclaration (finishComputation (validateComputation args));
+                  structure = declaration;
+                }
+              )
             );
         in
         {

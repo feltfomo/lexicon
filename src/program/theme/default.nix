@@ -13,6 +13,7 @@
 }:
 let
   capability = import ./capabilities.nix;
+  markers = import ./markers.nix;
   inherit (krisis) effects;
   inherit (effects.native) validation;
 
@@ -468,18 +469,20 @@ let
 
   themeFiles =
     entries: pkgs:
-    builtins.concatMap (themeGroupFiles pkgs) (
-      builtins.attrValues (
-        builtins.groupBy (
-          entry:
-          axiom.canonical.join ":" [
-            entry.renderer
-            entry.blockId
-          ]
-        ) entries
+    markers.composeThemes (
+      builtins.concatMap (themeGroupFiles pkgs) (
+        builtins.attrValues (
+          builtins.groupBy (
+            entry:
+            axiom.canonical.join ":" [
+              entry.renderer
+              entry.blockId
+            ]
+          ) entries
+        )
       )
-    )
-    ++ aggregatedThemeFiles entries pkgs;
+      ++ aggregatedThemeFiles entries pkgs
+    );
 in
 {
   inherit

@@ -60,9 +60,15 @@ let
     };
 
   publicDeclarations = import ./declarations/public.nix withPackages;
+  observations = import ./events/fixtures.nix (withPackages // { inherit krisisSource; });
 in
 {
-  effects-contract = (import ./effects-contract.nix (core // { inherit lexicon; })).tests;
+  effects-contract = observations.effects.tests;
+  bench = {
+    default = (import ./bench { inherit lib; }).tests;
+    markers = (import ./bench/markers.nix { inherit lib; }).tests;
+    workloads = (import ./bench/workloads.nix { inherit lib lexicon; }).tests;
+  };
   registry = (import ./registry core).tests;
 
   declarations = {
@@ -73,6 +79,7 @@ in
     inherit (publicDeclarations) links;
     contextual-theme = publicDeclarations.contextualTheme;
     resource-effects = (import ./declarations/resource-effects.nix withPackages).tests;
+    observations = observations.compiler.tests;
   };
 
   ownerships = {
@@ -82,12 +89,15 @@ in
     descriptors = (import ./ownerships/descriptors.nix core).tests;
     matrix = (import ./ownerships/matrix.nix core).tests;
     import-units = (import ./ownerships/import-units.nix core).tests;
+    observations = observations.ownerships.tests;
   };
 
   furnish = {
     default = (import ./furnish (core // furnishFixture)).tests;
     effects = (import ./furnish/effects.nix core).tests;
     runtime = (import ./furnish/runtime.nix (core // { inherit pkgs nixpkgs; })).tests;
+    observations = observations.resources.tests;
+    terminals = observations.terminals.tests;
   };
 
   program = {
@@ -104,12 +114,13 @@ in
   praxis = {
     default = (import ./praxis core).tests;
     graph-effects = (import ./praxis/graph-effects.nix core).tests;
-    effects = (import ./praxis/effects.nix (core // { inherit krisisSource; })).tests;
+    effects = observations.praxis.tests;
     public-surface = (import ./praxis/public-surface.nix core).tests;
   };
 
   toml = {
     encoding = import ./toml/encoding.nix { inherit pkgs lexicon; };
+    render = import ./toml/render.nix { inherit pkgs lexicon; };
     rendering =
       (import ./toml/rendering.nix {
         inherit lib;

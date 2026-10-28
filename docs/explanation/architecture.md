@@ -618,8 +618,7 @@ applied per `lib` call, is a construction defect that the import rule and the si
 `flake.nix` remove.
 
 Known violations today, each owned by the step that removes it: rendered-label paths (engine, K5
-and `core/paths.nix`), Python TOML validation at build time (`systems/services/toml`), Python
-evaluation drivers in `verification/components/` (replaced by nix-unit and the bench suite),
+and `core/paths.nix`), Python TOML validation at build time (`systems/services/toml`),
 `builtins.tryEval` around directory reads (`src/program/directories.nix:30`, furnish), three
 dependency sets per skadi evaluation (`flake.nix:29-39,57`, I5).
 
@@ -634,7 +633,6 @@ dependency sets per skadi evaluation (`flake.nix:29-39,57`, I5).
 | `tests/praxis/terminal.py` | test | keep: drives a real PTY |
 | `tests/toml/*.py` | test | keep only the publish and merge cases; rendering cases become nix-unit, and parity becomes `checks.toml-parity` |
 | `tests/system/harness/` (Go), `tests/system/*.sh` | test | keep: VM and running-system tests |
-| `verification/components/*.py` | test and measurement | replaced: contract and observation checks by nix-unit; measurement by `bench/` |
 
 ## Dependency pins
 
@@ -693,7 +691,7 @@ demanded value that both sides must produce identically.
 | --- | --- | --- |
 | `fleet.den` | Den v0.19.0 | N hosts by M users with skadi-shaped aspects: includes, batteries, a quirk, `lexicon { }` with files, links, directories, themes and units; demands `lexicon.furnish.manifestData` and each user's Home Manager file names, not toplevel derivations |
 | `fleet.plain` | plain | the same aspects through `lib.flake` |
-| `subsystem.<name>.<case>` | none or `forTarget` | the existing families from `verification/components/workload.nix`, `fleet.nix`, `compiler.nix`, `resources.nix`, `praxis.nix`, `toml.nix`, at sizes 4, 16 and 64 |
+| `subsystem.<name>.<case>` | none or `forTarget` | the subsystem families in `bench/workloads/subsystem/`, at sizes 4, 16 and 64 |
 | `skadi.live` | Den | optional, the real `/etc/skadi` at a recorded revision; report only, never gated, since it isn't reproducible from Lexicon's tree |
 
 Every sized workload runs at all three sizes so growth shows up, not only level.
@@ -740,7 +738,7 @@ directory of its definition file.
 | Evaluator | Counters (`NIX_SHOW_STATS`, `NIX_SHOW_STATS_PATH`) | Call counts (`NIX_COUNT_CALLS`) | Sampling profiler |
 | --- | --- | --- | --- |
 | Lix 2.95.4 (host `nix`) | yes, evaluated | yes, `functions` by position, evaluated | no; `eval-profiler` is an unknown setting (evaluated). It has `trace-function-calls`, an entry/exit trace too heavy for routine use |
-| CppNix 2.34.8 (devenv) | yes | yes; `attributes` always null (`verification/components/README.md`) | `--option eval-profiler flamegraph` with `eval-profiler-frequency` and `eval-profile-file`, folded stacks (setting confirmed by `nix config show`) |
+| CppNix 2.34.8 (devenv) | yes | yes; `attributes` always null (`bench/reference.md`) | `--option eval-profiler flamegraph` with `eval-profiler-frequency` and `eval-profile-file`, folded stacks (setting confirmed by `nix config show`) |
 
 The suite pins CppNix, because it has the sampling profiler and the existing record grammar is
 qualified against 2.34.8. The pin is a flake package, `packages.<system>.bench-evaluator =
@@ -762,19 +760,21 @@ supported for counters only, as a separate baseline, if the owner wants host-eva
 
 Gate signal, deterministic for one evaluator and expression: `nrFunctionCalls`, `nrPrimOpCalls`,
 `nrThunks`, `values.number`, `envs.number`, `sets.number`, `list.elements`, `list.concats`,
-`nrOpUpdates`, `nrOpUpdateValuesCopied`, the heap-bytes aggregate, marker entries and per-owner
-applications. A counter that differs across repeated samples of one side is flagged
-nondeterministic and excluded from verdicts for that workload, as nix-effects' bench does
+`nrOpUpdates`, `nrOpUpdateValuesCopied` and the heap-bytes aggregate. A counter that differs across
+repeated samples of one side is flagged nondeterministic and excluded from verdicts for that
+workload, as nix-effects' bench does
 (`NE/bench/lib/measure.nix:1-10`).
 
 Reported, never a verdict alone: evaluator `cpuTime`, wall time from launch to reap, peak RSS from
-`wait4`, `gc.heapSize`, sampled inclusive time per marker.
+`wait4`, `gc.heapSize`, sampled inclusive time per marker, marker entries and per-owner applications.
+Marker entries and owner applications attribute the aggregate changes. They do not gate a change,
+since moving an owner or adding a marker changes those counts without changing the work performed.
 
 Sampling: one warm-up per side, then three alternating pairs (baseline, candidate; candidate,
-baseline; baseline, candidate), as the current README fixes. Counting and profiling never share a
-process. Each record names the machine and its load average at launch. Timing runs on lumi over SSH
-when it's reachable, because khion is shared with other work; counters may run anywhere since
-they don't depend on load.
+baseline; baseline, candidate), then one profiling sample per side (`bench/runner/schedule.nix`).
+Counting and profiling never share a process. Each record names the machine and its load average
+at launch. Timing runs on lumi over SSH when it's reachable, because khion is shared with other
+work; counters may run anywhere since they don't depend on load.
 
 Verdicts per counter: regression when it moves by more than a relative tolerance and an absolute
 floor together, the joint rule nix-effects uses (`NE/bench/budgets.toml`). Tolerances come from a
@@ -789,8 +789,8 @@ runner (`NE/bench/runner/run.nix`); shell suffices because it only loops, launch
 Everything else is Nix: workload enumeration, projection checks, aggregation, tolerance verdicts,
 the per-region attribution and report rendering. The analysis is a separate `nix eval` over the
 collected records, never part of a build, so reading those files isn't import-from-derivation.
-`observe.py`, `compare.py`, `profile-contracts.py` and `snapshot.py` are replaced; their record
-grammar and source-position mapping rules move into `bench/analysis/` as Nix.
+The Python measurement scripts it replaced are deleted (D13). Their record grammar and
+source-position mapping rules live in `bench/analysis/` as Nix.
 
 ### Failure behavior
 
@@ -849,9 +849,8 @@ a pinned evaluator outside the check sandbox and a second revision.
 | Axiom `schema.compile`, `registry.compile`, `canonical`, `sets`, `requirements`, `phases`, `identity` | Krisis `T` and `validation`; `core/registry.nix`; `core/identity.nix`; `core/paths.nix`; `requirements` and `phases` folded into their single callers | audit: file table |
 | `tests/*` | `tests/` mirroring the tree as nix-unit cases | |
 | `tests/toml/test.py`, `protocol.py` | `tests/systems/services/toml/` | rendering cases to nix-unit; publish and merge cases stay Python |
-| `verification/components/contracts.py`, `observe.py` | `tests/` nix-unit cases | expected-error and throwing-sentinel cases (**Assumption**: the pinned nix-unit matches error messages) |
-| `verification/components/*.nix` | `bench/workloads/` | |
-| `verification/components/compare.py`, `profile-contracts.py`, `snapshot.py`, `toml.py` | `bench/runner/` (shell) and `bench/analysis/` (Nix) | |
+| none, the Python contract drivers are deleted (D13) | `tests/` nix-unit cases beside each fixture, and `checks.observation-events` over `tests/events/` | nix-unit pins values and whole exception messages; callback counts, call order and error contexts need captured traces, so a flake check reads them |
+| none, the measurement scripts and their workloads are deleted (D13) | `bench/workloads/`, `bench/runner/` (shell), `bench/analysis/` (Nix) | |
 | none | `bench/budgets.nix`, `bench/reference.md`, `tests/bench/` | new |
 | none | `tests/architecture/{layers,purity,allowlist}.nix` | new |
 

@@ -162,9 +162,61 @@ let
       context = { };
       outputs = [ "homeManager" ];
     };
+  cells = {
+    static = run false;
+    dynamic = run true;
+    exceptions = lib.genAttrs [ "parse" "normalize" "preparation" "lowering" "callback" ] exceptional;
+  };
+
+  # both contexts see every selected entry with its default, metadata, origin
+  # and preparation, and the inactive entry never appears
+  compiledEntries = lib.genList (index: {
+    id = index + 1;
+    defaulted = 7;
+    tag = index + 10;
+    origin = [
+      "sample"
+      "entries"
+      (index + 1)
+    ];
+    prepared = index;
+  }) 2;
+  compiled = {
+    first = {
+      entries = compiledEntries;
+      marker = 0;
+      root = true;
+    };
+    second = {
+      entries = compiledEntries;
+      marker = 1;
+      root = true;
+    };
+  };
+
+  threw = name: {
+    expr = cells.exceptions.${name};
+    expectedError.type = "ThrownError";
+    expectedError.msg = "compiler ${name} exception";
+  };
 in
-{
-  static = run false;
-  dynamic = run true;
-  exceptions = lib.genAttrs [ "parse" "normalize" "preparation" "lowering" "callback" ] exceptional;
+# callback counts and demand-site contexts are checked from the same cells by the
+# events flake check, since no value shows how often a callback ran
+cells
+// {
+  tests = {
+    "test a static tree compiles every selected entry in both contexts" = {
+      expr = cells.static;
+      expected = compiled;
+    };
+    "test a callback tree compiles every selected entry in both contexts" = {
+      expr = cells.dynamic;
+      expected = compiled;
+    };
+    "test a parse exception surfaces unchanged" = threw "parse";
+    "test a normalize exception surfaces unchanged" = threw "normalize";
+    "test a preparation exception surfaces unchanged" = threw "preparation";
+    "test a lowering exception surfaces unchanged" = threw "lowering";
+    "test a callback exception surfaces unchanged" = threw "callback";
+  };
 }

@@ -145,6 +145,25 @@
           inherit (inputs) nixpkgs;
         };
 
+      # the observation fixtures, one cell per attribute, for the events check to
+      # evaluate one process at a time
+      flake.observations =
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+          inherit (pkgs) lib;
+          inherit (dependenciesFor { inherit lib; }) axiom krisis;
+        in
+        import ./tests/events/fixtures.nix {
+          inherit
+            lib
+            pkgs
+            axiom
+            krisis
+            ;
+          krisisSource = inputs.krisis;
+          lexicon = inputs.self;
+        };
+
       flake.nixosConfigurations =
         let
           system = "x86_64-linux";
@@ -270,6 +289,13 @@
             axiomSource = inputs.axiom;
             krisisSource = inputs.krisis;
           };
+          # measurements pin one evaluator series from the flake's own nixpkgs, so
+          # a lock bump moves it in reviewed changes and every record names it
+          benchEvaluator = pkgs.nixVersions.nix_2_34;
+          benchRunner = import ./bench/runner {
+            inherit pkgs;
+            evaluator = benchEvaluator;
+          };
           praxisCommands = praxis {
             inherit pkgs;
             name = "lexicon-praxis";
@@ -308,6 +334,22 @@
                 packages = [ pkgs.nix-unit ];
                 description = "Run the Lexicon nix-unit suite";
               };
+              # later arguments override these, so a run can name another baseline
+              # or narrow the workloads
+              bench = {
+                command = [
+                  "nix"
+                  "run"
+                  "path:.#bench"
+                  "--"
+                  "compare"
+                  "--baseline"
+                  "main"
+                  "--candidate"
+                  "worktree"
+                ];
+                description = "Compare the working tree with main on the evaluation benchmark workloads";
+              };
             };
             tasks.gate = {
               description = "Format, run the complete Lexicon flake check and the nix-unit suite";
@@ -343,6 +385,8 @@
           packages = {
             praxis = genericPraxis;
             lexicon-praxis = praxisCommands.package;
+            bench-evaluator = benchEvaluator;
+            bench = benchRunner;
           };
           apps.lexicon-praxis = praxisCommands.apps.lexicon-praxis;
 
@@ -369,12 +413,6 @@
               inherit pkgs;
               lexicon = inputs.self;
               inherit (inputs) nixpkgs;
-            };
-            declarations-observations = import ./tests/declarations/observations-check.nix {
-              inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
             };
             consumers =
               let
@@ -407,17 +445,16 @@
               praxis = praxisCompiler;
             };
             praxis-runner = praxisCommands.runner;
-            furnish-observations = import ./tests/furnish/observations-check.nix {
+            # building the runner is what shellchecks its script
+            bench-runner = benchRunner;
+            bench-reduce = import ./tests/bench/reduce.nix {
               inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
+              runner = benchRunner;
             };
-            ownerships-observations = import ./tests/ownerships/observations-check.nix {
-              inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
+            # callback counts, call order and error contexts of the observation fixtures
+            observation-events = import ./tests/events/check.nix {
+              inherit pkgs lib inputOverrides;
+              inherit (inputs) self nixpkgs;
             };
           };
         };

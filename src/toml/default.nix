@@ -22,18 +22,30 @@ let
     inherit kind value;
   };
   encoder = import ./encode.nix { inherit lib axiom krisis; };
-  render = import ./render.nix;
   reporter = krisis.mkReporter {
     formatHeader = count: "toml: ${toString count} validation error(s)";
     formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
   };
+  markers = import ./markers.nix;
+  # render and generate share the document text and literal fragments so their
+  # output and validation cannot drift
+  rendered =
+    attrs:
+    markers.renderDocument (
+      import ./render.nix (krisis.effects.finishWithReporter reporter (encoder.compile attrs))
+    );
+  render = attrs: (rendered attrs).text;
+  # passthru stays out of the derivation, so exposing what was rendered leaves
+  # every generated file's derivation and its consumers' closures unchanged
   generate =
     name: attrs:
     let
-      encoded = krisis.effects.finishWithReporter reporter (encoder.compile attrs);
-      input = pkgs.writeText "${name}.json" (builtins.toJSON (render encoded));
+      envelope = rendered attrs;
+      input = pkgs.writeText "${name}.json" (builtins.toJSON envelope);
     in
-    pkgs.runCommand name { } ''${python}/bin/python ${./runtime.py} "" "" validate ${input} "$out"'';
+    pkgs.runCommand name {
+      passthru.rendered = envelope;
+    } ''${python}/bin/python ${./runtime.py} "" "" validate ${input} "$out"'';
   source =
     name: value:
     if encoder.isTagged value then
@@ -71,6 +83,7 @@ in
   inherit
     package
     generate
+    render
     merge
     source
     ;

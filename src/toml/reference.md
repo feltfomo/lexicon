@@ -1,6 +1,6 @@
 # TOML
 
-`lexicon.lib.toml { inherit pkgs; }` returns `generate`, `merge`, `source`,
+`lexicon.lib.toml { inherit pkgs; }` returns `generate`, `render`, `merge`, `source`,
 `literal`, `document`, `inline`, `tables`, and the `package` containing
 `lexicon-toml`. `lib` defaults to `pkgs.lib`. Generated values are rendered by
 one pure Nix renderer. TOML Kit from the caller's nixpkgs owns build-time
@@ -32,6 +32,15 @@ validation accumulates independent errors through the shared native Krisis/Fx
 owner. Constructor field schemas retain Axiom's checked-result boundary.
 Diagnostics keep their original paths and injected reporter behavior.
 Generated attribute keys follow Nix's sorted attribute order.
+
+`render attrs` returns the document string `generate` would write for the same
+value, keeping its store context. It's pure: it builds nothing and does no
+build-time validation, so `literal` and `document` text reaches the string
+unchecked. Encoding errors throw exactly as they do from `generate`, which renders
+through the same path and validates the result in its builder. The derivation
+`generate` returns carries what it rendered as `passthru.rendered`: `text`, the
+document `render` returns, and `literals`, the fragments its builder validates.
+Passthru isn't part of the derivation, so it doesn't change the build.
 
 `inline attrs` forces an inline table. Nested `tables` constructors inside an
 inline table become arrays of inline tables, as required by TOML syntax. `tables list` forces an array of tables,

@@ -12,6 +12,7 @@ let
   inherit (effects.native) validation;
   finish = effects.finishComputation reporter.fail;
   targets = import ./target.nix { inherit lib; };
+  markers = import ./markers.nix;
   claimAttrs = lib.genAttrs claimKeys (_: null);
 
   reporter = effects.reporter {
@@ -400,25 +401,27 @@ let
 
   collisionIndex =
     projections:
-    axiom.registry.compile {
-      registrations = projections;
-      keyOf = projection: projection.filesystemIdentity.canonical;
-      less = claimantLess;
-      onDuplicate =
-        key: claimants:
-        let
-          sorted = builtins.sort claimantLess claimants;
-        in
-        collisionDiagnostic {
-          code = "duplicate-filesystem-identity";
-          message = "claimed by ${lib.concatMapStringsSep ", " renderClaimant sorted}";
-          primary.label = key;
-          context = {
-            inherit ((builtins.head sorted)) filesystemIdentity;
-            claimants = sorted;
+    markers.indexCollisions (
+      axiom.registry.compile {
+        registrations = projections;
+        keyOf = projection: projection.filesystemIdentity.canonical;
+        less = claimantLess;
+        onDuplicate =
+          key: claimants:
+          let
+            sorted = builtins.sort claimantLess claimants;
+          in
+          collisionDiagnostic {
+            code = "duplicate-filesystem-identity";
+            message = "claimed by ${lib.concatMapStringsSep ", " renderClaimant sorted}";
+            primary.label = key;
+            context = {
+              inherit ((builtins.head sorted)) filesystemIdentity;
+              claimants = sorted;
+            };
           };
-        };
-    };
+      }
+    );
 
   collisionDiagnostics = projections: (collisionIndex projections).diagnostics;
 
@@ -716,27 +719,29 @@ let
       raw ? { },
       provider ? defaultProvider,
     }:
-    if declarations == [ ] then
-      (contract.emit [ ])
-      // {
-        inherit raw;
-      }
-    else
-      let
-        validated = validateShapes declarations;
-        executorSet = compileExecutorRegistry executors;
-        selected = krisis.withErrorContext "furnish: while selecting applicable declarations" (
-          provider.selectApplicable validated ctx
-        );
-        normalized = map deriveDestination selected;
-        ordered = builtins.sort identityLess normalized;
-        index = buildIndex (map indexProjection ordered);
-        manifestEntries = builtins.seq index (map (materialize executorSet) ordered);
-      in
-      (contract.emit manifestEntries)
-      // {
-        inherit raw;
-      };
+    markers.compileManifest (
+      if declarations == [ ] then
+        (contract.emit [ ])
+        // {
+          inherit raw;
+        }
+      else
+        let
+          validated = validateShapes declarations;
+          executorSet = compileExecutorRegistry executors;
+          selected = krisis.withErrorContext "furnish: while selecting applicable declarations" (
+            provider.selectApplicable validated ctx
+          );
+          normalized = map deriveDestination selected;
+          ordered = builtins.sort identityLess normalized;
+          index = buildIndex (map indexProjection ordered);
+          manifestEntries = builtins.seq index (map (materialize executorSet) ordered);
+        in
+        (contract.emit manifestEntries)
+        // {
+          inherit raw;
+        }
+    );
 in
 {
   inherit

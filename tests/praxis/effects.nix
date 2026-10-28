@@ -458,130 +458,207 @@ let
       expected = true;
     };
   };
-in
-{
-  inherit tests;
-  sharedProbe = {
-    selected = builtins.attrNames shared.manifests.once.commands;
-    description = shared.manifests.once.commands.good.description;
-    summary = shared.diagnosticSummaries.good.total;
-    repeated = shared.manifests.good.commands.good.description;
-  };
-  alternatingProbe =
-    lib.imap0
-      (
-        index: value:
-        let
-          result = alternatingChecks.scalar "subject${toString index}" "path" value;
-        in
-        {
-          count = builtins.length result.diagnostics;
-          value = if result.diagnostics == [ ] then result.value else null;
-        }
-      )
-      [
-        "valid"
-        ""
-        "valid"
-        ""
-      ];
-  factoryProbe =
-    map (d: { inherit (d) code primary; })
-      (factoryChecks.arguments "probe" [ 42 ]).diagnostics;
-  referenceProbe = {
-    value = (builtins.head (probeChecks.arguments "probe" [ { param = "valid"; } ]).value).param;
-    string = builtins.head (probeChecks.arguments "probe" [ "literal" ]).value;
-  };
-  exceptions = {
-    input = (typeChecks.scalar "probe" "int" (throw "praxis input exception")).diagnostics;
-    referenceProbe =
-      (
-        (checksWith {
-          name = _: throw "praxis reference probe exception";
-          diagnostic =
-            _: _: _:
-            throw "praxis premature fallback exception";
-        }).arguments
-        "probe"
-        [ { param = "valid"; } ]
-      ).diagnostics;
-    referenceCode =
-      (
-        (fallbackGuard (
-          d:
-          d
-          // {
-            code = throw "praxis reference code exception";
-            severity = throw "praxis premature severity exception";
+  probes = {
+    sharedProbe = {
+      selected = builtins.attrNames shared.manifests.once.commands;
+      description = shared.manifests.once.commands.good.description;
+      summary = shared.diagnosticSummaries.good.total;
+      repeated = shared.manifests.good.commands.good.description;
+    };
+    alternatingProbe =
+      lib.imap0
+        (
+          index: value:
+          let
+            result = alternatingChecks.scalar "subject${toString index}" "path" value;
+          in
+          {
+            count = builtins.length result.diagnostics;
+            value = if result.diagnostics == [ ] then result.value else null;
           }
-        )).arguments
-        "probe"
-        [ 42 ]
-      ).diagnostics;
-    referenceSeverity =
-      (
-        (fallbackGuard (
-          d:
-          d
-          // {
-            code = builtins.trace "praxis code" d.code;
-            severity = throw "praxis reference severity exception";
-          }
-        )).arguments
-        "probe"
-        [ 42 ]
-      ).diagnostics;
-    referenceEnvelope = ((fallbackGuard (d: d // { code = ""; })).arguments "probe" [ 42 ]).diagnostics;
-    referenceFactory =
-      (
-        (checksWith {
-          diagnostic =
-            _: _: _:
-            throw "praxis factory exception";
-        }).arguments
-        "probe"
-        [ 42 ]
-      ).diagnostics;
-    memberOrder =
-      ((fallbackGuard (d: d // { code = throw "praxis first member exception"; })).arguments "probe" [
-        42
-        poison
-      ]).diagnostics;
+        )
+        [
+          "valid"
+          ""
+          "valid"
+          ""
+        ];
+    factoryProbe =
+      map (d: { inherit (d) code primary; })
+        (factoryChecks.arguments "probe" [ 42 ]).diagnostics;
+    referenceProbe = {
+      value = (builtins.head (probeChecks.arguments "probe" [ { param = "valid"; } ]).value).param;
+      string = builtins.head (probeChecks.arguments "probe" [ "literal" ]).value;
+    };
+    exceptions = {
+      input = (typeChecks.scalar "probe" "int" (throw "praxis input exception")).diagnostics;
+      referenceProbe =
+        (
+          (checksWith {
+            name = _: throw "praxis reference probe exception";
+            diagnostic =
+              _: _: _:
+              throw "praxis premature fallback exception";
+          }).arguments
+          "probe"
+          [ { param = "valid"; } ]
+        ).diagnostics;
+      referenceCode =
+        (
+          (fallbackGuard (
+            d:
+            d
+            // {
+              code = throw "praxis reference code exception";
+              severity = throw "praxis premature severity exception";
+            }
+          )).arguments
+          "probe"
+          [ 42 ]
+        ).diagnostics;
+      referenceSeverity =
+        (
+          (fallbackGuard (
+            d:
+            d
+            // {
+              code = builtins.trace "praxis code" d.code;
+              severity = throw "praxis reference severity exception";
+            }
+          )).arguments
+          "probe"
+          [ 42 ]
+        ).diagnostics;
+      referenceEnvelope = ((fallbackGuard (d: d // { code = ""; })).arguments "probe" [ 42 ]).diagnostics;
+      referenceFactory =
+        (
+          (checksWith {
+            diagnostic =
+              _: _: _:
+              throw "praxis factory exception";
+          }).arguments
+          "probe"
+          [ 42 ]
+        ).diagnostics;
+      memberOrder =
+        ((fallbackGuard (d: d // { code = throw "praxis first member exception"; })).arguments "probe" [
+          42
+          poison
+        ]).diagnostics;
 
-    predicate =
-      builtins.seq (predicateChecks.scalar "first" "path" "valid").diagnostics
-        (predicateChecks.scalar "second" "path" "throw").diagnostics;
-    reference =
-      (compile {
-        commands.bad = {
-          command = [ "true" ];
-          args = [ { param = poison; } ];
-        };
-      }).diagnostics.bad;
-    normalize =
-      (compile {
-        axiom = axiom // {
-          schema = axiom.schema // {
-            compile =
-              spec:
-              axiom.schema.compile (
-                spec
-                // {
-                  fields =
-                    spec.fields
-                    // lib.optionalAttrs (spec.fields ? steps && spec.fields ? parameters) {
-                      description = spec.fields.description // {
-                        normalize = _: throw "praxis normalize exception";
-                      };
-                    };
-                }
-              );
+      predicate =
+        builtins.seq (predicateChecks.scalar "first" "path" "valid").diagnostics
+          (predicateChecks.scalar "second" "path" "throw").diagnostics;
+      reference =
+        (compile {
+          commands.bad = {
+            command = [ "true" ];
+            args = [ { param = poison; } ];
           };
-        };
-        commands.bad = {
-          command = [ "true" ];
-          description = "bad";
-        };
-      }).manifests.bad.commands.bad.description;
+        }).diagnostics.bad;
+      normalize =
+        (compile {
+          axiom = axiom // {
+            schema = axiom.schema // {
+              compile =
+                spec:
+                axiom.schema.compile (
+                  spec
+                  // {
+                    fields =
+                      spec.fields
+                      // lib.optionalAttrs (spec.fields ? steps && spec.fields ? parameters) {
+                        description = spec.fields.description // {
+                          normalize = _: throw "praxis normalize exception";
+                        };
+                      };
+                  }
+                );
+            };
+          };
+          commands.bad = {
+            command = [ "true" ];
+            description = "bad";
+          };
+        }).manifests.bad.commands.bad.description;
+    };
   };
+
+  # each exception is the whole terminal message, so a wrapper that adds context
+  # or replaces it fails. which callbacks ran first is checked by the events
+  # flake check
+  exceptionMessages = {
+    reference = "praxis effects payload exception";
+    normalize = "praxis normalize exception";
+    predicate = "praxis predicate exception";
+    input = "praxis input exception";
+    referenceProbe = "praxis reference probe exception";
+    referenceCode = "praxis reference code exception";
+    referenceSeverity = "praxis reference severity exception";
+    referenceEnvelope = "krisis: invalid diagnostic envelope";
+    referenceFactory = "praxis factory exception";
+    memberOrder = "praxis first member exception";
+  };
+  typeDiagnostic = {
+    code = "praxis/type";
+    primary = {
+      label = "probe";
+      source = "authored";
+    };
+  };
+  checked = [
+    {
+      count = 0;
+      value = "valid";
+    }
+    {
+      count = 1;
+      value = null;
+    }
+  ];
+in
+probes
+// {
+  tests =
+    tests
+    // {
+      "test a shared selection normalizes its command once" = {
+        expr = probes.sharedProbe;
+        expected = {
+          selected = [
+            "good"
+            "once"
+          ];
+          description = "good";
+          summary = 0;
+          repeated = "good";
+        };
+      };
+      "test a reference probe keeps parameter and literal arguments" = {
+        expr = probes.referenceProbe;
+        expected = {
+          value = "valid";
+          string = "literal";
+        };
+      };
+      "test alternating predicates report only invalid values" = {
+        expr = probes.alternatingProbe;
+        expected = checked ++ checked;
+      };
+      "test a factory diagnostic keeps its code and authored subject" = {
+        expr = probes.factoryProbe;
+        expected = [
+          typeDiagnostic
+          typeDiagnostic
+        ];
+      };
+    }
+    // lib.mapAttrs' (
+      name: message:
+      lib.nameValuePair "test the ${name} exception surfaces as its whole message" {
+        expr = probes.exceptions.${name};
+        expectedError.type = "ThrownError";
+        expectedError.msg = "^${lib.escapeRegex message}$";
+      }
+    ) exceptionMessages;
 }

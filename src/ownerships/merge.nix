@@ -17,6 +17,8 @@ let
     foldl'
     ;
 
+  markers = import ./markers.nix;
+
   inherit (krisis) safeRender;
   inherit (axiom) canonical schema;
 
@@ -488,7 +490,7 @@ let
                 contributors = [ entry.contributor ];
               }
             ) entries;
-            merged = foldl' (mergeNode "") (head tracked) (tail tracked);
+            merged = markers.mergeContributions (foldl' (mergeNode "") (head tracked) (tail tracked));
           in
           {
             inherit (merged) value provenance;
