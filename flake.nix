@@ -145,6 +145,25 @@
           inherit (inputs) nixpkgs;
         };
 
+      # the observation fixtures, one cell per attribute, for the events check to
+      # evaluate one process at a time
+      flake.observations =
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+          inherit (pkgs) lib;
+          inherit (dependenciesFor { inherit lib; }) axiom krisis;
+        in
+        import ./tests/events/fixtures.nix {
+          inherit
+            lib
+            pkgs
+            axiom
+            krisis
+            ;
+          krisisSource = inputs.krisis;
+          lexicon = inputs.self;
+        };
+
       flake.nixosConfigurations =
         let
           system = "x86_64-linux";
@@ -395,12 +414,6 @@
               lexicon = inputs.self;
               inherit (inputs) nixpkgs;
             };
-            declarations-observations = import ./tests/declarations/observations-check.nix {
-              inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
-            };
             consumers =
               let
                 existing = import ./tests/consumers.nix {
@@ -434,17 +447,14 @@
             praxis-runner = praxisCommands.runner;
             # building the runner is what shellchecks its script
             bench-runner = benchRunner;
-            furnish-observations = import ./tests/furnish/observations-check.nix {
+            bench-reduce = import ./tests/bench/reduce.nix {
               inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
+              runner = benchRunner;
             };
-            ownerships-observations = import ./tests/ownerships/observations-check.nix {
-              inherit pkgs;
-              nixpkgsSource = inputs.nixpkgs;
-              axiomSource = inputs.axiom;
-              krisisSource = inputs.krisis;
+            # callback counts, call order and error contexts of the observation fixtures
+            observation-events = import ./tests/events/check.nix {
+              inherit pkgs lib inputOverrides;
+              inherit (inputs) self nixpkgs;
             };
           };
         };

@@ -1027,7 +1027,69 @@ let
       expr = praxis.diagnosticSummaries.selected.injected;
       expected = true;
     };
-  };
+
+    "test a callback probe parses and normalizes once per demanded field" = {
+      expr = callbackProbe;
+      expected = {
+        first = {
+          parsed = "parse";
+          normalized = "normalize";
+        };
+        second = {
+          parsed = "parse";
+          normalized = "normalize";
+        };
+      };
+    };
+    "test a shared continuation answers both demands" = {
+      expr = sharedProbe;
+      expected = {
+        first = true;
+        second = true;
+      };
+    };
+    "test a mapped warning projects code, summary and recovery" = {
+      expr = projectionProbe;
+      expected = {
+        code = "mapped";
+        noValue = true;
+        recovered = true;
+        summary = {
+          total = 1;
+          hasErrors = false;
+          byCode.mapped = 1;
+          bySeverity = {
+            error = 0;
+            warning = 1;
+            info = 0;
+          };
+        };
+      };
+    };
+  }
+  // lib.mapAttrs' (
+    name: message:
+    lib.nameValuePair "test the ${name} callback exception surfaces as its whole message" {
+      expr = callbackExceptions.${name};
+      expectedError.type = "ThrownError";
+      expectedError.msg = "^${lib.escapeRegex message}$";
+    }
+  ) callbackMessages;
+
+  # each callback's exception is the whole terminal message, so a wrapper that
+  # adds context or replaces it fails. which callbacks ran before it is checked
+  # by the events flake check
+  callbackMessages =
+    lib.genAttrs [ "parse" "normalize" "formatter" "dependent" "lower" "mapper" ] (
+      name: "effects contract ${name} exception"
+    )
+    // {
+      mappedCode = "effects contract code exception";
+      mappedSeverity = "effects contract severity exception";
+      mappedFactory = "effects contract factory exception";
+      mappedEnvelope = "krisis: invalid diagnostic envelope";
+      mappedOrder = "effects contract first envelope exception";
+    };
 in
 {
   inherit

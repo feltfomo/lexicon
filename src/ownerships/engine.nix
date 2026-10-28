@@ -21,6 +21,8 @@ let
     all
     ;
 
+  markers = import ./markers.nix;
+
   inherit (krisis) safeShape;
   inherit (krisis.effects) fromAxiom fromDiagnostics finishComputation;
 
@@ -562,7 +564,7 @@ let
       } leaves;
       merged = merge (stripForMerge selected.survivors);
     in
-    {
+    markers.resolveContext {
       inherit (merged) value;
       mergeProvenance = merged.provenance;
       # authored keys preserve alignment when a later phase filters leaves

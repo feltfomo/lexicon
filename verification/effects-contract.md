@@ -2,8 +2,9 @@
 
 `tests/effects-contract.nix` checks the dependency adapter through native Krisis,
 retained Axiom schemas, the public configured declaration factory and selected
-Praxis manifests. Its `ok` projection evaluates the Boolean cases without
-demanding opaque payloads.
+Praxis manifests. Its `tests` attribute supplies nix-unit cases that demand safe
+projections without forcing opaque payloads. `checks.observation-events` separately
+evaluates the callback probes and checks their captured traces.
 
 The raw handler-state control must throw while the thunk-protected state and
 returned value remain usable. Error reports omit their value. Independent errors
@@ -22,7 +23,7 @@ identity inputs for comparison with the retained old exception messages.
 `callbackProbe` is a separate projection for callback-count observation. Evaluate
 it once as JSON and retain stderr. It demands two references to the same parsed
 record; `effects-contract parse` and `effects-contract normalize` must each occur
-once. Ordinary `ok` evaluation doesn't emit these traces.
+once. Ordinary value tests don't demand this probe.
 
 `callbackExceptions` exposes parse, normalize, formatter, dependent callback and
 public lowering failures separately. Demand each relevant result projection and
@@ -37,8 +38,8 @@ structural-terminal fixture returns a sentinel from an injected reporter's
 successful boolean check; that return must not replace the prepared entry.
 
 Resource transport and callback observations are maintained by
-`tests/furnish/observations.nix` and `contracts.py --family resources`.
-`furnish-pure` also checks real NixOS module evaluation. Program boundary checks
+`tests/furnish/observations.nix` and `tests/events/resources.nix`.
+The Furnish unit cases also check real NixOS module evaluation. Program boundary checks
 include directory Checked expansion and theme file/Matugen preparation. These
 projections demand identities and diagnostics while leaving unrelated source,
 generator and executor payloads opaque.
@@ -51,7 +52,7 @@ Public group probes preserve the first thrown diagnostic and leave later payload
 opaque when that terminal throws.
 
 Praxis adds `tests/praxis/effects.nix` and `tests/praxis/graph-effects.nix` to
-`praxis-pure`. The type cases compare complete retained diagnostics against
+the Praxis nix-unit subtree. The type cases compare complete retained diagnostics against
 Axiom characterization, including list/maybe/refinement and malformed references.
 The configured type-checker cases reuse fixed codes across subjects and values,
 compare complete diagnostics, alternate success and failure, preserve original
@@ -61,7 +62,7 @@ The graph cases demand selected public entries with throwing siblings, malformed
 parents, cycles, missing references, alias conflicts and sensitive sources.
 Both successful and failing summary cases leave builders and runtime paths opaque.
 
-`contracts.py --family praxis` observes one public project through repeated
+`tests/events/praxis.nix` observes one public project through repeated
 manifest and summary demand. It expects three schema checks and one description
 normalizer across the command/task declaration and compiled shapes. Reference
 and normalizer exceptions are separate projections with their original text.
@@ -81,10 +82,10 @@ across qualified state and result carriers.
 The mapped diagnostic fixtures leave message, locations, related entries, notes,
 help and context throwing. Required envelopes still validate through public
 native `diagnostic.make`. Ordered mapper, code, severity and factory failures are
-separate exception projections. `contracts.py --family effects` retains their
-exact terminal messages, code-before-severity trace, callback counts and recovery
-projection. It also observes the original parse, normalizer, formatter, dependent
-callback and public lowering exceptions.
+separate exception projections. The effects nix-unit cases retain their exact terminal
+messages and recovery projections. `tests/events/effects.nix` checks the code-before-severity
+trace and callback counts. Together they also cover the original parse, normalizer,
+formatter, dependent callback and public lowering exceptions.
 
 Praxis adds accepted scalar/list/nullable values, no-value failures, complete
 diagnostic and summary parity, authored environment paths and argument order.

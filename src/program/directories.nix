@@ -11,6 +11,7 @@ let
   inherit (fields) joinSource lifecycleKeysAttrs;
   inherit (krisis) effects;
   inherit (effects.native) validation;
+  markers = import ./markers.nix;
 
   subjectAt =
     index:
@@ -124,7 +125,7 @@ let
             });
       walked =
         if sourceErrors == [ ] && shapeErrors == [ ] then
-          walkDirectory entry.src (entry.exclude or [ ])
+          markers.inventoryDirectory (walkDirectory entry.src (entry.exclude or [ ]))
         else
           {
             diagnostics = [ ];

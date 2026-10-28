@@ -230,186 +230,356 @@ let
       finish = _: trace "finish" "Matugen terminal recovery";
       checked = _: _: trace "checked" (throw "unused Matugen checked");
     };
-in
-{
-  dispatch = {
-    validShape = (furnish.core.validateShape declaration).label;
-    validShapeSentinel =
-      (
-        (publicFurnish (
-          args:
-          (recovering args)
-          // {
-            finish = _: trace "finish" { sentinel = true; };
-          }
-        )).core.validateShape
-        declaration
-      ).label;
-    executorRecovery = map (value: value.identity) (
-      furnish.core.validateExecutors [ (executor // { priority = false; }) ]
-    );
-    indexRecovery = builtins.attrNames (
-      furnish.core.buildHostIndex {
-        declarations = [
-          declaration
-          declaration
-        ];
-        principals = [
-          {
-            inherit (declaration) authority;
-            ctx = throw "terminal index context forced";
-          }
-        ];
-        provider = furnish.core.offProvider;
-      }
-    );
-    indexShapeRecovery = builtins.attrNames (
-      furnish.core.buildHostIndex {
-        declarations = [ shapeBad ];
-        principals = [
-          {
-            inherit (declaration) authority;
-            ctx = throw "terminal index context forced";
-          }
-        ];
-        provider = furnish.core.offProvider;
-      }
-    );
-    shapeRecovery = (furnish.core.validateShape shapeBad).label;
-    compileShapeRecovery =
-      (entry {
-        declarations = [ shapeBad ];
-        provider.selectApplicable = values: _: trace "provider" values;
-      }).target.path;
-    capabilityRecovery = (furnish.core.selectExecutor [ ] declaration).identity;
-    materializerRecovery = (entry { executors = [ (executor // { materialize = 1; }) ]; }).target.path;
-    artifactRecovery = (entry { executors = [ (executor // { materialize = _: { }; }) ]; }).target.path;
-    externalRecovery = entry {
-      executors = [
+  cells = {
+    dispatch = {
+      validShape = (furnish.core.validateShape declaration).label;
+      validShapeSentinel =
         (
-          executor
-          // {
-            materialize =
-              _:
-              artifact
-              // {
-                target = {
-                  kind = "external";
-                  path = "/srv/alice/.config/terminal";
+          (publicFurnish (
+            args:
+            (recovering args)
+            // {
+              finish = _: trace "finish" { sentinel = true; };
+            }
+          )).core.validateShape
+          declaration
+        ).label;
+      executorRecovery = map (value: value.identity) (
+        furnish.core.validateExecutors [ (executor // { priority = false; }) ]
+      );
+      indexRecovery = builtins.attrNames (
+        furnish.core.buildHostIndex {
+          declarations = [
+            declaration
+            declaration
+          ];
+          principals = [
+            {
+              inherit (declaration) authority;
+              ctx = throw "terminal index context forced";
+            }
+          ];
+          provider = furnish.core.offProvider;
+        }
+      );
+      indexShapeRecovery = builtins.attrNames (
+        furnish.core.buildHostIndex {
+          declarations = [ shapeBad ];
+          principals = [
+            {
+              inherit (declaration) authority;
+              ctx = throw "terminal index context forced";
+            }
+          ];
+          provider = furnish.core.offProvider;
+        }
+      );
+      shapeRecovery = (furnish.core.validateShape shapeBad).label;
+      compileShapeRecovery =
+        (entry {
+          declarations = [ shapeBad ];
+          provider.selectApplicable = values: _: trace "provider" values;
+        }).target.path;
+      capabilityRecovery = (furnish.core.selectExecutor [ ] declaration).identity;
+      materializerRecovery = (entry { executors = [ (executor // { materialize = 1; }) ]; }).target.path;
+      artifactRecovery = (entry { executors = [ (executor // { materialize = _: { }; }) ]; }).target.path;
+      externalRecovery = entry {
+        executors = [
+          (
+            executor
+            // {
+              materialize =
+                _:
+                artifact
+                // {
+                  target = {
+                    kind = "external";
+                    path = "/srv/alice/.config/terminal";
+                  };
                 };
-              };
-          }
-        )
-      ];
+            }
+          )
+        ];
+      };
+    };
+    groups = {
+      themeWithin = checkedTheme.themeFiles [ aOne aOne aTwo aTwo ] pkgs;
+      matugenWithin = map (value: value.destination) (
+        matugen recoveringFinish [
+          maOne
+          maOne
+          maTwo
+          maTwo
+        ]
+      );
+      themeRecovery = checkedTheme.themeFiles [ a a z ] pkgs;
+      themeSuccessThenRecovery = map (file: file.dest or file.text) (
+        checkedTheme.themeFiles [ a z ] pkgs
+      );
+      themeSuccess = destinations (checkedTheme.themeFiles [ a ] pkgs);
+      matugenRecovery = map (value: value.destination) (
+        matugen recoveringFinish [
+          ma
+          ma
+          mz
+          mz
+        ]
+      );
+      matugenSuccess = map (value: value.destination) (
+        matugen recoveringFinish [
+          ma
+          mz
+        ]
+      );
+      matugenNativeOpaque = map (value: value.destination) (
+        matugen recoveringFinish [
+          ma
+          (
+            mz
+            // {
+              native = throw "later Matugen native forced";
+            }
+          )
+        ]
+      );
+    };
+    exceptions = {
+      themeWithin = builtins.length (themeFiles [
+        aOne
+        aOne
+        aTwo
+        aTwo
+      ]);
+      matugenWithin = builtins.length (
+        matugen finishReporter [
+          maOne
+          maOne
+          maTwo
+          maTwo
+        ]
+      );
+      themeTwo = builtins.length (themeFiles [
+        a
+        a
+        z
+      ]);
+      themePoison = builtins.length (themeFiles [
+        a
+        a
+        poison
+      ]);
+      themeSuccessThenFailure = builtins.length (themeFiles [
+        a
+        z
+      ]);
+      matugenTwo = builtins.length (
+        matugen finishReporter [
+          ma
+          ma
+          mz
+          mz
+        ]
+      );
+      matugenPoison = builtins.length (
+        matugen finishReporter [
+          ma
+          ma
+          mp
+        ]
+      );
+      matugenSuccessThenFailure = builtins.length (
+        matugen finishReporter [
+          ma
+          mz
+          mz
+        ]
+      );
+      matugenNativeAfterDuplicate = map (value: builtins.fromJSON value.source.value) (
+        matugen finishReporter [
+          ma
+          ma
+          (
+            mz
+            // {
+              native = throw "later Matugen native forced";
+            }
+          )
+        ]
+      );
+      themeSuccessPoison = builtins.length (themeFiles [
+        a
+        poison
+      ]);
     };
   };
-  groups = {
-    themeWithin = checkedTheme.themeFiles [ aOne aOne aTwo aTwo ] pkgs;
-    matugenWithin = map (value: value.destination) (
-      matugen recoveringFinish [
-        maOne
-        maOne
-        maTwo
-        maTwo
-      ]
-    );
-    themeRecovery = checkedTheme.themeFiles [ a a z ] pkgs;
-    themeSuccessThenRecovery = map (file: file.dest or file.text) (
-      checkedTheme.themeFiles [ a z ] pkgs
-    );
-    themeSuccess = destinations (checkedTheme.themeFiles [ a ] pkgs);
-    matugenRecovery = map (value: value.destination) (
-      matugen recoveringFinish [
-        ma
-        ma
-        mz
-        mz
-      ]
-    );
-    matugenSuccess = map (value: value.destination) (
-      matugen recoveringFinish [
-        ma
-        mz
-      ]
-    );
-    matugenNativeOpaque = map (value: value.destination) (
-      matugen recoveringFinish [
-        ma
-        (
-          mz
-          // {
-            native = throw "later Matugen native forced";
-          }
-        )
-      ]
-    );
+
+  duplicate = label: id: {
+    code = "program/theme-registration-duplicate";
+    message = "has duplicate registration id ${id}";
+    primary.label = label;
+    severity = "error";
   };
-  exceptions = {
-    themeWithin = builtins.length (themeFiles [
-      aOne
-      aOne
-      aTwo
-      aTwo
-    ]);
-    matugenWithin = builtins.length (
-      matugen finishReporter [
-        maOne
-        maOne
-        maTwo
-        maTwo
-      ]
-    );
-    themeTwo = builtins.length (themeFiles [
-      a
-      a
-      z
-    ]);
-    themePoison = builtins.length (themeFiles [
-      a
-      a
-      poison
-    ]);
-    themeSuccessThenFailure = builtins.length (themeFiles [
-      a
-      z
-    ]);
-    matugenTwo = builtins.length (
-      matugen finishReporter [
-        ma
-        ma
-        mz
-        mz
-      ]
-    );
-    matugenPoison = builtins.length (
-      matugen finishReporter [
-        ma
-        ma
-        mp
-      ]
-    );
-    matugenSuccessThenFailure = builtins.length (
-      matugen finishReporter [
-        ma
-        mz
-        mz
-      ]
-    );
-    matugenNativeAfterDuplicate = map (value: builtins.fromJSON value.source.value) (
-      matugen finishReporter [
-        ma
-        ma
-        (
-          mz
-          // {
-            native = throw "later Matugen native forced";
-          }
-        )
-      ]
-    );
-    themeSuccessPoison = builtins.length (themeFiles [
-      a
-      poison
-    ]);
+  unsupported = {
+    code = "program/theme-native-unsupported";
+    message = "cannot use native registration fields: z";
+    primary.label = "theme.caelestia.z";
+    severity = "error";
+  };
+  line = diagnostic: "\n  - [${diagnostic.code}] ${diagnostic.primary.label}: ${diagnostic.message}";
+  checkedGroup = diagnostics: {
+    inherit diagnostics;
+    fallbackLength = 0;
+    text = "program: ${toString (builtins.length diagnostics)} declaration error(s)${lib.concatMapStrings line diagnostics}";
+  };
+  matugenFile = ".config/matugen/config.toml";
+  themeDestinations = [
+    ".config/caelestia/templates/a-palette.tmpl"
+    ".config/caelestia/theme-hooks/a"
+  ];
+
+  # a terminal's whole text, so a reporter that adds or drops a line fails
+  terminal = name: lines: {
+    expr = cells.exceptions.${name};
+    expectedError.type = "ThrownError";
+    expectedError.msg = "^${lib.escapeRegex "program: ${toString (builtins.length lines)} declaration error(s)${lib.concatMapStrings (text: "\n  - ${text}") lines}"}$";
+  };
+  themeDuplicate =
+    id: "[program/theme-registration-duplicate] theme.caelestia.a: has duplicate registration id ${id}";
+  matugenDuplicate =
+    id: owner:
+    "[program/theme-registration-duplicate] theme.dms: has duplicate registration id ${id} for ${owner} (alice)";
+  themeUnsupported = "[program/theme-native-unsupported] theme.caelestia.z: cannot use native registration fields: z";
+in
+# which reporter method ran, how often and in which order is checked from the
+# same cells by the events flake check. unused methods throw, so a value here
+# also shows no other method's result was demanded
+cells
+// {
+  tests = {
+    "test a valid shape reaches no reporter" = {
+      expr = cells.dispatch.validShape;
+      expected = "terminal";
+    };
+    "test a valid shape ignores a sentinel finish" = {
+      expr = cells.dispatch.validShapeSentinel;
+      expected = "terminal";
+    };
+    "test an invalid executor recovers through fail" = {
+      expr = cells.dispatch.executorRecovery;
+      expected = [ "terminal/executor" ];
+    };
+    "test a host index collision recovers through fail" = {
+      expr = cells.dispatch.indexRecovery;
+      expected = [ "recovered-index" ];
+    };
+    "test a host index shape error recovers through fail" = {
+      expr = cells.dispatch.indexShapeRecovery;
+      expected = [ "host:/srv/alice/.config/terminal" ];
+    };
+    "test a shape error recovers through fail" = {
+      expr = cells.dispatch.shapeRecovery;
+      expected = "terminal";
+    };
+    "test a compile shape error recovers before the provider" = {
+      expr = cells.dispatch.compileShapeRecovery;
+      expected = "/external/terminal";
+    };
+    "test a missing capability recovers through failOne" = {
+      expr = cells.dispatch.capabilityRecovery;
+      expected = "terminal/executor";
+    };
+    "test an invalid materializer recovers through failOne" = {
+      expr = cells.dispatch.materializerRecovery;
+      expected = "/external/terminal";
+    };
+    "test an invalid artifact recovers through fail" = {
+      expr = cells.dispatch.artifactRecovery;
+      expected = "/external/terminal";
+    };
+    "test a managed external target recovers through failOne" = {
+      expr = cells.dispatch.externalRecovery;
+      expected.recovered = "external";
+    };
+
+    "test duplicates within one theme group report together" = {
+      expr = cells.groups.themeWithin;
+      expected = [
+        (checkedGroup [
+          (duplicate "theme.caelestia.a" "one")
+          (duplicate "theme.caelestia.a" "two")
+        ])
+      ];
+    };
+    "test duplicates within one matugen group recover through finish" = {
+      expr = cells.groups.matugenWithin;
+      expected = [ matugenFile ];
+    };
+    "test each failing theme group recovers on its own" = {
+      expr = cells.groups.themeRecovery;
+      expected = [
+        (checkedGroup [ (duplicate "theme.caelestia.a" "a") ])
+        (checkedGroup [ unsupported ])
+      ];
+    };
+    "test a valid theme group survives a failing one" = {
+      expr = cells.groups.themeSuccessThenRecovery;
+      expected = themeDestinations ++ [ (checkedGroup [ unsupported ]).text ];
+    };
+    "test a valid theme group reaches no reporter" = {
+      expr = cells.groups.themeSuccess;
+      expected = themeDestinations;
+    };
+    "test each failing matugen group recovers on its own" = {
+      expr = cells.groups.matugenRecovery;
+      expected = [
+        matugenFile
+        matugenFile
+      ];
+    };
+    "test valid matugen groups finish separately" = {
+      expr = cells.groups.matugenSuccess;
+      expected = [
+        matugenFile
+        matugenFile
+      ];
+    };
+    "test a matugen native payload stays opaque" = {
+      expr = cells.groups.matugenNativeOpaque;
+      expected = [
+        matugenFile
+        matugenFile
+      ];
+    };
+
+    "test theme duplicates in one group fail with both lines" = terminal "themeWithin" [
+      (themeDuplicate "one")
+      (themeDuplicate "two")
+    ];
+    "test matugen duplicates in one group fail with both lines" = terminal "matugenWithin" [
+      (matugenDuplicate "one" "a")
+      (matugenDuplicate "two" "a")
+    ];
+    "test the first failing theme group fails alone" = terminal "themeTwo" [ (themeDuplicate "a") ];
+    "test a later poisoned theme stays unforced" = terminal "themePoison" [ (themeDuplicate "a") ];
+    "test a valid theme group before a failing one" = terminal "themeSuccessThenFailure" [
+      themeUnsupported
+    ];
+    "test the first failing matugen group fails alone" = terminal "matugenTwo" [
+      (matugenDuplicate "duplicate" "a")
+    ];
+    "test a later poisoned matugen registration stays unforced" = terminal "matugenPoison" [
+      (matugenDuplicate "duplicate" "a")
+    ];
+    "test a valid matugen group before a failing one" = terminal "matugenSuccessThenFailure" [
+      (matugenDuplicate "duplicate" "z")
+    ];
+    "test a matugen native payload after a duplicate stays unforced" =
+      terminal "matugenNativeAfterDuplicate"
+        [ (matugenDuplicate "duplicate" "a") ];
+    "test a later poisoned theme native surfaces its own exception" = {
+      expr = cells.exceptions.themeSuccessPoison;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "^later theme native forced$";
+    };
   };
 }

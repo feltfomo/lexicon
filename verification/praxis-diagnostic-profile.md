@@ -39,10 +39,11 @@ observations followed, covering baseline and candidate at sizes 4 and 64 in each
 mode. Every launch demanded the complete projection with report initialization
 disabled. There were no warmups, retries or extra launches.
 
-The maintained [observer](components/observe.py) and
-[`profile-contracts.py`](components/profile-contracts.py) own capture, record
-validity and source mapping. The [components guide](components/README.md)
-documents their interface, record grammar and limits. Region tables were
+The historical `components/observe.py`, `components/profile-contracts.py` and components guide
+owned this campaign's capture, record validity and source mapping. Their exact executed and
+corrected identities are retained below. The maintained benchmark now owns capture and analysis
+under [bench](../bench/reference.md); the historical campaign's records and claims are unchanged.
+Region tables were
 predeclared before any observation. Each table partitions one file by exact
 anchor lines and is resolved separately against the bytes of each side's root. A
 mapped position whose bytes differ from the resolved table stays unclassified.
@@ -450,8 +451,8 @@ These ignored runtime files aren't shipped in a repository clone.
 
 Everything below stays in place. No cleanup is authorized.
 
-- Maintained tools: `observe.py`, the corrected `profile-contracts.py` and the
-  README.
+- The campaign's tool identities and archived copies. The maintained observer, corrected
+  `profile-contracts.py` and README were subsequently retired in favor of `bench/`.
 - Scratch helpers: `common.py`, `prepare.py`, `run.py`, `classify.py`,
   `analyze.py`, `runner-check.py`, `legacy-check.py`, `classify-check.py` and
   their attempt-2 copies, plus `corrective-1` scripts.

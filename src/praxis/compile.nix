@@ -21,22 +21,27 @@ let
       problem
       ;
   };
+  markers = import ./markers.nix;
   finish = krisis.effects.finishWithReporter reporter;
   finishResult = result: finish (krisis.effects.fromAxiom result);
-  project = finish (
-    schema.project (
-      removeAttrs args [
-        "lib"
-        "axiom"
-        "krisis"
-        "lower"
-        "installWrappers"
-      ]
+  project = markers.compileProject (
+    finish (
+      schema.project (
+        removeAttrs args [
+          "lib"
+          "axiom"
+          "krisis"
+          "lower"
+          "installWrappers"
+        ]
+      )
     )
   );
-  results = lib.mapAttrs (
-    name: value: krisis.effects.resultOf ((args.lower or schema.command) name value)
-  ) project.commands;
+  results = markers.normalizeCommands (
+    lib.mapAttrs (
+      name: value: krisis.effects.resultOf ((args.lower or schema.command) name value)
+    ) project.commands
+  );
   fields = import ./fields.nix {
     inherit
       lib
