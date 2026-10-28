@@ -463,7 +463,7 @@ the initialized Krisis.
 
 | # | Signature | Laws | Lexicon consumers |
 | --- | --- | --- | --- |
-| K1 | `k.diagnostic.catalog { namespace; codes = { <code> = { severity ? "error"; summary; help ? null; }; }; } -> Catalog`; `Catalog.<code> : args -> Diagnostic`; `Catalog.codes`; `k.diagnostic.combine [ Catalog ] -> Catalogs` | a constructor exists exactly for each listed code; the code is namespace-qualified as `diagnostic.factory` does; `combine` rejects a repeated namespace naming both; `codes` is data a docs generator can read without forcing constructors | every subsystem's `catalog.nix`; assembly; settings and reference generators |
+| K1 | `k.diagnostic.catalog { namespace; codes = { <code> = { severity ? "error"; summary; help ? null; }; }; } -> Catalog`; `Catalog.<code> : args -> Diagnostic`; `Catalog.codes`; `Catalog.namespace`; `k.diagnostic.combine [ Catalog ] -> Catalogs`, where `Catalogs` is `{ <namespace> = Catalog; }` | a constructor exists exactly for each listed code; the code is namespace-qualified as `diagnostic.factory` does; `codes` and `namespace` are reserved code names and a local code contains no `/`; a constructor rejects `code` and `severity` arguments, and a call's `help` overrides the catalog's; `combine` rejects a repeated namespace naming both list positions; `codes` is data a docs generator can read without forcing constructors | every subsystem's `catalog.nix`; assembly; settings and reference generators |
 | K2 | `k.validation.types.OneOf [ { name; guard; type; } ] -> Type` | branches are tried in list order; the first guard returning true selects; guards are shallow predicates and their throws stay exceptions; no match emits one diagnostic listing branch names; failures inside a branch carry a `{ variant = name; }` segment | engine contextual nodes (static value or callback); native `homeManager` (record or function); furnish collections (list or function) |
 | K3 | `k.validation.types.AttrsOf { key ? T.String; value; } -> Type` | keys validated before values; values visited in sorted key order with a `{ field = key; }` segment; extra keys are allowed by definition; an empty attrset is valid | record-map nodes (theme renderers); settings `attrs` leaves; praxis commands |
 | K4 | `k.validation.map f checked -> Computation (Checked b)`; `k.validation.allAttrs { <name> = Computation (Checked a); } -> Computation (Checked { <name> = a; })` | `map` skips `f` on Invalid; `map id = id`; `allAttrs` accumulates in sorted key order and keeps keys; values stay thunked | `subsystems/praxis` normalization and schema; `systems/services/toml` encoder; engine record nodes |
@@ -506,15 +506,19 @@ files:
 
 1. Kernel applications are zero: the sum of `functions` counts whose `file` is under
    `vendor/nix-effects/src/tc/` is 0 at both sizes.
-2. One envelope check per emission: the applications of the marker `envelopeCheck` grow by exactly
-   48 from N = 16 to N = 64. The marker is an identity lambda on its own line in Krisis's
+2. Two plain envelope checks per factory-built emission, one when the catalog or factory builds
+   the diagnostic and one when `report.emit` receives it, since `emit` can't tell a built diagnostic
+   from raw fields without a brand on the data contract: the applications of the marker
+   `envelopeCheck` grow by exactly 96 from N = 16 to N = 64. The emission path itself builds once.
+   The marker is an identity lambda on its own line in Krisis's
    `src/markers.nix`, applied around the envelope check in `diagnostic.make`. The check never
    hard-codes a line: it resolves the marker's file and line at check time with
    `builtins.unsafeGetAttrPos "envelopeCheck" (import ../../src/markers.nix)` and matches `functions`
    entries on that file and line, so an edit anywhere in Krisis moves the key and the lookup
    together. A missing marker entry fails the check, so it can't silently measure nothing.
 3. Constant work per emission: `(nrFunctionCalls(64) - nrFunctionCalls(16)) / 48` is at most the
-   ceiling in `tests/cost/budget.nix`. The ceiling is the value measured when K9 lands, plus 10%,
+   ceiling in `tests/cost/budget.nix`. The ceiling is the value measured when K9 lands, plus 10%:
+   126 calls per emission at batch 1, down from 45,942, so the ceiling is 138.6,
    and moves only in a reviewed Krisis change. Rules 1 and 2 hold before any number is known; the
    evidence for them is the praxis profile, where 2,792 of 3,079 samples were envelope checks
    through the kernel.
