@@ -11,6 +11,8 @@ and nix-unit. skadi keeps evaluating unchanged on the day each band lands.
   Krisis contract, the benchmark suite, the file mapping and the approved decisions.
 - [Audit](../records/restructure-audit.md) and [research proposal](../records/restructure-proposal.md):
   the evidence behind the design.
+- [Benchmark qualification](../records/benchmark-foundation.md): the calibration and completed
+  comparison that qualified the benchmark suite.
 
 ## Owner and plan
 

@@ -1,0 +1,1806 @@
+warning: unknown experimental feature 'pipe-operator'
+• Running lexicon:gate
+  warning: unknown experimental feature 'pipe-operator'
+  Using saved setting for 'extra-experimental-features = pipe-operators' from ~/.local/share/nix/trusted-settings.json.
+  started [0/3] gate (0.00s)
+  running [1/3] nix (0.00s)
+  warning: unknown experimental feature 'pipe-operator'
+  Using saved setting for 'extra-experimental-features = pipe-operators' from ~/.local/share/nix/trusted-settings.json.
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/tests/declarations/observations-check.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/tests/furnish/observations-check.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/tests/ownerships/observations-check.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/README.md is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/compare.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/compiler.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/contracts.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/fleet.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/observe.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/praxis.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/profile-contracts.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/resources.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/snapshot.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/toml.nix is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/toml.py is in the worktree but appears to have been removed from the filesystem
+  WARN walk | git: Path /home/feltfomo/Projects/lexicon/.claude/worktrees/agent-a5a8a01e3b2609666/verification/components/workload.nix is in the worktree but appears to have been removed from the filesystem
+  traversed 410 files
+  emitted 324 files for processing
+  formatted 11 files (0 changed) in 248ms
+  succeeded [1/3] nix (6.71s)
+  running [2/3] nix (0.00s)
+  warning: unknown experimental feature 'pipe-operator'
+  Using saved setting for 'extra-experimental-features = pipe-operators' from ~/.local/share/nix/trusted-settings.json.
+  evaluating flake...
+  checking flake output 'lib'...
+  checking flake output 'tests'...
+  warning: unknown flake output 'tests'
+  checking flake output 'legacyPackages'...
+  checking flake output 'observations'...
+  warning: unknown flake output 'observations'
+  checking flake output 'nixosConfigurations'...
+  checking NixOS configuration 'nixosConfigurations.furnish-vm'...
+  checking NixOS configuration 'nixosConfigurations.furnish-installer'...
+  checking flake output 'nixosModules'...
+  checking flake output 'packages'...
+  checking derivation packages.x86_64-linux.furnish-coordinator...
+  derivation evaluated to /nix/store/18zn53g9yfj4ik1ap5mzqzw05k287f8c-furnish-coordinator-0.1.0.drv
+  checking derivation packages.x86_64-linux.praxis...
+  derivation evaluated to /nix/store/iv6asx7k4009k6gnpk1xxn16y2qda0xr-praxis.drv
+  checking derivation packages.x86_64-linux.bench...
+  derivation evaluated to /nix/store/bkpw1zxqzqsgflbzrk52rpya6pcng8a7-lexicon-bench.drv
+  checking derivation packages.x86_64-linux.lexicon-praxis...
+  derivation evaluated to /nix/store/82ikzm9z7rjggqvhjb4xwzn9i8v34wmg-lexicon-praxis.drv
+  checking derivation packages.x86_64-linux.bench-evaluator...
+  derivation evaluated to /nix/store/fd086zbv0ipmcq7clpq1r2z24h8cgmqj-nix-2.34.8.drv
+  checking derivation packages.x86_64-linux.furnish-coordinator-fault-injection...
+  derivation evaluated to /nix/store/8zlhf2ljml9h86g188n1jwmc5h5gv3i5-furnish-coordinator-fault-injection-0.1.0.drv
+  checking derivation packages.x86_64-linux.program-files-regression...
+  derivation evaluated to /nix/store/ypw0rsnysll4xl469spj3qmd7p043cwj-program-files-regression.drv
+  checking derivation packages.x86_64-linux.rebuild-vm-golden...
+  derivation evaluated to /nix/store/5bbfmxf3c6796kqcf6bl85whsjy94hl1-rebuild-vm-golden-0.1.0.drv
+  checking derivation packages.x86_64-linux.furnish-coordinator-gate...
+  derivation evaluated to /nix/store/d7rs22yw9gdl187qx2siva7i2gzs8kn6-furnish-coordinator-gate.drv
+  checking flake output 'apps'...
+  checking app 'apps.x86_64-linux.furnish-coordinator'...
+  warning: app 'apps.x86_64-linux.furnish-coordinator' lacks attribute 'meta.description'
+  checking app 'apps.x86_64-linux.lexicon-praxis'...
+  warning: app 'apps.x86_64-linux.lexicon-praxis' lacks attribute 'meta.description'
+  checking app 'apps.x86_64-linux.program-files-regression'...
+  warning: app 'apps.x86_64-linux.program-files-regression' lacks attribute 'meta.description'
+  checking app 'apps.x86_64-linux.rebuild-vm-golden'...
+  warning: app 'apps.x86_64-linux.rebuild-vm-golden' lacks attribute 'meta.description'
+  checking app 'apps.x86_64-linux.furnish-coordinator-gate'...
+  warning: app 'apps.x86_64-linux.furnish-coordinator-gate' lacks attribute 'meta.description'
+  checking flake output 'checks'...
+  checking derivation checks.x86_64-linux.unit...
+  derivation evaluated to /nix/store/km1jd4apaln44i2cgky2y0ls15qlnxzm-lexicon-unit-tests.drv
+  checking derivation checks.x86_64-linux.treefmt...
+  derivation evaluated to /nix/store/8lh332f76nxhfrqxabibijadfa8di6wa-treefmt-check.drv
+  checking derivation checks.x86_64-linux.toml-composition...
+  derivation evaluated to /nix/store/6j2g56wk8jwlxq24jg69qz3hw8xw2zkr-toml-composition-tests.drv
+  checking derivation checks.x86_64-linux.consumers...
+  derivation evaluated to /nix/store/qnir177w71hq37b9fqlwigkvnbvp3cbx-lexicon-consumer-checks.drv
+  checking derivation checks.x86_64-linux.praxis-generated-cli...
+  derivation evaluated to /nix/store/979nh9rgx7kyq9jhzdzf1h9khvk2p6ps-praxis-generated-cli.drv
+  checking derivation checks.x86_64-linux.praxis-integration...
+  derivation evaluated to /nix/store/wfq2m9pc4jd5swnfskxk8ysszh6dxb9s-praxis-integration.drv
+  checking derivation checks.x86_64-linux.praxis-runtime...
+  derivation evaluated to /nix/store/wvkn2kkpqkrhbzl87f9aclzqk0xd97dn-praxis-runtime-tests.drv
+  checking derivation checks.x86_64-linux.praxis-runner...
+  derivation evaluated to /nix/store/5jnja4my7yfp0agrvyidyb2va917ga3w-praxis-1.0.0.drv
+  checking derivation checks.x86_64-linux.bench-runner...
+  derivation evaluated to /nix/store/bkpw1zxqzqsgflbzrk52rpya6pcng8a7-lexicon-bench.drv
+  checking derivation checks.x86_64-linux.bench-reduce...
+  derivation evaluated to /nix/store/5h69mirrhx77aq5ipxix17bdcb660fgh-lexicon-bench-reduce.drv
+  checking derivation checks.x86_64-linux.observation-events...
+  derivation evaluated to /nix/store/2pj4x3i65rlb1rchclxyb4z4v6dv390i-lexicon-observation-events.drv
+  checking flake output 'devShells'...
+  checking flake output 'formatter'...
+  checking derivation formatter.x86_64-linux...
+  derivation evaluated to /nix/store/bcp8lbl07dx0ghyzk0mgvi37n93ii8h7-treefmt.drv
+  checking flake output 'overlays'...
+  running 10 flake checks...
+  building '/nix/store/zixzscwgh8qy6wpy6wgxfjkf8n93qj76-praxis-project-evaluator.nix.drv'...
+  building '/nix/store/2pj4x3i65rlb1rchclxyb4z4v6dv390i-lexicon-observation-events.drv'...
+  building '/nix/store/8lh332f76nxhfrqxabibijadfa8di6wa-treefmt-check.drv'...
+  treefmt-check> treefmt v2.6.0traversed 410 files
+  treefmt-check> emitted 324 files for processing
+  treefmt-check> formatted 324 files (0 changed) in 2.517s
+  building '/nix/store/5h69mirrhx77aq5ipxix17bdcb660fgh-lexicon-bench-reduce.drv'...
+  lexicon-bench-reduce> m
+  building '/nix/store/km1jd4apaln44i2cgky2y0ls15qlnxzm-lexicon-unit-tests.drv'...
+  lexicon-unit-tests> warning: not writing modified lock file of flake 'path:/nix/store/xdp5zxx65k66ddp96jxkq822i7d391lv-source':
+  lexicon-unit-tests> • Updated input 'axiom':
+  lexicon-unit-tests>     'github:feltfomo/axiom-nix/d56208631f0b89b8ff0a115105ad385017aaef23?narHash=sha256-eCsHSpBp6JgGS6BZdfkUbRwejrLPm0an/u35YQi2jyw%3D' (2026-09-05)
+  lexicon-unit-tests>   → 'path:/nix/store/ncqbd58vnc3m221gwfaxwz9kbmci669z-source?lastModified=1&narHash=sha256-eCsHSpBp6JgGS6BZdfkUbRwejrLPm0an/u35YQi2jyw%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'axiom/nixpkgs':
+  lexicon-unit-tests>     'github:NixOS/nixpkgs/b7c2ada94fe99c15b0dbcf4d11fd7850b957a436?narHash=sha256-IItrdb7Puk05RqOBWZYFC5X6Wl1sJmCfh5MWVHw5iMM%3D' (2026-08-05)
+  lexicon-unit-tests>   → 'path:/nix/store/1dffznc7fgw6xnzssy1h4waxz63i11qa-source?lastModified=1&narHash=sha256-IItrdb7Puk05RqOBWZYFC5X6Wl1sJmCfh5MWVHw5iMM%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'disko':
+  lexicon-unit-tests>     'github:nix-community/disko/ff8702b4de27f72b4c78573dfb89ec74e36abdf1?narHash=sha256-RxWs5ND31KzTG7wvMM%2BPMfUjyNpmIEr999lqNARaM5o%3D' (2026-06-11)
+  lexicon-unit-tests>   → 'path:/nix/store/w2c23ykc12mswlg8hrrjzb5gv9gvkzwq-source?lastModified=1&narHash=sha256-RxWs5ND31KzTG7wvMM%2BPMfUjyNpmIEr999lqNARaM5o%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'disko/nixpkgs':
+  lexicon-unit-tests>     follows 'nixpkgs'
+  lexicon-unit-tests>   → 'path:/nix/store/dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'flake-parts':
+  lexicon-unit-tests>     'github:hercules-ci/flake-parts/31729ca8cbdb4fa927b34e5f4353e6a83f39e993?narHash=sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU%3D' (2026-09-03)
+  lexicon-unit-tests>   → 'path:/nix/store/9iv83r72z5xwgylkwms1qip1ijnr6jqs-source?lastModified=1&narHash=sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'flake-parts/nixpkgs-lib':
+  lexicon-unit-tests>     'github:nix-community/nixpkgs.lib/596e2e3940e09b2abbeb03f75fa1828c57fcd72c?narHash=sha256-DTQSMxzDWmT0zhguthvegnVkn7CFqGCv4IHCzk5ZUpM%3D' (2026-08-30)
+  lexicon-unit-tests>   → 'path:/nix/store/jfhxabp199nagprgx26pms1gdz408s2c-source?lastModified=1&narHash=sha256-DTQSMxzDWmT0zhguthvegnVkn7CFqGCv4IHCzk5ZUpM%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator':
+  lexicon-unit-tests>     'github:feltfomo/furnish-coordinator/16e628d6a2f58b4bcf0da6139d00c80a4d6c1acc?narHash=sha256-LjMBmAT0cjdrjsqgbhN/MfaInaGvl3kwfkItyVvzedI%3D' (2026-10-22)
+  lexicon-unit-tests>   → 'path:/nix/store/8vv1gci0z5q6d8ih68qsyxjds4g29b60-source?lastModified=1&narHash=sha256-LjMBmAT0cjdrjsqgbhN/MfaInaGvl3kwfkItyVvzedI%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator/flake-parts':
+  lexicon-unit-tests>     'github:hercules-ci/flake-parts/427bf4bd9435fdf21321c8cc628c24efc14c0f7a?narHash=sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw%3D' (2026-08-01)
+  lexicon-unit-tests>   → 'path:/nix/store/lrxvs4l9bqbgjfz7w9bkfg5zqq442jxc-source?lastModified=1&narHash=sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator/flake-parts/nixpkgs-lib':
+  lexicon-unit-tests>     'github:nix-community/nixpkgs.lib/0e79af5e3d4dcfcd676ab5ba3f95d2e3352e078c?narHash=sha256-OmshNvn2vupOFpYinLUu%2B1Dnpu4n7Q5N3ggGVNHpkUI%3D' (2026-07-26)
+  lexicon-unit-tests>   → 'path:/nix/store/2xyjmn6zr9jrd5kadcmaqjv0rl197kmk-source?lastModified=1&narHash=sha256-OmshNvn2vupOFpYinLUu%2B1Dnpu4n7Q5N3ggGVNHpkUI%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator/nixpkgs':
+  lexicon-unit-tests>     follows 'nixpkgs'
+  lexicon-unit-tests>   → 'path:/nix/store/dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator/treefmt-nix':
+  lexicon-unit-tests>     'github:numtide/treefmt-nix/ae7910970dddc408fe6ab1c8e4b277bb21d72dc0?narHash=sha256-NLSyTCW4K4ofhNBllt3omPasm6QpralXH1DBZOc91Dw%3D' (2026-08-05)
+  lexicon-unit-tests>   → 'path:/nix/store/ik3w3k6fqj7dwjjfhz7ca7wi1gncr4bn-source?lastModified=1&narHash=sha256-NLSyTCW4K4ofhNBllt3omPasm6QpralXH1DBZOc91Dw%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'furnish-coordinator/treefmt-nix/nixpkgs':
+  lexicon-unit-tests>     follows 'furnish-coordinator/nixpkgs'
+  lexicon-unit-tests>   → 'path:/nix/store/dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis':
+  lexicon-unit-tests>     'github:feltfomo/krisis/c48e40834fe90299096d2988433b17f650c30c8a?narHash=sha256-mY7wl3gCuVgR0FiLTwuKU7wXf%2B9eTWib62J29JkUruk%3D' (2026-10-24)
+  lexicon-unit-tests>   → 'path:/nix/store/m1mby1jivsmf98g3w5fwxm8m78xgph80-source?lastModified=1&narHash=sha256-mY7wl3gCuVgR0FiLTwuKU7wXf%2B9eTWib62J29JkUruk%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/flake-parts':
+  lexicon-unit-tests>     'github:hercules-ci/flake-parts/427bf4bd9435fdf21321c8cc628c24efc14c0f7a?narHash=sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw%3D' (2026-08-01)
+  lexicon-unit-tests>   → 'path:/nix/store/lrxvs4l9bqbgjfz7w9bkfg5zqq442jxc-source?lastModified=1&narHash=sha256-4dtXQk/NMePegK/nWp5NSeuZKLATItOq61lpEvmXqGw%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/flake-parts/nixpkgs-lib':
+  lexicon-unit-tests>     'github:nix-community/nixpkgs.lib/0e79af5e3d4dcfcd676ab5ba3f95d2e3352e078c?narHash=sha256-OmshNvn2vupOFpYinLUu%2B1Dnpu4n7Q5N3ggGVNHpkUI%3D' (2026-07-26)
+  lexicon-unit-tests>   → 'path:/nix/store/2xyjmn6zr9jrd5kadcmaqjv0rl197kmk-source?lastModified=1&narHash=sha256-OmshNvn2vupOFpYinLUu%2B1Dnpu4n7Q5N3ggGVNHpkUI%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/nix-effects':
+  lexicon-unit-tests>     'github:kleisli-io/nix-effects/55ec2657c3c37e178c7730992a0f510739c1f945?narHash=sha256-oktsDBoufvZS0cKlo8sMFV2j/KmN%2BZPrtzOZ6ioaDQk%3D' (2026-07-04)
+  lexicon-unit-tests>   → 'path:/nix/store/ni4bnzl97ann0kyfi7awbdvga58bk0v2-source?lastModified=1&narHash=sha256-oktsDBoufvZS0cKlo8sMFV2j/KmN%2BZPrtzOZ6ioaDQk%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/nixpkgs':
+  lexicon-unit-tests>     'github:NixOS/nixpkgs/f13ff45afd1bb73e640eaa08a7066dbed07e3238?narHash=sha256-zDSUbpoeo/9ZmD2%2BwXnzxoo1%2BuhL8vxc0b8yuYMKYq0%3D' (2026-08-07)
+  lexicon-unit-tests>   → 'path:/nix/store/cc7ff4ysismx0c3778v8gc6b14plrz3z-source?lastModified=1&narHash=sha256-zDSUbpoeo/9ZmD2%2BwXnzxoo1%2BuhL8vxc0b8yuYMKYq0%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/treefmt-nix':
+  lexicon-unit-tests>     'github:numtide/treefmt-nix/ae7910970dddc408fe6ab1c8e4b277bb21d72dc0?narHash=sha256-NLSyTCW4K4ofhNBllt3omPasm6QpralXH1DBZOc91Dw%3D' (2026-08-05)
+  lexicon-unit-tests>   → 'path:/nix/store/ik3w3k6fqj7dwjjfhz7ca7wi1gncr4bn-source?lastModified=1&narHash=sha256-NLSyTCW4K4ofhNBllt3omPasm6QpralXH1DBZOc91Dw%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'krisis/treefmt-nix/nixpkgs':
+  lexicon-unit-tests>     follows 'krisis/nixpkgs'
+  lexicon-unit-tests>   → 'path:/nix/store/cc7ff4ysismx0c3778v8gc6b14plrz3z-source?lastModified=1&narHash=sha256-zDSUbpoeo/9ZmD2%2BwXnzxoo1%2BuhL8vxc0b8yuYMKYq0%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'nixpkgs':
+  lexicon-unit-tests>     'github:NixOS/nixpkgs/801bef6abd86b91e51083066b83fb354a11fc640?narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (2026-09-04)
+  lexicon-unit-tests>   → 'path:/nix/store/dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'treefmt-nix':
+  lexicon-unit-tests>     'github:numtide/treefmt-nix/27b3b12a8e6375f28ebe122f07d230ca5459bbfa?narHash=sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE%3D' (2026-08-16)
+  lexicon-unit-tests>   → 'path:/nix/store/7sjy8935654h3220n5gbaclf5nfw4nzx-source?lastModified=1&narHash=sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE%3D' (1970-01-01)
+  lexicon-unit-tests> • Updated input 'treefmt-nix/nixpkgs':
+  lexicon-unit-tests>     follows 'nixpkgs'
+  lexicon-unit-tests>   → 'path:/nix/store/dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  lexicon-unit-tests> ✅ bench.default.test a candidate change reports its delta and per-owner attribution
+  lexicon-unit-tests> ✅ bench.default.test a candidate failure fails and a baseline failure is unjudged
+  lexicon-unit-tests> ✅ bench.default.test a cell cut short by a failure is incomplete
+  lexicon-unit-tests> ✅ bench.default.test a clean cell aggregates equal counters into zero deltas
+  lexicon-unit-tests> ✅ bench.default.test a comparison with only rejected baseline cells cannot pass
+  lexicon-unit-tests> ✅ bench.default.test a counter past its relative tolerance and floor regresses
+  lexicon-unit-tests> ✅ bench.default.test a counter that moves within one side is flagged and keeps its median
+  lexicon-unit-tests> ✅ bench.default.test a dirty baseline refuses the comparison
+  lexicon-unit-tests> ✅ bench.default.test a fractional permille beyond tolerance regresses before display rounding
+  lexicon-unit-tests> ✅ bench.default.test a malformed record names its missing fields
+  lexicon-unit-tests> ✅ bench.default.test a marker name another applied lambda shares is ambiguous
+  lexicon-unit-tests> ✅ bench.default.test a move under the absolute floor stays within budget
+  lexicon-unit-tests> ✅ bench.default.test a nondeterministic counter gets no verdict
+  lexicon-unit-tests> ✅ bench.default.test a profiling sample without a profile rejects the cell
+  lexicon-unit-tests> ✅ bench.default.test a projection that differs between sides rejects the cell
+  lexicon-unit-tests> ✅ bench.default.test a projection that differs within one side rejects the cell
+  lexicon-unit-tests> ✅ bench.default.test a refused comparison renders as a thrown refusal
+  lexicon-unit-tests> ✅ bench.default.test a rejected cell never forces counters
+  lexicon-unit-tests> ✅ bench.default.test an empty budget cannot pass a comparison
+  lexicon-unit-tests> ✅ bench.default.test an empty comparison cannot pass
+  lexicon-unit-tests> ✅ bench.default.test an improvement past both tolerances passes
+  lexicon-unit-tests> ✅ bench.default.test an unknown workload is refused before any source is read
+  lexicon-unit-tests> ✅ bench.default.test an unsized workload is refused
+  lexicon-unit-tests> ✅ bench.default.test attribution changes alone do not fail the aggregate gate
+  lexicon-unit-tests> ✅ bench.default.test budgets from another evaluator judge nothing
+  lexicon-unit-tests> ✅ bench.default.test calibration doubles the noise it saw and keeps the policy floor
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses a counter without deterministic observations
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses a rejected cell beside an accepted one
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses changed content at the same revision
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses different evaluator builds at the same version
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses distinct clean snapshots at the same revision
+  lexicon-unit-tests> ✅ bench.default.test calibration refuses runs from two evaluators
+  lexicon-unit-tests> ✅ bench.default.test call counts that don't sum to nrFunctionCalls reject the record
+  lexicon-unit-tests> ✅ bench.default.test copied samples must match their source and cell identity
+  lexicon-unit-tests> ✅ bench.default.test discovery finds owner markers by name and skips test and hidden trees
+  lexicon-unit-tests> ✅ bench.default.test every failed sample is listed and the projection check is skipped
+  lexicon-unit-tests> ✅ bench.default.test inclusive samples map each marker name to its region
+  lexicon-unit-tests> ✅ bench.default.test malformed candidate instrumentation fails beside a clean cell
+  lexicon-unit-tests> ✅ bench.default.test malformed function counts and positions reject attribution
+  lexicon-unit-tests> ✅ bench.default.test malformed metadata rejects a sample before reading its statistics
+  lexicon-unit-tests> ✅ bench.default.test malformed primop and evaluator counters accumulate
+  lexicon-unit-tests> ✅ bench.default.test malformed reduced counts reject a profiling cell
+  lexicon-unit-tests> ✅ bench.default.test marker entries compare a shared region and name one-sided ones
+  lexicon-unit-tests> ✅ bench.default.test owners drop revisions and store hashes
+  lexicon-unit-tests> ✅ bench.default.test primop counts must sum to the evaluator total
+  lexicon-unit-tests> ✅ bench.default.test records from another evaluator refuse the comparison
+  lexicon-unit-tests> ✅ bench.default.test repeated sample orders reject even when adjacent phase and side match
+  lexicon-unit-tests> ✅ bench.default.test the catalog lists every family without forcing a case
+  lexicon-unit-tests> ✅ bench.default.test the plain fleet is a recorded limit that fails explicitly
+  lexicon-unit-tests> ✅ bench.default.test the report lists counters excluded for nondeterminism
+  lexicon-unit-tests> ✅ bench.default.test the report names deltas, rejections and declared limits
+  lexicon-unit-tests> ✅ bench.default.test the report states the verdict, regressions and marker regions
+  lexicon-unit-tests> ✅ bench.default.test warm-up samples never reach the aggregate
+  lexicon-unit-tests> ✅ bench.markers.test every marker has a position of its own
+  lexicon-unit-tests> ✅ bench.markers.test every marker is an identity lambda alone on its line
+  lexicon-unit-tests> ✅ bench.markers.test every owner the workloads exercise defines its markers
+  lexicon-unit-tests> ✅ bench.markers.test marker names are unique across owners
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.compileDeclaration changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.compileDeclaration forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.compileDeclaration leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.prepareDeclaration changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.prepareDeclaration forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/declarations.prepareDeclaration leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.compileManifest changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.compileManifest forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.compileManifest leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.indexCollisions changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.indexCollisions forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/furnish.indexCollisions leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.mergeContributions changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.mergeContributions forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.mergeContributions leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.resolveContext changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.resolveContext forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/ownerships.resolveContext leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.compileProject changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.compileProject forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.compileProject leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.normalizeCommands changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.normalizeCommands forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/praxis.normalizeCommands leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/program.inventoryDirectory changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/program.inventoryDirectory forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/program.inventoryDirectory leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/program/theme.composeThemes changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/program/theme.composeThemes forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/program/theme.composeThemes leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/toml.renderDocument changes no value"
+  lexicon-unit-tests> ✅ bench.markers."test src/toml.renderDocument forces its argument when its result is demanded"
+  lexicon-unit-tests> ✅ bench.markers."test src/toml.renderDocument leaves a throwing argument unforced until demanded"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.combined projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.deep projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.dynamic projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.native projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.prepared projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.single projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.declarations.wide projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.compile projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.directory projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.grouped projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.index projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.links projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.furnish.shared projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.fleet-custom projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.fleet-matrix projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.fleet-prepared projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.fleet-resolve projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.fleet-trace projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.ownerships.resolve projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.praxis.diagnostics projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.praxis.manifest projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.praxis.selected projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.registry.queries projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.registry.summary projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.theme.matugen projects its independent value"
+  lexicon-unit-tests> ✅ bench.workloads."test subsystem.toml.generate projects its independent value"
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test callback direct scan includes unrequested descendants
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test callback scope check precedes returned selection
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test contextual wrapper does not make recursion productive
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test contextual wrapper mixed output requires projection
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test contextual wrapper rejects native boundary
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test contextual wrapper rejects nested wrapper
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test contextual wrapper rejects unknown fields
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test external contextual record gets system config and metadata
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context callback gets no internal merger
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context claim shape has authored path
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context custom ancestry skips invocation
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context direct factory lowers
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context direct rejects returned descendant claim
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context direct rejects returned root claim
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context empty result remains inert
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context filtering retains template index
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context home output does not invoke resource callback
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context host only rejects without invoking
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context id shape has authored path
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context metadata shape has authored path
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context native function field stays opaque
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context public factory lowers
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context receives native resource arguments
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context registered metadata is accepted
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context returned claims filter before payload
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context returned function is not invoked
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context returned renderer claims filter
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context root ancestry skips invocation
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context unknown field has authored path
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context unknown nested annotation retains index
+  lexicon-unit-tests> ✅ declarations.contextual-theme.test theme context wrong result has authored path
+  lexicon-unit-tests> ✅ declarations.default.test advanced resolver vocabulary is shared
+  lexicon-unit-tests> ✅ declarations.default.test annotations are stripped
+  lexicon-unit-tests> ✅ declarations.default.test authored index survives filter
+  lexicon-unit-tests> ✅ declarations.default.test block ancestry constrains callback
+  lexicon-unit-tests> ✅ declarations.default.test callback receives same context
+  lexicon-unit-tests> ✅ declarations.default.test callback result claim shape fails
+  lexicon-unit-tests> ✅ declarations.default.test callback result reenters selection
+  lexicon-unit-tests> ✅ declarations.default.test callback result shape fails
+  lexicon-unit-tests> ✅ declarations.default.test callback result unknown field fails
+  lexicon-unit-tests> ✅ declarations.default.test callback static scope check precedes item selection
+  lexicon-unit-tests> ✅ declarations.default.test custom and host annotations narrow
+  lexicon-unit-tests> ✅ declarations.default.test declaration user claim projects for system
+  lexicon-unit-tests> ✅ declarations.default.test direct allows metadata
+  lexicon-unit-tests> ✅ declarations.default.test direct host only native remains valid
+  lexicon-unit-tests> ✅ declarations.default.test direct rejects callback custom claim
+  lexicon-unit-tests> ✅ declarations.default.test direct rejects custom entry claim
+  lexicon-unit-tests> ✅ declarations.default.test direct rejects custom root claim
+  lexicon-unit-tests> ✅ declarations.default.test direct rejects static claims in other scope
+  lexicon-unit-tests> ✅ declarations.default.test direct resource needs user even empty callback
+  lexicon-unit-tests> ✅ declarations.default.test domain and metadata diagnostics accumulate
+  lexicon-unit-tests> ✅ declarations.default.test empty collection is retained
+  lexicon-unit-tests> ✅ declarations.default.test external block lowers through registry
+  lexicon-unit-tests> ✅ declarations.default.test inactive callback context stays lazy
+  lexicon-unit-tests> ✅ declarations.default.test inactive callback scope pass stays lazy
+  lexicon-unit-tests> ✅ declarations.default.test inactive preparation is lazy
+  lexicon-unit-tests> ✅ declarations.default.test inactive resource intent is lazy
+  lexicon-unit-tests> ✅ declarations.default.test inactive static system claims still fail
+  lexicon-unit-tests> ✅ declarations.default.test invalid map key fails
+  lexicon-unit-tests> ✅ declarations.default.test invalid selected callback fails even when lower ignores value
+  lexicon-unit-tests> ✅ declarations.default.test invalid selected child fails even when lower ignores value
+  lexicon-unit-tests> ✅ declarations.default.test lower cannot reintroduce custom annotations
+  lexicon-unit-tests> ✅ declarations.default.test malformed metadata fails
+  lexicon-unit-tests> ✅ declarations.default.test metadata does not inherit
+  lexicon-unit-tests> ✅ declarations.default.test missing custom context fails
+  lexicon-unit-tests> ✅ declarations.default.test native contribution envelope is closed
+  lexicon-unit-tests> ✅ declarations.default.test native record is opaque
+  lexicon-unit-tests> ✅ declarations.default.test optional record is omitted
+  lexicon-unit-tests> ✅ declarations.default.test original list origin
+  lexicon-unit-tests> ✅ declarations.default.test original map origin
+  lexicon-unit-tests> ✅ declarations.default.test output envelope is closed
+  lexicon-unit-tests> ✅ declarations.default.test output kind must be declared
+  lexicon-unit-tests> ✅ declarations.default.test output origin is structured
+  lexicon-unit-tests> ✅ declarations.default.test output scope is checked
+  lexicon-unit-tests> ✅ declarations.default.test preparation keeps authored path
+  lexicon-unit-tests> ✅ declarations.default.test record map filters and retains name
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects block claim collision
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects domain child collision
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects duplicate author key
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects duplicate block
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects duplicate extension
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects duplicate metadata
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects invalid field schema
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects invalid node
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects malformed before lower
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects malformed extension
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects malformed metadata schema
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects record claim collision
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects reserved author key
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects unknown definition field
+  lexicon-unit-tests> ✅ declarations.default.test registration rejects unknown relation axis
+  lexicon-unit-tests> ✅ declarations.default.test resource intent cannot lie
+  lexicon-unit-tests> ✅ declarations.default.test resource output envelope is closed
+  lexicon-unit-tests> ✅ declarations.default.test root ancestry constrains block
+  lexicon-unit-tests> ✅ declarations.default.test schema defaults remain lazy until selection
+  lexicon-unit-tests> ✅ declarations.default.test selected domain validation fails
+  lexicon-unit-tests> ✅ declarations.default.test sibling diagnostics keep authored order
+  lexicon-unit-tests> ✅ declarations.default.test split collection items keep explicit scope
+  lexicon-unit-tests> ✅ declarations.default.test split lower and callback receive scope
+  lexicon-unit-tests> ✅ declarations.default.test split record map items keep explicit scope
+  lexicon-unit-tests> ✅ declarations.default.test structural reservations include inactive
+  lexicon-unit-tests> ✅ declarations.default.test structural sibling diagnostics accumulate
+  lexicon-unit-tests> ✅ declarations.default.test unknown inactive entry field fails
+  lexicon-unit-tests> ✅ declarations.default.test unknown root field fails
+  lexicon-unit-tests> ✅ declarations.default.test unregistered metadata fails
+  lexicon-unit-tests> ✅ declarations.default.test unsupported scope fails
+  lexicon-unit-tests> ✅ declarations.default.test value node diagnostic path is authored
+  lexicon-unit-tests> ✅ declarations.default.test value node validates
+  lexicon-unit-tests> ✅ declarations.links.test grouped links accept absolute roots
+  lexicon-unit-tests> ✅ declarations.links.test grouped links accumulate independent indexed errors
+  lexicon-unit-tests> ✅ declarations.links.test grouped links add root on one line
+  lexicon-unit-tests> ✅ declarations.links.test grouped links authored label keeps context in collision diagnostic
+  lexicon-unit-tests> ✅ declarations.links.test grouped links callback and ancestor claims
+  lexicon-unit-tests> ✅ declarations.links.test grouped links context strings fail
+  lexicon-unit-tests> ✅ declarations.links.test grouped links cross subsystem collisions use common backend
+  lexicon-unit-tests> ✅ declarations.links.test grouped links direct rejects registered claims
+  lexicon-unit-tests> ✅ declarations.links.test grouped links empty dimensions remain inert
+  lexicon-unit-tests> ✅ declarations.links.test grouped links empty still validate other dimension
+  lexicon-unit-tests> ✅ declarations.links.test grouped links expand destination then name
+  lexicon-unit-tests> ✅ declarations.links.test grouped links filtered authored index survives expansion
+  lexicon-unit-tests> ✅ declarations.links.test grouped links final containment remains authoritative
+  lexicon-unit-tests> ✅ declarations.links.test grouped links generated label keeps origin and dimensions
+  lexicon-unit-tests> ✅ declarations.links.test grouped links inactive payloads and callbacks stay lazy
+  lexicon-unit-tests> ✅ declarations.links.test grouped links incomplete form rejects before payload
+  lexicon-unit-tests> ✅ declarations.links.test grouped links list shapes have authored fields
+  lexicon-unit-tests> ✅ declarations.links.test grouped links mixed form rejects before payload
+  lexicon-unit-tests> ✅ declarations.links.test grouped links own collisions use generated label
+  lexicon-unit-tests> ✅ declarations.links.test grouped links path boundaries fail
+  lexicon-unit-tests> ✅ declarations.links.test grouped links preserve label and provenance
+  lexicon-unit-tests> ✅ declarations.links.test grouped links reject invalid forms through public api
+  lexicon-unit-tests> ✅ declarations.observations.test a callback exception surfaces unchanged
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler callback
+  lexicon-unit-tests> trace: compiler parse 0
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 1
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler lowering
+  lexicon-unit-tests> trace: compiler preparation root
+  lexicon-unit-tests> trace: compiler preparation 0
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler preparation 1
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler callback
+  lexicon-unit-tests> trace: compiler parse 0
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 1
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler lowering
+  lexicon-unit-tests> trace: compiler preparation 0
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler preparation 1
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> ✅ declarations.observations.test a callback tree compiles every selected entry in both contexts
+  lexicon-unit-tests> ✅ declarations.observations.test a lowering exception surfaces unchanged
+  lexicon-unit-tests> ✅ declarations.observations.test a normalize exception surfaces unchanged
+  lexicon-unit-tests> ✅ declarations.observations.test a parse exception surfaces unchanged
+  lexicon-unit-tests> ✅ declarations.observations.test a preparation exception surfaces unchanged
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 0
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 1
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler lowering
+  lexicon-unit-tests> trace: compiler preparation root
+  lexicon-unit-tests> trace: compiler preparation 0
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler preparation 1
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 0
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler parse 1
+  lexicon-unit-tests> trace: compiler metadata
+  lexicon-unit-tests> trace: compiler lowering
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> trace: compiler normalize
+  lexicon-unit-tests> ✅ declarations.observations.test a static tree compiles every selected entry in both contexts
+  lexicon-unit-tests> ✅ declarations.outputs.test contribution items accumulate in group and authored order
+  lexicon-unit-tests> ✅ declarations.outputs.test empty output does not demand unrelated guards
+  lexicon-unit-tests> ✅ declarations.outputs.test host and user target failures accumulate in existing order
+  lexicon-unit-tests> ✅ declarations.outputs.test malformed envelope suppresses dependent controls
+  lexicon-unit-tests> ✅ declarations.outputs.test native and resource envelopes keep payloads opaque
+  lexicon-unit-tests> ✅ declarations.outputs.test native functions remain ordinary opaque modules
+  lexicon-unit-tests> ✅ declarations.outputs.test omitted contributions default to empty lists
+  lexicon-unit-tests> ✅ declarations.outputs.test outer target failure suppresses identity fields
+  lexicon-unit-tests> ✅ declarations.outputs.test output guard accumulates before item validation
+  lexicon-unit-tests> ✅ declarations.outputs.test public result and native computation have equal projections
+  lexicon-unit-tests> ✅ declarations.outputs.test returned annotation values are never inspected
+  lexicon-unit-tests> ✅ declarations.outputs.test target normalization preserves defaults
+  lexicon-unit-tests> ✅ declarations.outputs.test target normalization preserves explicit identities
+  lexicon-unit-tests> ✅ declarations.outputs.test target public result and computation have equal projections
+  lexicon-unit-tests> ✅ declarations.public.test advanced binding uses configured vocabulary
+  lexicon-unit-tests> ✅ declarations.public.test advanced system predicates see null user
+  lexicon-unit-tests> ✅ declarations.public.test advanced system selection and merge see null user
+  lexicon-unit-tests> ✅ declarations.public.test all inactive renderers produce no plans
+  lexicon-unit-tests> ✅ declarations.public.test all registered resources share selection
+  lexicon-unit-tests> ✅ declarations.public.test authored empty renderers remain invalid
+  lexicon-unit-tests> ✅ declarations.public.test block and entry narrowing
+  lexicon-unit-tests> ✅ declarations.public.test builtin directory diagnostic has field path
+  lexicon-unit-tests> ✅ declarations.public.test builtin file diagnostic keeps authored index
+  lexicon-unit-tests> ✅ declarations.public.test builtin file missing source has field path
+  lexicon-unit-tests> ✅ declarations.public.test builtin override diagnostic keeps authored index
+  lexicon-unit-tests> ✅ declarations.public.test canonical and legacy manifests match
+  lexicon-unit-tests> ✅ declarations.public.test canonical direct and roster match
+  lexicon-unit-tests> ✅ declarations.public.test canonical direct native function and path values work
+  lexicon-unit-tests> ✅ declarations.public.test den binding keeps principal
+  lexicon-unit-tests> ✅ declarations.public.test den extra roster cannot replace base
+  lexicon-unit-tests> ✅ declarations.public.test den extra roster shape fails
+  lexicon-unit-tests> ✅ declarations.public.test den system predicates see null user
+  lexicon-unit-tests> ✅ declarations.public.test direct recursive custom claim fails
+  lexicon-unit-tests> ✅ declarations.public.test direct rejects custom dynamic claim
+  lexicon-unit-tests> ✅ declarations.public.test direct rejects custom static claim
+  lexicon-unit-tests> ✅ declarations.public.test direct system callback keeps bound user
+  lexicon-unit-tests> ✅ declarations.public.test dynamic recursive descendants work
+  lexicon-unit-tests> ✅ declarations.public.test empty canonical theme is inert without user
+  lexicon-unit-tests> ✅ declarations.public.test empty collection callback needs user
+  lexicon-unit-tests> ✅ declarations.public.test empty legacy imports are inert
+  lexicon-unit-tests> ✅ declarations.public.test empty legacy theme is inert without user
+  lexicon-unit-tests> ✅ declarations.public.test empty static collection is inert
+  lexicon-unit-tests> ✅ declarations.public.test empty theme mixed fields fail
+  lexicon-unit-tests> ✅ declarations.public.test extension and builtin collisions share furnish
+  lexicon-unit-tests> ✅ declarations.public.test factory is plain function
+  lexicon-unit-tests> ✅ declarations.public.test host only native remains lazy
+  lexicon-unit-tests> ✅ declarations.public.test inactive custom callback stays lazy
+  lexicon-unit-tests> ✅ declarations.public.test inactive recursive callback and native stay lazy
+  lexicon-unit-tests> ✅ declarations.public.test inherited theme source retains field origin
+  lexicon-unit-tests> ✅ declarations.public.test legacy canonical mixes fail
+  lexicon-unit-tests> ✅ declarations.public.test legacy direct native functions and paths remain modules
+  lexicon-unit-tests> ✅ declarations.public.test legacy owned malformed users remain errors
+  lexicon-unit-tests> ✅ declarations.public.test legacy owned mixed value fails even when inactive
+  lexicon-unit-tests> ✅ declarations.public.test malformed recursive binder fails
+  lexicon-unit-tests> ✅ declarations.public.test metadata validates on builtins
+  lexicon-unit-tests> ✅ declarations.public.test missing context fails
+  lexicon-unit-tests> ✅ declarations.public.test mixed home does not force resource callback
+  lexicon-unit-tests> ✅ declarations.public.test mixed inactive resource keeps context lazy
+  lexicon-unit-tests> ✅ declarations.public.test mixed resource gets system config
+  lexicon-unit-tests> ✅ declarations.public.test mixed wrong output is rejected
+  lexicon-unit-tests> ✅ declarations.public.test native ownership looking fields stay opaque
+  lexicon-unit-tests> ✅ declarations.public.test native priorities remain native
+  lexicon-unit-tests> ✅ declarations.public.test native role argument remains owned by module system
+  lexicon-unit-tests> ✅ declarations.public.test nonboolean resource intent has diagnostic
+  lexicon-unit-tests> ✅ declarations.public.test nonrecord context fails when demanded
+  lexicon-unit-tests> ✅ declarations.public.test overridden theme source retains field origin
+  lexicon-unit-tests> ✅ declarations.public.test recursive system unit selects and merges
+  lexicon-unit-tests> ✅ declarations.public.test recursive wrapper only cycle fails
+  lexicon-unit-tests> ✅ declarations.public.test recursive wrapper unknown field fails
+  lexicon-unit-tests> ✅ declarations.public.test reference outside binder fails
+  lexicon-unit-tests> ✅ declarations.public.test reserved axis context fails at binding
+  lexicon-unit-tests> ✅ declarations.public.test scalar unit conflicts remain errors
+  lexicon-unit-tests> ✅ declarations.public.test selected theme diagnostic keeps original template and renderer
+  lexicon-unit-tests> ✅ declarations.public.test shared renderers retain their origin
+  lexicon-unit-tests> ✅ declarations.public.test static forbidden deep descendant fails before filter
+  lexicon-unit-tests> ✅ declarations.public.test system predicates see null user and callbacks keep user
+  lexicon-unit-tests> ✅ declarations.public.test target host diagnostic has field path
+  lexicon-unit-tests> ✅ declarations.public.test target user diagnostic has field path
+  lexicon-unit-tests> ✅ declarations.public.test theme id diagnostic has field path
+  lexicon-unit-tests> ✅ declarations.public.test unclaimed extra context stays lazy
+  lexicon-unit-tests> ✅ declarations.public.test unknown context key fails when demanded
+  lexicon-unit-tests> ✅ declarations.registration.test block and metadata collision registries remain active
+  lexicon-unit-tests> ✅ declarations.registration.test extension envelope rejects unknown fields
+  lexicon-unit-tests> ✅ declarations.registration.test extension list rejects nonfunctions
+  lexicon-unit-tests> ✅ declarations.registration.test extension names collide before block registration
+  lexicon-unit-tests> ✅ declarations.registration.test malformed blocks precede node compilation
+  lexicon-unit-tests> ✅ declarations.registration.test malformed extension suppresses dependent block inspection
+  lexicon-unit-tests> trace: registration extension
+  lexicon-unit-tests> trace: registration parse
+  lexicon-unit-tests> trace: registration normalize
+  lexicon-unit-tests> trace: registration default
+  lexicon-unit-tests> ✅ declarations.registration.test metadata retains external parse and default specifications
+  lexicon-unit-tests> ✅ declarations.registration.test node and field schema contracts remain checked
+  lexicon-unit-tests> ✅ declarations.registration.test productive recursion keeps reference targets lazy
+  lexicon-unit-tests> ✅ declarations.registration.test recursive binder shape and vocabulary are checked
+  lexicon-unit-tests> ✅ declarations.registration.test references cannot escape their binder
+  lexicon-unit-tests> ✅ declarations.registration.test registered functions and payload defaults stay opaque
+  lexicon-unit-tests> ✅ declarations.registration.test registrations preserve builtins and extension order
+  lexicon-unit-tests> ✅ declarations.registration.test unproductive recursion is rejected
+  lexicon-unit-tests> ✅ declarations.resource-effects.test directory theme source suppression stays declaration local
+  lexicon-unit-tests> trace: resource-effects inventory
+  lexicon-unit-tests> ✅ declarations.resource-effects.test selected resource poison survives complete public transport
+  lexicon-unit-tests> ✅ declarations.resource-effects.test selected resource principals and shared preparation survive
+  lexicon-unit-tests> trace: effects-contract parse
+  lexicon-unit-tests> trace: effects-contract normalize
+  lexicon-unit-tests> ✅ effects-contract.test a callback probe parses and normalizes once per demanded field
+  lexicon-unit-tests> ✅ effects-contract.test a mapped warning projects code, summary and recovery
+  lexicon-unit-tests> trace: effects-contract shared continuation
+  lexicon-unit-tests> ✅ effects-contract.test a shared continuation answers both demands
+  lexicon-unit-tests> ✅ effects-contract.test aggregate custom rendering is retained
+  lexicon-unit-tests> ✅ effects-contract.test axiom type adapter retains failure path
+  lexicon-unit-tests> ✅ effects-contract.test axiom type adapter retains valid value
+  lexicon-unit-tests> ✅ effects-contract.test callback old diagnostic enters native report
+  lexicon-unit-tests> ✅ effects-contract.test code and path helpers retain spellings
+  lexicon-unit-tests> ✅ effects-contract.test collector and optional preserve laziness
+  lexicon-unit-tests> ✅ effects-contract.test composed checked values protect arbitrary payloads
+  lexicon-unit-tests> ✅ effects-contract.test defaults are parsed
+  lexicon-unit-tests> ✅ effects-contract.test dependent callback is suppressed
+  lexicon-unit-tests> ✅ effects-contract.test empty old primary is absent in native presentation
+  lexicon-unit-tests> ✅ effects-contract.test empty primary survives round trip
+  lexicon-unit-tests> ✅ effects-contract.test explicit null call retains factory primary
+  lexicon-unit-tests> ✅ effects-contract.test explicit null is present
+  lexicon-unit-tests> ✅ effects-contract.test explicit null presentation fields are omitted
+  lexicon-unit-tests> ✅ effects-contract.test failure constructor is explicit
+  lexicon-unit-tests> ✅ effects-contract.test failure has no value
+  lexicon-unit-tests> ✅ effects-contract.test handler collisions fail
+  lexicon-unit-tests> ✅ effects-contract.test incompatible field specification fails
+  lexicon-unit-tests> ✅ effects-contract.test independent diagnostics stay ordered
+  lexicon-unit-tests> ✅ effects-contract.test injected axiom identity participates
+  lexicon-unit-tests> ✅ effects-contract.test injected diagnostic factory participates in extension
+  lexicon-unit-tests> ✅ effects-contract.test injected renderer participates in extension
+  lexicon-unit-tests> ✅ effects-contract.test injected reporter participates in public report
+  lexicon-unit-tests> ✅ effects-contract.test injected summary participates in extension
+  lexicon-unit-tests> ✅ effects-contract.test injected summary participates in praxis
+  lexicon-unit-tests> ✅ effects-contract.test invalid has no value
+  lexicon-unit-tests> ✅ effects-contract.test malformed diagnostics result is rejected
+  lexicon-unit-tests> ✅ effects-contract.test malformed field specification fails
+  lexicon-unit-tests> ✅ effects-contract.test malformed inspection options fail before payload
+  lexicon-unit-tests> ✅ effects-contract.test malformed success result is rejected
+  lexicon-unit-tests> ✅ effects-contract.test malformed summary input fails
+  lexicon-unit-tests> ✅ effects-contract.test mapped diagnostic order and authored content
+  lexicon-unit-tests> ✅ effects-contract.test mapped failure has no success value
+  lexicon-unit-tests> ✅ effects-contract.test mapped presentation and context stay deferred
+  lexicon-unit-tests> ✅ effects-contract.test mapped success recovers qualified carriers
+  lexicon-unit-tests> ✅ effects-contract.test nested and sibling scopes restore
+  lexicon-unit-tests> ✅ effects-contract.test old diagnostic recovery stays opaque
+  lexicon-unit-tests> ✅ effects-contract.test old location poison stays opaque
+  lexicon-unit-tests> ✅ effects-contract.test optional field is omitted
+  lexicon-unit-tests> ✅ effects-contract.test poisoned input state and summary stay opaque
+  lexicon-unit-tests> ✅ effects-contract.test protected state preserves poison
+  lexicon-unit-tests> ✅ effects-contract.test public external bookmark lowers
+  lexicon-unit-tests> ✅ effects-contract.test raw state control forces poison
+  lexicon-unit-tests> ✅ effects-contract.test report eliminators reject missing evidence and impossible constructors
+  lexicon-unit-tests> ✅ effects-contract.test returned poison stays opaque
+  lexicon-unit-tests> ✅ effects-contract.test safe inspection variants retain projections
+  lexicon-unit-tests> ✅ effects-contract.test scoped poison stays opaque
+  lexicon-unit-tests> ✅ effects-contract.test selected praxis keeps sibling opaque
+  lexicon-unit-tests> ✅ effects-contract.test shared elimination rejects invalid without evidence
+  lexicon-unit-tests> ✅ effects-contract.test shared handler runs remain isolated
+  lexicon-unit-tests> ✅ effects-contract.test shared validation retains diagnostics and suppresses dependent work
+  lexicon-unit-tests> ✅ effects-contract.test shared validation transports opaque successes
+  lexicon-unit-tests> ✅ effects-contract.test string and record diagnostics recover in order
+  lexicon-unit-tests> ✅ effects-contract.test structural terminal projection does not replace prepared entry
+  lexicon-unit-tests> ✅ effects-contract.test suggestion variants retain nearest
+  lexicon-unit-tests> ✅ effects-contract.test summary demands only envelope
+  lexicon-unit-tests> ✅ effects-contract.test summary projection is retained
+  lexicon-unit-tests> ✅ effects-contract.test the dependent callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the formatter callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the lower callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the mappedCode callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the mappedEnvelope callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the mappedFactory callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the mappedOrder callback exception surfaces as its whole message
+  lexicon-unit-tests> trace: effects-contract code
+  lexicon-unit-tests> ✅ effects-contract.test the mappedSeverity callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the mapper callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the normalize callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test the parse callback exception surfaces as its whole message
+  lexicon-unit-tests> ✅ effects-contract.test unhandled effects fail
+  lexicon-unit-tests> ✅ effects-contract.test unknown values stay opaque and field order is authored
+  lexicon-unit-tests> ✅ effects-contract.test valid and success eliminate through carriers
+  lexicon-unit-tests> ✅ furnish.default.test a conflict policy outside the enum is refused by shape validation
+  lexicon-unit-tests> ✅ furnish.default.test a declaration naming no conflict policy still serializes the error policy
+  lexicon-unit-tests> ✅ furnish.default.test a declaration naming no provenance source falls back to its own label
+  lexicon-unit-tests> ✅ furnish.default.test a home-relative entry takes no declaration from a system principal
+  lexicon-unit-tests> ✅ furnish.default.test an empty file half generates an empty declaration set
+  lexicon-unit-tests> ✅ furnish.default.test an explicit conflict policy reaches the manifest entry unchanged
+  lexicon-unit-tests> ✅ furnish.default.test an explicit principal managed root overrides the conventional home
+  lexicon-unit-tests> ✅ furnish.default.test authority chooses the system ownership door
+  lexicon-unit-tests> ✅ furnish.default.test compile rejects a same-principal collision
+  lexicon-unit-tests> ✅ furnish.default.test cross-principal collisions render the shared diagnostic
+  lexicon-unit-tests> ✅ furnish.default.test distinct collisions aggregate into one rendered report
+  lexicon-unit-tests> ✅ furnish.default.test duplicate executor identities fail before capability selection
+  lexicon-unit-tests> ✅ furnish.default.test empty declarations have one inert encoding and don't enter ownership
+  lexicon-unit-tests> ✅ furnish.default.test empty host index is inert
+  lexicon-unit-tests> ✅ furnish.default.test executor metadata validation rejects malformed records before selection
+  lexicon-unit-tests> ✅ furnish.default.test hand-written and generated kitty records compile to one manifest
+  lexicon-unit-tests> ✅ furnish.default.test inactive ownership: deepSeq forces no inactive payload
+  lexicon-unit-tests> ✅ furnish.default.test inactive ownership: exactly one entry survives selection
+  lexicon-unit-tests> ✅ furnish.default.test inactive ownership: manifest equals the sample-only manifest
+  lexicon-unit-tests> ✅ furnish.default.test inactive ownership: surviving entry identity equals the sample entry
+  lexicon-unit-tests> ✅ furnish.default.test lexical normalization collapses equivalent in-root spellings
+  lexicon-unit-tests> ✅ furnish.default.test lexical normalization still rejects managed-root escape
+  lexicon-unit-tests> ✅ furnish.default.test manifest context pins a dedicated artifact object
+  lexicon-unit-tests> ✅ furnish.default.test manifest document versions runtime diagnostics and carries entries
+  lexicon-unit-tests> ✅ furnish.default.test manifest is safe serializable data with enum lifecycle strategies
+  lexicon-unit-tests> ✅ furnish.default.test manifest keeps identity authority root and executor separate
+  lexicon-unit-tests> ✅ furnish.default.test native executor tuple is exact and has no fallback identity
+  lexicon-unit-tests> ✅ furnish.default.test no capable executor is a structured furnish error without forcing payload
+  lexicon-unit-tests> ✅ furnish.default.test no principal at all is a host-scope zero, not the same zero as a system principal
+  lexicon-unit-tests> ✅ furnish.default.test off mode passes an untagged declaration byte-identical to enabled mode
+  lexicon-unit-tests> ✅ furnish.default.test off mode rejects an owner-tagged declaration instead of silently passing it
+  lexicon-unit-tests> ✅ furnish.default.test one entry and one user principal make exactly one declaration
+  lexicon-unit-tests> ✅ furnish.default.test ownership impossible errors propagate through furnish without a catch or wrapper
+  lexicon-unit-tests> ✅ furnish.default.test ownerships facade keeps internals private and supplies furnish claim keys
+  lexicon-unit-tests> ✅ furnish.default.test raw config is returned byte-for-byte adjacent to furnish output
+  lexicon-unit-tests> ✅ furnish.default.test safe rendering keeps flat scalar lists and rejects unsafe list members
+  lexicon-unit-tests> ✅ furnish.default.test safe rendering never traverses arbitrary attribute values
+  lexicon-unit-tests> ✅ furnish.default.test safe rendering tolerates poisoned derivation names
+  lexicon-unit-tests> ✅ furnish.default.test same-principal collisions render the shared diagnostic
+  lexicon-unit-tests> ✅ furnish.default.test sample manifest is byte-stable and entry order is canonical
+  lexicon-unit-tests> ✅ furnish.default.test selected executor artifacts must satisfy the lifecycle result contract
+  lexicon-unit-tests> ✅ furnish.default.test shape validation accumulates metadata errors without forcing source value
+  lexicon-unit-tests> ✅ furnish.default.test single claims across principals build one deterministic host index
+  lexicon-unit-tests> ✅ furnish.default.test the emission site names host and user with defaults so the class wrapper keeps it
+  lexicon-unit-tests> ✅ furnish.default.test the files layer generates the record kitty wrote by hand
+  lexicon-unit-tests> ✅ furnish.default.test the files layer takes no claim key and counts one declaration per principal handed in
+  lexicon-unit-tests> ✅ furnish.default.test the host index rejects a cross-principal collision
+  lexicon-unit-tests> ✅ furnish.default.test three claimants are all rendered in deterministic order
+  lexicon-unit-tests> ✅ furnish.default.test throwing executor callbacks fail through declaration and executor context
+  lexicon-unit-tests> ✅ furnish.default.test throwing provider callbacks fail through the furnish selection context
+  lexicon-unit-tests> ✅ furnish.default.test two user principals do not collapse onto one declaration
+  lexicon-unit-tests> ✅ furnish.default.test unused executor: materialize stays unforced when a capable executor exists
+  lexicon-unit-tests> ✅ furnish.default.test whole host index stays payload executor generator and exclusion lazy
+  lexicon-unit-tests> ✅ furnish.effects.test furnish absent external target does not read the filesystem
+  lexicon-unit-tests> ✅ furnish.effects.test furnish empty keeps provider context and executors opaque
+  lexicon-unit-tests> ✅ furnish.effects.test furnish equal content and policy do not excuse collisions
+  lexicon-unit-tests> ✅ furnish.effects.test furnish external rejects context and unnormalized paths
+  lexicon-unit-tests> ✅ furnish.effects.test furnish host index keeps source and context opaque
+  lexicon-unit-tests> ✅ furnish.effects.test furnish invalid shapes suppress provider and executors
+  lexicon-unit-tests> trace: resource-effects materialize
+  lexicon-unit-tests> ✅ furnish.effects.test furnish protected preparation and artifact transport
+  lexicon-unit-tests> ✅ furnish.effects.test furnish shape diagnostics keep payload opaque
+  lexicon-unit-tests> ✅ furnish.observations.test a materializer exception surfaces unchanged
+  lexicon-unit-tests> ✅ furnish.observations.test a provider exception surfaces unchanged
+  lexicon-unit-tests> trace: resource-effects inventory
+  lexicon-unit-tests> ✅ furnish.observations.test one static inventory serves both principals
+  lexicon-unit-tests> trace: resource-effects materialize
+  lexicon-unit-tests> ✅ furnish.observations.test repeated demand sees one retained materialization
+  lexicon-unit-tests> ✅ furnish.runtime.test native activation defers initrd and preserves protocol
+  lexicon-unit-tests> ✅ furnish.runtime.test native disabled runtime is inert
+  lexicon-unit-tests> ✅ furnish.runtime.test native enabled empty reconciles retirements
+  lexicon-unit-tests> ✅ furnish.runtime.test native generated sources stay in the system closure
+  lexicon-unit-tests> ✅ furnish.runtime.test native nonempty runtime preserves order and mounts
+  lexicon-unit-tests> trace: terminal provider
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test a compile shape error recovers before the provider
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test a host index collision recovers through fail
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test a host index shape error recovers through fail
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test a later poisoned matugen registration stays unforced
+  lexicon-unit-tests> ✅ furnish.terminals.test a later poisoned theme native surfaces its own exception
+  lexicon-unit-tests> ✅ furnish.terminals.test a later poisoned theme stays unforced
+  lexicon-unit-tests> trace: terminal failOne
+  lexicon-unit-tests> ✅ furnish.terminals.test a managed external target recovers through failOne
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test a matugen native payload after a duplicate stays unforced
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test a matugen native payload stays opaque
+  lexicon-unit-tests> trace: terminal failOne
+  lexicon-unit-tests> ✅ furnish.terminals.test a missing capability recovers through failOne
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test a shape error recovers through fail
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid matugen group before a failing one
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid shape ignores a sentinel finish
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid shape reaches no reporter
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid theme group before a failing one
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid theme group reaches no reporter
+  lexicon-unit-tests> trace: terminal checked
+  lexicon-unit-tests> ✅ furnish.terminals.test a valid theme group survives a failing one
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test an invalid artifact recovers through fail
+  lexicon-unit-tests> trace: terminal fail
+  lexicon-unit-tests> ✅ furnish.terminals.test an invalid executor recovers through fail
+  lexicon-unit-tests> trace: terminal failOne
+  lexicon-unit-tests> ✅ furnish.terminals.test an invalid materializer recovers through failOne
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test duplicates within one matugen group recover through finish
+  lexicon-unit-tests> trace: terminal checked
+  lexicon-unit-tests> ✅ furnish.terminals.test duplicates within one theme group report together
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test each failing matugen group recovers on its own
+  lexicon-unit-tests> trace: terminal checked
+  lexicon-unit-tests> trace: terminal checked
+  lexicon-unit-tests> ✅ furnish.terminals.test each failing theme group recovers on its own
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test matugen duplicates in one group fail with both lines
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test the first failing matugen group fails alone
+  lexicon-unit-tests> ✅ furnish.terminals.test the first failing theme group fails alone
+  lexicon-unit-tests> ✅ furnish.terminals.test theme duplicates in one group fail with both lines
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> trace: terminal finish
+  lexicon-unit-tests> ✅ furnish.terminals.test valid matugen groups finish separately
+  lexicon-unit-tests> ✅ furnish-examples.test contract versions match the documented schema
+  lexicon-unit-tests> ✅ furnish-examples.test disabled runtime publishes no manifest or service
+  lexicon-unit-tests> ✅ furnish-examples.test enabled empty runtime still publishes a manifest and service
+  lexicon-unit-tests> ✅ furnish-examples.test example manifest records the authored provenance
+  lexicon-unit-tests> ✅ furnish-examples.test file helper emits one declaration per user principal
+  lexicon-unit-tests> ✅ furnish-examples.test furnish factory exposes only its documented surface
+  lexicon-unit-tests> ✅ furnish-examples.test off provider compiles to an empty manifest without a path
+  lexicon-unit-tests> ✅ furnish-examples.test runtime module declares the documented options
+  lexicon-unit-tests> ✅ ownerships.descriptors.test compiled descriptors retain ordered syntax and roster projections
+  lexicon-unit-tests> ✅ ownerships.descriptors.test descriptor collision diagnostics retain registry and authored order
+  lexicon-unit-tests> ✅ ownerships.descriptors.test descriptor preparation transports opaque extension fields
+  lexicon-unit-tests> ✅ ownerships.descriptors.test descriptor registration rejects malformed, duplicate-name, duplicate-key, and duplicate-order entries
+  lexicon-unit-tests> ✅ ownerships.descriptors.test descriptor shape failures accumulate before duplicate registration
+  lexicon-unit-tests> ✅ ownerships.descriptors.test missing role context throws through the structured engine diagnostic path
+  lexicon-unit-tests> ✅ ownerships.descriptors.test one role descriptor adds include and exclude author keys
+  lexicon-unit-tests> ✅ ownerships.descriptors.test production descriptors remain host, user, and when
+  lexicon-unit-tests> ✅ ownerships.descriptors.test relation registration rejects a duplicate relation name
+  lexicon-unit-tests> ✅ ownerships.descriptors.test relation registration rejects a relation without a reason
+  lexicon-unit-tests> ✅ ownerships.descriptors.test relation registration rejects an unknown axis
+  lexicon-unit-tests> ✅ ownerships.descriptors.test relation stages follow satisfiability in registry order
+  lexicon-unit-tests> ✅ ownerships.descriptors.test role exclude drops a context inside the excluded set
+  lexicon-unit-tests> ✅ ownerships.descriptors.test role exclude keeps a context outside the excluded set
+  lexicon-unit-tests> ✅ ownerships.descriptors.test role include drops a non-matching standalone context
+  lexicon-unit-tests> ✅ ownerships.descriptors.test role include selects its matching standalone context
+  lexicon-unit-tests> ✅ ownerships.descriptors."test role projection extends the standalone roster through define.role"
+  lexicon-unit-tests> ✅ ownerships.descriptors.test role system-scope message is pinned
+  lexicon-unit-tests> ✅ ownerships.descriptors.test set axis selection leaves a skipped roster member tail opaque
+  lexicon-unit-tests> ✅ ownerships.descriptors.test suggestion helpers retain thresholds and the first tied candidate
+  lexicon-unit-tests> ✅ ownerships.descriptors.test system scope rejects a nested role claim through the generic recursive guard
+  lexicon-unit-tests> ✅ ownerships.descriptors.test test-only host/role relation accepts a known compatible pair
+  lexicon-unit-tests> ✅ ownerships.descriptors.test test-only host/role relation rejects a known incompatible pair
+  lexicon-unit-tests> ✅ ownerships.descriptors.test test-only host/role relation skips a global host side
+  lexicon-unit-tests> ✅ ownerships.descriptors.test user system-scope message remains byte-identical
+  lexicon-unit-tests> ✅ ownerships.engine.test a leaf's label rides through compose without disrupting an impossible resolve
+  lexicon-unit-tests> ✅ ownerships.engine.test a throwing selector fails through the generic contextual axis boundary
+  lexicon-unit-tests> ✅ ownerships.engine.test activated malformed merge profiles fail through ownerships validation
+  lexicon-unit-tests> ✅ ownerships.engine.test activated non-function list strategies fail before application
+  lexicon-unit-tests> ✅ ownerships.engine.test all stage views and their trace reports preserve payload laziness
+  lexicon-unit-tests> ✅ ownerships.engine.test an empty prepared stage set checks clean
+  lexicon-unit-tests> ✅ ownerships.engine.test an unknown stage view throws instead of silently failing open
+  lexicon-unit-tests> ✅ ownerships.engine.test compose carries label/source as leaf-sibling fields; strip drops them before merge
+  lexicon-unit-tests> ✅ ownerships.engine.test ctx missing a set axis's key still throws when a claim narrows on it
+  lexicon-unit-tests> ✅ ownerships.engine.test dedup-union opt-in strategy registers
+  lexicon-unit-tests> ✅ ownerships.engine.test default merge doesn't force contributor identity or owners
+  lexicon-unit-tests> ✅ ownerships.engine.test default merger remains strict ordered and keeps contributor shape
+  lexicon-unit-tests> ✅ ownerships.engine.test different derivations conflict without forcing their internals
+  lexicon-unit-tests> ✅ ownerships.engine.test different explicit profiles on one scalar throw loud
+  lexicon-unit-tests> ✅ ownerships.engine.test different unit profiles on disjoint attrs fall back to deep cleanly
+  lexicon-unit-tests> ✅ ownerships.engine.test disjoint nest -> impossible
+  lexicon-unit-tests> ✅ ownerships.engine.test equal derivations merge as terminal values
+  lexicon-unit-tests> ✅ ownerships.engine.test function-valued co-owners use the ownership conflict path
+  lexicon-unit-tests> ✅ ownerships.engine.test golden attributed conflict and lock diagnostics name safe identities, not values
+  lexicon-unit-tests> ✅ ownerships.engine.test golden error: renderDiags exactly renders 2 diagnostics (unlabeled poison-carrying unit + labeled unit) without forcing either payload
+  lexicon-unit-tests> ✅ ownerships.engine.test host+user nest resolves
+  lexicon-unit-tests> ✅ ownerships.engine.test host-narrowed claim resolves with the user entity explicitly null
+  lexicon-unit-tests> ✅ ownerships.engine.test impossible claim on a unit carrying a secret-shaped value still throws
+  lexicon-unit-tests> ✅ ownerships.engine.test inactive leaf drops silently
+  lexicon-unit-tests> ✅ ownerships.engine.test last-wins attrset treatment reuses the right tracked subtree
+  lexicon-unit-tests> ✅ ownerships.engine.test lock authorization still precedes last-wins policy
+  lexicon-unit-tests> ✅ ownerships.engine.test merge conflict between a plain value and a derivation-shaped value still throws
+  lexicon-unit-tests> ✅ ownerships.engine.test merge trace attributes every nested path and keeps lists terminal
+  lexicon-unit-tests> ✅ ownerships.engine.test nested blocks merge
+  lexicon-unit-tests> ✅ ownerships.engine.test one last-wins list contributor cannot silently merge with an unprofiled co-owner
+  lexicon-unit-tests> ✅ ownerships.engine.test one last-wins unit cannot override an unprofiled scalar co-owner
+  lexicon-unit-tests> ✅ ownerships.engine.test ordinary resolve leaves merge provenance unforced
+  lexicon-unit-tests> ✅ ownerships.engine.test path profile is authoritative and isolated to its selected paths
+  lexicon-unit-tests> ✅ ownerships.engine.test plain and trace pin the same rendered impossible diagnostic string
+  lexicon-unit-tests> ✅ ownerships.engine.test plain resolve preserves the impossible claim error
+  lexicon-unit-tests> ✅ ownerships.engine.test polarity meet: associativity law, exhaustive over {a,b,c}
+  lexicon-unit-tests> ✅ ownerships.engine.test polarity meet: commutativity law, exhaustive over {a,b,c}
+  lexicon-unit-tests> ✅ ownerships.engine.test polarity meet: idempotence law, exhaustive over {a,b,c}
+  lexicon-unit-tests> ✅ ownerships.engine.test polarity meet: identity law, exhaustive over {a,b,c}
+  lexicon-unit-tests> ✅ ownerships.engine.test post-select coverage accepts exactly one active bootloader
+  lexicon-unit-tests> ✅ ownerships.engine.test post-select coverage ignores an inactive bootloader
+  lexicon-unit-tests> ✅ ownerships.engine.test pre-select tree validity rejects a greeter claimed for vm before selection
+  lexicon-unit-tests> ✅ ownerships.engine.test predicate axis needs no ctx entity of its own
+  lexicon-unit-tests> ✅ ownerships.engine.test predicate observation reports its decision without fabricated members
+  lexicon-unit-tests> ✅ ownerships.engine.test prepared stage carriers reject a non-function stage field
+  lexicon-unit-tests> ✅ ownerships.engine.test prepared stage carriers reject a non-record registration
+  lexicon-unit-tests> ✅ ownerships.engine.test prepared stage carriers reject an unregistered record
+  lexicon-unit-tests> ✅ ownerships.engine.test prepared stage carriers reject extra fields without forcing them
+  lexicon-unit-tests> ✅ ownerships.engine.test profiled merge doesn't force values, identity, or owners
+  lexicon-unit-tests> ✅ ownerships.engine.test profiled resolve keeps poison payloads and contributor metadata lazy
+  lexicon-unit-tests> ✅ ownerships.engine.test registered host/user relation is byte-identical to the frozen membership check
+  lexicon-unit-tests> ✅ ownerships.engine.test registered relation pins the exact known-none diagnostic and rendered string
+  lexicon-unit-tests> ✅ ownerships.engine.test relation diagnostics identify a poison-carrying leaf without forcing its payload
+  lexicon-unit-tests> ✅ ownerships.engine.test safeRender falls back safely on a value that throws when serialized
+  lexicon-unit-tests> ✅ ownerships.engine.test safeRender identifies a derivation by name, never touches its fields
+  lexicon-unit-tests> ✅ ownerships.engine.test safeShape identifies a derivation by name, never touches its fields
+  lexicon-unit-tests> ✅ ownerships.engine.test safeShape lists attribute names only, never forces their values
+  lexicon-unit-tests> ✅ ownerships.engine.test scalar clash -> conflict
+  lexicon-unit-tests> ✅ ownerships.engine.test single-writer lock accepts its declared writer
+  lexicon-unit-tests> ✅ ownerships.engine.test single-writer lock applies the caller's subtree predicate to descendants
+  lexicon-unit-tests> ✅ ownerships.engine.test single-writer lock rejects an equal foreign write before scalar equality
+  lexicon-unit-tests> ✅ ownerships.engine.test stage validation rejects a missing callback
+  lexicon-unit-tests> ✅ ownerships.engine.test stage validation rejects a non-function callback
+  lexicon-unit-tests> ✅ ownerships.engine.test third axis (role) composes with no core change
+  lexicon-unit-tests> ✅ ownerships.engine.test top identity law per axis
+  lexicon-unit-tests> ✅ ownerships.engine.test trace and resolve share one selected output
+  lexicon-unit-tests> ✅ ownerships.engine.test trace observes names and value shape without forcing payload fields
+  lexicon-unit-tests> ✅ ownerships.engine.test trace reports identity, context requirements, and the exact rejecting axis
+  lexicon-unit-tests> ✅ ownerships.engine.test traced resolve preserves the impossible claim error
+  lexicon-unit-tests> ✅ ownerships.engine.test tracked merge preserves unlocked values and nested attr/list contributors
+  lexicon-unit-tests> ✅ ownerships.engine.test tracked scalar conflict policy receives both contributing units
+  lexicon-unit-tests> ✅ ownerships.engine.test tree diagnostics aggregate in registration order independent of cross-view list position
+  lexicon-unit-tests> ✅ ownerships.engine.test unanimous last-wins units deep-merge disjoint attrs
+  lexicon-unit-tests> ✅ ownerships.engine.test unanimous last-wins units select the right scalar
+  lexicon-unit-tests> ✅ ownerships.engine.test unknown contributor and path profile names fail closed
+  lexicon-unit-tests> ✅ ownerships.engine.test untagged claim tolerates a null-or-absent ctx entity
+  lexicon-unit-tests> ✅ ownerships.engine.test unused malformed merge profile registrations stay lazy
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnitSets discovers system and home collections in one call
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnitSets rejects a non-attribute argument bundle
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnits normalizes one unit and a list into one flat collection
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnits passes caller arguments to function files
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnits recursively discovers files in deterministic relative-path order
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnits rejects a non-attribute argument bundle
+  lexicon-unit-tests> ✅ ownerships.import-units.test importUnits validates only the unit shell and keeps payload fields lazy
+  lexicon-unit-tests> ✅ ownerships.import-units.test imported home units resolve through the public user door
+  lexicon-unit-tests> ✅ ownerships.import-units.test imported system units resolve through the public system door
+  lexicon-unit-tests> ✅ ownerships.import-units.test invalid imported values fail closed
+  lexicon-unit-tests> ✅ ownerships.import-units.test mixed trees reject loose root nix files instead of guessing their scope
+  lexicon-unit-tests> ✅ ownerships.import-units.test mixed trees reject unknown top-level collections
+  lexicon-unit-tests> ✅ ownerships.matrix.test cross-axis dead matches the real resolver's impossible outcome
+  lexicon-unit-tests> ✅ ownerships.matrix.test dead uses the engine impossibility diagnostics for axis and relation failures
+  lexicon-unit-tests> ✅ ownerships.matrix.test host diffs include unit keys and top-level pre-merge paths
+  lexicon-unit-tests> ✅ ownerships.matrix.test matrix runs survivor stages for every modeled context
+  lexicon-unit-tests> ✅ ownerships.matrix.test matrix runs tree stages before context projection
+  lexicon-unit-tests> ✅ ownerships.matrix.test stable keys distinguish unit identity from snapshot position
+  lexicon-unit-tests> ✅ ownerships.matrix.test system matrix agrees with host-only resolution and has its own row shape
+  lexicon-unit-tests> ✅ ownerships.matrix.test system matrix keeps the recursive user-claim guard
+  lexicon-unit-tests> ✅ ownerships.matrix.test the full report never forces surviving package or secret values
+  lexicon-unit-tests> ✅ ownerships.matrix.test unit and top-level pre-merge coverage are pinned
+  lexicon-unit-tests> ✅ ownerships.matrix.test unknown membership is excluded from rows and surfaced as indeterminate
+  lexicon-unit-tests> ✅ ownerships.matrix.test user matrix survivors agree with real resolve in every valid context
+  lexicon-unit-tests> ✅ ownerships.matrix.test when misses are observationally inactive, never dead
+  lexicon-unit-tests> trace: fleet registration
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet list
+  lexicon-unit-tests> trace: fleet list
+  lexicon-unit-tests> ✅ ownerships.observations.test a custom list strategy folds in order
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet scalar
+  lexicon-unit-tests> trace: fleet scalar
+  lexicon-unit-tests> ✅ ownerships.observations.test a custom scalar policy folds left
+  lexicon-unit-tests> ✅ ownerships.observations.test a custom scope exception surfaces unchanged
+  lexicon-unit-tests> ✅ ownerships.observations.test a custom shape exception surfaces unchanged
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> ✅ ownerships.observations.test a list strategy exception surfaces unchanged
+  lexicon-unit-tests> ✅ ownerships.observations.test a resolver registers its stages only when applied to a context
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> ✅ ownerships.observations.test a scalar policy exception surfaces unchanged
+  lexicon-unit-tests> ✅ ownerships.observations.test a scope error fails before its selector runs
+  lexicon-unit-tests> trace: fleet schema selector
+  lexicon-unit-tests> ✅ ownerships.observations.test a selector exception surfaces unchanged
+  lexicon-unit-tests> ✅ ownerships.observations.test a shape error fails before the payload is read
+  lexicon-unit-tests> trace: fleet registration
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> ✅ ownerships.observations.test a stage exception surfaces unchanged
+  lexicon-unit-tests> ✅ ownerships.observations.test an importer exception surfaces unchanged
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> ✅ ownerships.observations.test an opaque payload and an unused context stay unforced
+  lexicon-unit-tests> trace: fleet registration
+  lexicon-unit-tests> ✅ ownerships.observations.test an unknown stage view fails at registration
+  lexicon-unit-tests> trace: fleet schema unnamed
+  lexicon-unit-tests> ✅ ownerships.observations.test an unsatisfiable claim fails before its selector runs
+  lexicon-unit-tests> trace: fleet schema parent
+  lexicon-unit-tests> trace: fleet schema child
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet schema parent
+  lexicon-unit-tests> trace: fleet schema child
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> ✅ ownerships.observations.test ordinary translation answers both contexts
+  lexicon-unit-tests> trace: fleet schema parent
+  lexicon-unit-tests> trace: fleet schema child
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> trace: fleet predicate
+  lexicon-unit-tests> ✅ ownerships.observations.test prepared translation answers repeated and second contexts
+  lexicon-unit-tests> trace: fleet schema a
+  lexicon-unit-tests> trace: fleet schema b
+  lexicon-unit-tests> trace: fleet registration
+  lexicon-unit-tests> trace: fleet one a
+  lexicon-unit-tests> trace: fleet two a
+  lexicon-unit-tests> trace: fleet one b
+  lexicon-unit-tests> trace: fleet two b
+  lexicon-unit-tests> trace: fleet survivors
+  lexicon-unit-tests> trace: fleet tree
+  lexicon-unit-tests> trace: fleet survivors
+  lexicon-unit-tests> ✅ ownerships.observations.test the matrix covers every leaf in both contexts
+  lexicon-unit-tests> trace: fleet registration
+  lexicon-unit-tests> trace: fleet survivors
+  lexicon-unit-tests> trace: fleet tree
+  lexicon-unit-tests> trace: fleet schema a
+  lexicon-unit-tests> trace: fleet schema b
+  lexicon-unit-tests> trace: fleet one a
+  lexicon-unit-tests> trace: fleet one b
+  lexicon-unit-tests> trace: fleet two a
+  lexicon-unit-tests> trace: fleet two b
+  lexicon-unit-tests> ✅ ownerships.observations.test the trace keeps every leaf key and stage report
+  lexicon-unit-tests> ✅ ownerships.roster.test an ambiguous user host reference fails during roster construction
+  lexicon-unit-tests> ✅ ownerships.roster.test an unknown user host reference fails during roster construction
+  lexicon-unit-tests> ✅ ownerships.roster.test canonical exclusion does not erase a raw alias include
+  lexicon-unit-tests> ✅ ownerships.roster.test canonical ids can label context diagnostics without display names
+  lexicon-unit-tests> ✅ ownerships.roster.test canonical membership takes precedence over a colliding alias
+  lexicon-unit-tests> ✅ ownerships.roster.test cross-axis membership fires: grandpa is not on khion
+  lexicon-unit-tests> ✅ ownerships.roster."test define.* resolves a nested host+user unit with no den"
+  lexicon-unit-tests> ✅ ownerships.roster.test distinct canonical user ids select without conflating a shared bare name
+  lexicon-unit-tests> ✅ ownerships.roster.test exclude meet retains authored duplicates before alias observation
+  lexicon-unit-tests> ✅ ownerships.roster.test grouped host aliases retain declaration order
+  lexicon-unit-tests> ✅ ownerships.roster.test host-only config on a user-less host is not a membership error
+  lexicon-unit-tests> ✅ ownerships.roster.test include meet compares aliases and canonical names before observation
+  lexicon-unit-tests> ✅ ownerships.roster.test known-none user still trips membership (null vs [])
+  lexicon-unit-tests> ✅ ownerships.roster.test parent canonical exclusion retains child alias duplicates and order
+  lexicon-unit-tests> ✅ ownerships.roster.test strict system resolution accepts a canonical host id without a display name
+  lexicon-unit-tests> ✅ ownerships.roster.test strict user resolution accepts canonical ids with real membership
+  lexicon-unit-tests> ✅ ownerships.roster.test unknown-membership user degrades to same-axis-only
+  lexicon-unit-tests> ✅ ownerships.surface.test a claim narrows around a value block (hit)
+  lexicon-unit-tests> ✅ ownerships.surface.test a claim narrows around a value block (miss drops)
+  lexicon-unit-tests> ✅ ownerships.surface.test a claim-only parent remains valid when it narrows a real child
+  lexicon-unit-tests> ✅ ownerships.surface.test a contradictory metadata-only unit fails before selection
+  lexicon-unit-tests> ✅ ownerships.surface.test a non-string label throws at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test a non-string source throws at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test a parent merge profile doesn't inherit into child contributors
+  lexicon-unit-tests> ✅ ownerships.surface.test a throwing when predicate fails through the contextual selector boundary
+  lexicon-unit-tests> ✅ ownerships.surface.test a unit must be an attribute set
+  lexicon-unit-tests> ✅ ownerships.surface.test children must be a list
+  lexicon-unit-tests> ✅ ownerships.surface.test children must contain unit attribute sets
+  lexicon-unit-tests> ✅ ownerships.surface.test cross-host user claim still impossible through the surface
+  lexicon-unit-tests> ✅ ownerships.surface.test default descriptors preserve the public key, registry, and roster shapes
+  lexicon-unit-tests> ✅ ownerships.surface.test default registry projects the byte-identical bounded user and system contexts
+  lexicon-unit-tests> ✅ ownerships.surface.test default surface reserves mergeProfile without enabling it
+  lexicon-unit-tests> ✅ ownerships.surface.test exceptHosts active
+  lexicon-unit-tests> ✅ ownerships.surface.test exceptHosts inactive drops
+  lexicon-unit-tests> ✅ ownerships.surface.test exceptUsers active
+  lexicon-unit-tests> ✅ ownerships.surface.test exceptUsers inactive drops
+  lexicon-unit-tests> ✅ ownerships.surface.test file-link entries merge across units
+  lexicon-unit-tests> ✅ ownerships.surface.test host hit
+  lexicon-unit-tests> ✅ ownerships.surface.test host miss drops
+  lexicon-unit-tests> ✅ ownerships.surface.test label never leaks into merged output
+  lexicon-unit-tests> ✅ ownerships.surface.test label/source are optional plain-string identification, not claims or config
+  lexicon-unit-tests> ✅ ownerships.surface.test label/source don't inherit to children
+  lexicon-unit-tests> ✅ ownerships.surface.test metadata-only terminal units fail instead of silently disappearing
+  lexicon-unit-tests> ✅ ownerships.surface.test misshaped reserved key throws at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test nested narrow + merge + option path
+  lexicon-unit-tests> ✅ ownerships.surface.test plain and trace surface entries both preserve impossible claims
+  lexicon-unit-tests> ✅ ownerships.surface.test profiled surface applies unanimous unit selection
+  lexicon-unit-tests> ✅ ownerships.surface.test profiled surface rejects unknown profiles on inactive units
+  lexicon-unit-tests> ✅ ownerships.surface.test profiled system surface applies unanimous unit selection
+  lexicon-unit-tests> ✅ ownerships.surface.test strict permissive path is byte-identical to the non-strict resolve
+  lexicon-unit-tests> ✅ ownerships.surface.test strict rejects a known but impossible host x user pair
+  lexicon-unit-tests> ✅ ownerships.surface.test strict rejects an unknown host name
+  lexicon-unit-tests> ✅ ownerships.surface.test strict rejects an unknown user name
+  lexicon-unit-tests> ✅ ownerships.surface.test strict rescues an unknown-membership user instead of rejecting it
+  lexicon-unit-tests> ✅ ownerships.surface.test system scope drops a host-narrowed unit off its claimed hosts
+  lexicon-unit-tests> ✅ ownerships.surface.test system scope rejects a users claim at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test system scope rejects an exceptUsers claim at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test system scope resolves a host-narrowed unit with no user bound
+  lexicon-unit-tests> ✅ ownerships.surface.test system-scope strict rejects an unknown host
+  lexicon-unit-tests> ✅ ownerships.surface.test system-scope strict validates the host only and still resolves
+  lexicon-unit-tests> ✅ ownerships.surface.test trace names host as the rejecting axis
+  lexicon-unit-tests> ✅ ownerships.surface.test trace names predicate rejection without inventing members
+  lexicon-unit-tests> ✅ ownerships.surface.test trace reuses diagnostic identity and reports pre-merge contribution
+  lexicon-unit-tests> ✅ ownerships.surface.test untagged is global
+  lexicon-unit-tests> ✅ ownerships.surface.test user hit
+  lexicon-unit-tests> ✅ ownerships.surface.test user miss drops
+  lexicon-unit-tests> ✅ ownerships.surface.test value + children matches the inline-config + children shape
+  lexicon-unit-tests> ✅ ownerships.surface.test value block content is never re-scanned for claim keys
+  lexicon-unit-tests> ✅ ownerships.surface.test value escape hatch requires an attribute set
+  lexicon-unit-tests> ✅ ownerships.surface."test value escape hatch routes users.* as ordinary config"
+  lexicon-unit-tests> ✅ ownerships.surface.test value mixed with inline config throws at author time
+  lexicon-unit-tests> ✅ ownerships.surface.test when hit
+  lexicon-unit-tests> ✅ ownerships.surface.test when miss drops
+  lexicon-unit-tests> ✅ ownerships-examples.test claims user miss
+  lexicon-unit-tests> ✅ ownerships-examples.test disjoint nesting
+  lexicon-unit-tests> ✅ ownerships-examples.test empty axis
+  lexicon-unit-tests> ✅ ownerships-examples.test first change
+  lexicon-unit-tests> ✅ ownerships-examples.test list policy
+  lexicon-unit-tests> ✅ ownerships-examples.test matrix parity
+  lexicon-unit-tests> ✅ ownerships-examples.test metadata only
+  lexicon-unit-tests> ✅ ownerships-examples.test mixed alias nesting
+  lexicon-unit-tests> ✅ ownerships-examples.test module priority resolves the files example editor
+  lexicon-unit-tests> ✅ ownerships-examples.test nested and predicate
+  lexicon-unit-tests> ✅ ownerships-examples.test partial unknown claim
+  lexicon-unit-tests> ✅ ownerships-examples.test plain resolve applies global units on an unknown host
+  lexicon-unit-tests> ✅ ownerships-examples.test polarity
+  lexicon-unit-tests> ✅ ownerships-examples.test prepared team
+  lexicon-unit-tests> ✅ ownerships-examples.test projected claims
+  lexicon-unit-tests> ✅ ownerships-examples.test scalar conflict
+  lexicon-unit-tests> ✅ ownerships-examples.test strict resolve accepts a user with unknown host membership
+  lexicon-unit-tests> ✅ ownerships-examples.test strict resolve rejects a user known to live on no host
+  lexicon-unit-tests> ✅ ownerships-examples.test strict resolve rejects an unknown host
+  lexicon-unit-tests> ✅ ownerships-examples.test subtree replacement
+  lexicon-unit-tests> ✅ ownerships-examples.test system resolver parity
+  lexicon-unit-tests> ✅ ownerships-examples.test system scope
+  lexicon-unit-tests> ✅ ownerships-examples.test team membership
+  lexicon-unit-tests> ✅ ownerships-examples.test trace parity
+  lexicon-unit-tests> ✅ ownerships-examples.test unprioritized scalar co-owners conflict
+  lexicon-unit-tests> ✅ ownerships-examples.test user resolver parity
+  lexicon-unit-tests> ✅ praxis.default.test absent steps
+  lexicon-unit-tests> ✅ praxis.default.test absolute script
+  lexicon-unit-tests> ✅ praxis.default.test all three layouts have the same manifest
+  lexicon-unit-tests> ✅ praxis.default.test args must be list
+  lexicon-unit-tests> ✅ praxis.default.test args must be strings
+  lexicon-unit-tests> ✅ praxis.default.test arguments stay literal
+  lexicon-unit-tests> ✅ praxis.default.test bad default
+  lexicon-unit-tests> ✅ praxis.default.test both forms
+  lexicon-unit-tests> ✅ praxis.default.test choice default rejected
+  lexicon-unit-tests> ✅ praxis.default.test choice type rejected
+  lexicon-unit-tests> ✅ praxis.default.test choices normalize
+  lexicon-unit-tests> ✅ praxis.default.test command becomes app and package
+  lexicon-unit-tests> ✅ praxis.default.test command names do not force declarations
+  lexicon-unit-tests> ✅ praxis.default.test cycle rejected
+  lexicon-unit-tests> ✅ praxis.default.test description propagates
+  lexicon-unit-tests> ✅ praxis.default.test diagnostic summary counts
+  lexicon-unit-tests> ✅ praxis.default.test diagnostic summary stays selected
+  lexicon-unit-tests> ✅ praxis.default.test diagnostics accumulate
+  lexicon-unit-tests> ✅ praxis.default.test diagnostics do not force builders
+  lexicon-unit-tests> ✅ praxis.default.test dot script
+  lexicon-unit-tests> ✅ praxis.default.test duplicate parameter
+  lexicon-unit-tests> ✅ praxis.default.test empty declaration is no op
+  lexicon-unit-tests> ✅ praxis.default.test empty exec
+  lexicon-unit-tests> ✅ praxis.default.test empty interpreter
+  lexicon-unit-tests> ✅ praxis.default.test empty name rejected before payload
+  lexicon-unit-tests> ✅ praxis.default.test empty run
+  lexicon-unit-tests> ✅ praxis.default.test empty script
+  lexicon-unit-tests> ✅ praxis.default.test empty segment script
+  lexicon-unit-tests> ✅ praxis.default.test empty steps
+  lexicon-unit-tests> ✅ praxis.default.test env must be record
+  lexicon-unit-tests> ✅ praxis.default.test env name is validated before value
+  lexicon-unit-tests> ✅ praxis.default.test env values must be strings
+  lexicon-unit-tests> ✅ praxis.default.test environment stays literal
+  lexicon-unit-tests> ✅ praxis.default.test explicit forwarding opt out
+  lexicon-unit-tests> ✅ praxis.default.test inline body stays literal
+  lexicon-unit-tests> ✅ praxis.default.test interpreter must be string
+  lexicon-unit-tests> ✅ praxis.default.test interpreter requires script
+  lexicon-unit-tests> ✅ praxis.default.test invalid command map
+  lexicon-unit-tests> ✅ praxis.default.test invalid command reference
+  lexicon-unit-tests> ✅ praxis.default.test invalid command shape
+  lexicon-unit-tests> ✅ praxis.default.test invalid condition
+  lexicon-unit-tests> ✅ praxis.default.test invalid description
+  lexicon-unit-tests> ✅ praxis.default.test invalid group
+  lexicon-unit-tests> ✅ praxis.default.test invalid label
+  lexicon-unit-tests> ✅ praxis.default.test invalid root
+  lexicon-unit-tests> ✅ praxis.default.test invalid scope keeps body lazy
+  lexicon-unit-tests> ✅ praxis.default.test invalid timeout
+  lexicon-unit-tests> ✅ praxis.default.test invalid type skips default payload
+  lexicon-unit-tests> ✅ praxis.default.test invalid ui
+  lexicon-unit-tests> ✅ praxis.default.test literal exec
+  lexicon-unit-tests> ✅ praxis.default.test malformed command does not force sibling
+  lexicon-unit-tests> ✅ praxis.default.test missing form
+  lexicon-unit-tests> ✅ praxis.default.test missing live script is not an eval error
+  lexicon-unit-tests> ✅ praxis.default.test missing reference
+  lexicon-unit-tests> ✅ praxis.default.test missing root marker
+  lexicon-unit-tests> ✅ praxis.default.test mixed forms compile
+  lexicon-unit-tests> ✅ praxis.default.test multiline label is not source
+  lexicon-unit-tests> ✅ praxis.default.test multiple commands compile
+  lexicon-unit-tests> ✅ praxis.default.test multiple forwarders
+  lexicon-unit-tests> ✅ praxis.default.test named parameters do not change positional order
+  lexicon-unit-tests> ✅ praxis.default.test no flake needed
+  lexicon-unit-tests> ✅ praxis.default.test optional adapters stay outside core
+  lexicon-unit-tests> ✅ praxis.default.test optional before required
+  lexicon-unit-tests> ✅ praxis.default.test output is deterministic
+  lexicon-unit-tests> ✅ praxis.default.test parameter condition types must match
+  lexicon-unit-tests> ✅ praxis.default.test parameter conditions must use choices
+  lexicon-unit-tests> ✅ praxis.default.test parameter environment collision
+  lexicon-unit-tests> ✅ praxis.default.test parameter reference is case sensitive
+  lexicon-unit-tests> ✅ praxis.default.test parent script
+  lexicon-unit-tests> ✅ praxis.default.test path stays literal
+  lexicon-unit-tests> ✅ praxis.default.test prompt cannot forward arguments
+  lexicon-unit-tests> ✅ praxis.default.test prompt never inherits arguments
+  lexicon-unit-tests> ✅ praxis.default.test reachable aliases cannot collide
+  lexicon-unit-tests> ✅ praxis.default.test reachable only
+  lexicon-unit-tests> ✅ praxis.default.test rendered diagnostics stay praxis owned
+  lexicon-unit-tests> ✅ praxis.default.test root policy conflict
+  lexicon-unit-tests> ✅ praxis.default.test runtime does not cd to store root
+  lexicon-unit-tests> ✅ praxis.default.test runtime inputs must be list
+  lexicon-unit-tests> ✅ praxis.default.test runtime inputs must be packages
+  lexicon-unit-tests> ✅ praxis.default.test runtime inputs stay lazy
+  lexicon-unit-tests> ✅ praxis.default.test scope defaults to project
+  lexicon-unit-tests> ✅ praxis.default.test select needs valid default
+  lexicon-unit-tests> ✅ praxis.default.test selected alias check keeps siblings lazy
+  lexicon-unit-tests> ✅ praxis.default.test selected invalid command throws
+  lexicon-unit-tests> ✅ praxis.default.test sensitive argv rejected
+  lexicon-unit-tests> ✅ praxis.default.test sensitive default not forced
+  lexicon-unit-tests> ✅ praxis.default.test sensitive keys cannot be overridden in references
+  lexicon-unit-tests> ✅ praxis.default.test sensitive sources cannot feed referenced defaults
+  lexicon-unit-tests> ✅ praxis.default.test sensitive sources cannot replace prompt results
+  lexicon-unit-tests> ✅ praxis.default.test separated required positional is rejected
+  lexicon-unit-tests> ✅ praxis.default.test sequences do not guess a recipient
+  lexicon-unit-tests> ✅ praxis.default.test shared reference diagnostics stay ordered
+  lexicon-unit-tests> ✅ praxis.default.test shell source is never rewritten
+  lexicon-unit-tests> ✅ praxis.default.test short collision
+  lexicon-unit-tests> ✅ praxis.default.test shorthand list
+  lexicon-unit-tests> ✅ praxis.default.test shorthand string
+  lexicon-unit-tests> ✅ praxis.default.test single executable inherits arguments
+  lexicon-unit-tests> ✅ praxis.default.test steps keep order
+  lexicon-unit-tests> ✅ praxis.default.test structural error does not force body
+  lexicon-unit-tests> ✅ praxis.default.test traversal script
+  lexicon-unit-tests> ✅ praxis.default.test type default path
+  lexicon-unit-tests> ✅ praxis.default.test type defaults normalize
+  lexicon-unit-tests> ✅ praxis.default.test type environment path
+  lexicon-unit-tests> ✅ praxis.default.test type errors keep all reachable paths
+  lexicon-unit-tests> ✅ praxis.default.test typed default
+  lexicon-unit-tests> ✅ praxis.default.test typed parameter conditions are valid
+  lexicon-unit-tests> ✅ praxis.default.test typed prompt needs acknowledgement
+  lexicon-unit-tests> ✅ praxis.default.test unknown argument field keeps payload lazy
+  lexicon-unit-tests> ✅ praxis.default.test unknown command field
+  lexicon-unit-tests> ✅ praxis.default.test unknown parameter reference
+  lexicon-unit-tests> ✅ praxis.default.test unknown project field
+  lexicon-unit-tests> ✅ praxis.default.test unknown step field
+  lexicon-unit-tests> ✅ praxis.default.test unsafe name rejected
+  lexicon-unit-tests> ✅ praxis.default.test valid command does not force sibling
+  lexicon-unit-tests> ✅ praxis.default.test wrong exec
+  lexicon-unit-tests> ✅ praxis.default.test wrong run type
+  lexicon-unit-tests> ✅ praxis.default.test wrong step type
+  lexicon-unit-tests> trace: praxis factory
+  lexicon-unit-tests> trace: praxis factory
+  lexicon-unit-tests> ✅ praxis.effects.test a factory diagnostic keeps its code and authored subject
+  lexicon-unit-tests> trace: praxis reference probe
+  lexicon-unit-tests> ✅ praxis.effects.test a reference probe keeps parameter and literal arguments
+  lexicon-unit-tests> trace: praxis check
+  lexicon-unit-tests> trace: praxis check
+  lexicon-unit-tests> trace: praxis check
+  lexicon-unit-tests> trace: praxis normalize
+  lexicon-unit-tests> ✅ praxis.effects.test a shared selection normalizes its command once
+  lexicon-unit-tests> trace: praxis predicate
+  lexicon-unit-tests> trace: praxis predicate
+  lexicon-unit-tests> trace: praxis predicate
+  lexicon-unit-tests> trace: praxis predicate
+  lexicon-unit-tests> ✅ praxis.effects.test alternating predicates report only invalid values
+  lexicon-unit-tests> ✅ praxis.effects.test argument authored member and check order
+  lexicon-unit-tests> ✅ praxis.effects.test argument summaries match characterization
+  lexicon-unit-tests> ✅ praxis.effects.test configured checker subject and state
+  lexicon-unit-tests> ✅ praxis.effects.test configured checker success values
+  lexicon-unit-tests> ✅ praxis.effects.test configured opaque transport
+  lexicon-unit-tests> ✅ praxis.effects.test configured predicate exception
+  lexicon-unit-tests> ✅ praxis.effects.test configured predicate per value
+  lexicon-unit-tests> ✅ praxis.effects.test environment path and content match characterization
+  lexicon-unit-tests> ✅ praxis.effects.test failure values are absent
+  lexicon-unit-tests> ✅ praxis.effects.test malformed reference suppresses payload
+  lexicon-unit-tests> ✅ praxis.effects.test native argument diagnostics
+  lexicon-unit-tests> ✅ praxis.effects.test native scalar list maybe diagnostics
+  lexicon-unit-tests> ✅ praxis.effects.test original reference exception
+  lexicon-unit-tests> ✅ praxis.effects.test outer list rejection suppresses member work
+  lexicon-unit-tests> ✅ praxis.effects.test public check terminal recovery
+  lexicon-unit-tests> ✅ praxis.effects.test retained argument values keep original opaque children
+  lexicon-unit-tests> ✅ praxis.effects.test retained success values match characterization
+  lexicon-unit-tests> ✅ praxis.effects.test terminal recovery
+  lexicon-unit-tests> ✅ praxis.effects.test the input exception surfaces as its whole message
+  lexicon-unit-tests> trace: praxis reference envelope
+  lexicon-unit-tests> ✅ praxis.effects.test the memberOrder exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test the normalize exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test the predicate exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test the reference exception surfaces as its whole message
+  lexicon-unit-tests> trace: praxis reference envelope
+  lexicon-unit-tests> ✅ praxis.effects.test the referenceCode exception surfaces as its whole message
+  lexicon-unit-tests> trace: praxis reference envelope
+  lexicon-unit-tests> ✅ praxis.effects.test the referenceEnvelope exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test the referenceFactory exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test the referenceProbe exception surfaces as its whole message
+  lexicon-unit-tests> trace: praxis reference envelope
+  lexicon-unit-tests> trace: praxis code
+  lexicon-unit-tests> ✅ praxis.effects.test the referenceSeverity exception surfaces as its whole message
+  lexicon-unit-tests> ✅ praxis.effects.test unused configured code
+  lexicon-unit-tests> ✅ praxis.effects.test unused native configuration
+  lexicon-unit-tests> ✅ praxis.graph-effects.test alias errors precede sensitive source errors
+  lexicon-unit-tests> ✅ praxis.graph-effects.test failed graph summary needs no builder
+  lexicon-unit-tests> ✅ praxis.graph-effects.test malformed parent suppresses child lookup
+  lexicon-unit-tests> ✅ praxis.graph-effects.test namespace poison control
+  lexicon-unit-tests> ✅ praxis.graph-effects.test reached errors keep depth first order
+  lexicon-unit-tests> ✅ praxis.graph-effects.test selected namespace leaf keeps siblings lazy
+  lexicon-unit-tests> ✅ praxis.graph-effects.test successful summary keeps runtime inputs opaque
+  lexicon-unit-tests> ✅ praxis.public-surface.test ambiguous target rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test availability matrix does not normalize bodies
+  lexicon-unit-tests> ✅ praxis.public-surface.test availability report
+  lexicon-unit-tests> ✅ praxis.public-surface.test availability trace
+  lexicon-unit-tests> ✅ praxis.public-surface.test availability trace keeps bodies lazy
+  lexicon-unit-tests> ✅ praxis.public-surface.test check conflict
+  lexicon-unit-tests> ✅ praxis.public-surface.test check fixed directory rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test check generation
+  lexicon-unit-tests> ✅ praxis.public-surface.test check interactive rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test check prompts rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test check required parameter rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test command context applies once
+  lexicon-unit-tests> ✅ praxis.public-surface.test contradictory forms stay lazy
+  lexicon-unit-tests> ✅ praxis.public-surface.test custom dispatcher
+  lexicon-unit-tests> ✅ praxis.public-surface.test default check
+  lexicon-unit-tests> ✅ praxis.public-surface.test default forwarding
+  lexicon-unit-tests> ✅ praxis.public-surface.test direct flake
+  lexicon-unit-tests> ✅ praxis.public-surface.test dispatcher alias reserved
+  lexicon-unit-tests> ✅ praxis.public-surface.test dispatcher name reserved
+  lexicon-unit-tests> ✅ praxis.public-surface.test duplicate command task
+  lexicon-unit-tests> ✅ praxis.public-surface.test empty argv rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test explicit record parity
+  lexicon-unit-tests> ✅ praxis.public-surface.test host selection
+  lexicon-unit-tests> ✅ praxis.public-surface.test inactive path
+  lexicon-unit-tests> ✅ praxis.public-surface.test inline and imported declarations match
+  lexicon-unit-tests> ✅ praxis.public-surface.test invalid namespace name keeps body lazy
+  lexicon-unit-tests> ✅ praxis.public-surface.test large parameter declaration normalizes
+  lexicon-unit-tests> ✅ praxis.public-surface.test literal argv
+  lexicon-unit-tests> ✅ praxis.public-surface.test local targets
+  lexicon-unit-tests> ✅ praxis.public-surface.test manifest order is deterministic
+  lexicon-unit-tests> ✅ praxis.public-surface.test minimal app
+  lexicon-unit-tests> ✅ praxis.public-surface.test minimal output
+  lexicon-unit-tests> ✅ praxis.public-surface.test namespace manifest has leaves
+  lexicon-unit-tests> ✅ praxis.public-surface.test namespace task reference is rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test nested selection keeps siblings lazy
+  lexicon-unit-tests> ✅ praxis.public-surface.test no target guessing
+  lexicon-unit-tests> ✅ praxis.public-surface.test old steps are not public
+  lexicon-unit-tests> ✅ praxis.public-surface.test optional metadata
+  lexicon-unit-tests> ✅ praxis.public-surface.test other host
+  lexicon-unit-tests> ✅ praxis.public-surface.test ownership inactive payload
+  lexicon-unit-tests> ✅ praxis.public-surface.test ownership optional
+  lexicon-unit-tests> ✅ praxis.public-surface.test parameter fields stay lazy on error
+  lexicon-unit-tests> ✅ praxis.public-surface.test parameter lists are not public
+  lexicon-unit-tests> ✅ praxis.public-surface.test per command opt in
+  lexicon-unit-tests> ✅ praxis.public-surface.test positional order and defaults
+  lexicon-unit-tests> ✅ praxis.public-surface.test positional typos are rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test primitive never forces optional machinery
+  lexicon-unit-tests> ✅ praxis.public-surface.test project scope is inherited
+  lexicon-unit-tests> ✅ praxis.public-surface.test script needs root
+  lexicon-unit-tests> ✅ praxis.public-surface.test script outside root
+  lexicon-unit-tests> ✅ praxis.public-surface.test script path
+  lexicon-unit-tests> ✅ praxis.public-surface.test selected command laziness
+  lexicon-unit-tests> ✅ praxis.public-surface.test shell is explicit
+  lexicon-unit-tests> ✅ praxis.public-surface.test shell is not rewritten
+  lexicon-unit-tests> ✅ praxis.public-surface.test shell opt in
+  lexicon-unit-tests> ✅ praxis.public-surface.test system rejects user claims
+  lexicon-unit-tests> ✅ praxis.public-surface.test target context rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test task confirm once
+  lexicon-unit-tests> ✅ praxis.public-surface.test task kind
+  lexicon-unit-tests> ✅ praxis.public-surface.test task no broadcast
+  lexicon-unit-tests> ✅ praxis.public-surface.test task order
+  lexicon-unit-tests> ✅ praxis.public-surface.test task raw shell rejected
+  lexicon-unit-tests> ✅ praxis.public-surface.test task reference
+  lexicon-unit-tests> ✅ praxis.public-surface.test typo help without payload evaluation
+  lexicon-unit-tests> ✅ praxis.public-surface.test unknown context
+  lexicon-unit-tests> ✅ praxis.public-surface.test unknown field stays lazy
+  lexicon-unit-tests> ✅ praxis.public-surface.test user context
+  lexicon-unit-tests> ✅ praxis.public-surface.test user membership
+  lexicon-unit-tests> ✅ praxis.public-surface.test wrappers opt in
+  lexicon-unit-tests> ✅ praxis-examples.test commands example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test generated scripts are store paths rather than root relative
+  lexicon-unit-tests> ✅ praxis-examples.test minimal example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test outputs example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test ownerships example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test parameters example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test project example matches its documented result
+  lexicon-unit-tests> ✅ praxis-examples.test script example discovers the flake root
+  lexicon-unit-tests> ✅ praxis-examples.test script example registers only its source check
+  lexicon-unit-tests> ✅ praxis-examples.test source scripts resolve relative to the root
+  lexicon-unit-tests> ✅ praxis-examples.test workflow example matches its documented result
+  lexicon-unit-tests> ✅ program.bindings.test canonical and legacy native bridges evaluate equally
+  lexicon-unit-tests> ✅ program.bindings.test constructing direct program is inert
+  lexicon-unit-tests> ✅ program.bindings.test den binding does not force host instantiation
+  lexicon-unit-tests> ✅ program.bindings.test den binding keeps the program output shape
+  lexicon-unit-tests> ✅ program.bindings.test den binding resolves one user file to one principal
+  lexicon-unit-tests> ✅ program.bindings.test den binding uses the adapter boundary
+  lexicon-unit-tests> ✅ program.bindings.test den file principals select one resolved user
+  lexicon-unit-tests> ✅ program.bindings.test den host principals enumerate possible authorities
+  lexicon-unit-tests> ✅ program.bindings.test den host user names enumerate without user bodies
+  lexicon-unit-tests> ✅ program.bindings.test den roster enumerates without user bodies
+  lexicon-unit-tests> ✅ program.bindings.test direct combined output is the required union
+  lexicon-unit-tests> ✅ program.bindings.test direct directory claims are rejected
+  lexicon-unit-tests> ✅ program.bindings.test direct directory expansion is preserved
+  lexicon-unit-tests> ✅ program.bindings.test direct directory rule claims are rejected
+  lexicon-unit-tests> ✅ program.bindings.test direct file claims are rejected
+  lexicon-unit-tests> ✅ program.bindings.test direct file defaults remain symlink and error
+  lexicon-unit-tests> ✅ program.bindings.test direct file lowers to one furnish declaration
+  lexicon-unit-tests> ✅ program.bindings.test direct file only is sparse
+  lexicon-unit-tests> ✅ program.bindings.test direct files require a user target
+  lexicon-unit-tests> ✅ program.bindings.test direct filesystem target needs host identity
+  lexicon-unit-tests> ✅ program.bindings.test direct imports only has no furnish runtime
+  lexicon-unit-tests> ✅ program.bindings.test direct imports only is sparse
+  lexicon-unit-tests> ✅ program.bindings.test direct nixos only is sparse and ordinary
+  lexicon-unit-tests> ✅ program.bindings.test direct package only has no furnish runtime
+  lexicon-unit-tests> ✅ program.bindings.test direct package only is sparse
+  lexicon-unit-tests> ✅ program.bindings.test direct specifications can be rebound to another target
+  lexicon-unit-tests> ✅ program.bindings.test direct target supplies authority root and namespace
+  lexicon-unit-tests> ✅ program.bindings.test direct theme backend still lowers files
+  lexicon-unit-tests> ✅ program.bindings.test direct theme claims are rejected
+  lexicon-unit-tests> ✅ program.bindings.test direct top level claims are rejected
+  lexicon-unit-tests> ✅ program.bindings.test direct user home defaults from name
+  lexicon-unit-tests> ✅ program.bindings.test invalid direct targets are rejected
+  lexicon-unit-tests> ✅ program.bindings.test invalid ownerships rosters are rejected
+  lexicon-unit-tests> ✅ program.bindings.test native and resource bridges keep separate configurations
+  lexicon-unit-tests> ✅ program.bindings.test native bridge preserves imports priorities and requested arguments
+  lexicon-unit-tests> ✅ program.bindings.test ownerships binding accepts a roster
+  lexicon-unit-tests> ✅ program.bindings.test ownerships exclusions and predicates select context
+  lexicon-unit-tests> ✅ program.bindings.test ownerships files only reach the selected user
+  lexicon-unit-tests> ✅ program.bindings.test ownerships global declarations apply
+  lexicon-unit-tests> ✅ program.bindings.test ownerships host and user claims select context
+  lexicon-unit-tests> ✅ program.bindings.test ownerships inactive malformed payloads stay lazy
+  lexicon-unit-tests> ✅ program.bindings.test ownerships system slices select canonical hosts
+  lexicon-unit-tests> ✅ program.bindings.test package only direct mode leaves file machinery lazy
+  lexicon-unit-tests> ✅ program.bindings.test public den export exists
+  lexicon-unit-tests> ✅ program.bindings.test public direct export exists
+  lexicon-unit-tests> ✅ program.bindings.test public ownerships export exists
+  lexicon-unit-tests> ✅ program.bindings.test public program export remains a function
+  lexicon-unit-tests> ✅ program.bindings.test public target normalization honors injected diagnostics and terminal recovery
+  lexicon-unit-tests> ✅ program.context.test context direct callbacks require user at declaration
+  lexicon-unit-tests> ✅ program.context.test context direct directory claims rejected
+  lexicon-unit-tests> ✅ program.context.test context direct directory rule claims rejected
+  lexicon-unit-tests> ✅ program.context.test context direct file claims rejected
+  lexicon-unit-tests> ✅ program.context.test context direct link claims rejected
+  lexicon-unit-tests> ✅ program.context.test context directory indices rules and theme reservations
+  lexicon-unit-tests> ✅ program.context.test context empty callbacks are inert
+  lexicon-unit-tests> ✅ program.context.test context home manager attr module
+  lexicon-unit-tests> ✅ program.context.test context home manager native module
+  lexicon-unit-tests> ✅ program.context.test context home manager skills service
+  lexicon-unit-tests> ✅ program.context.test context inactive callbacks stay lazy
+  lexicon-unit-tests> ✅ program.context.test context malformed results rejected
+  lexicon-unit-tests> ✅ program.context.test context outer and nested claims select
+  lexicon-unit-tests> ✅ program.context.test context owned home manager only is selected
+  lexicon-unit-tests> ✅ program.context.test context skills stays direct and sparse
+  lexicon-unit-tests> ✅ program.context.test context skills two host user targets
+  lexicon-unit-tests> ✅ program.default.test bounded output shapes
+  lexicon-unit-tests> ✅ program.default.test caelestia multi output destinations are exact
+  lexicon-unit-tests> ✅ program.default.test caelestia native fields are rejected
+  lexicon-unit-tests> ✅ program.default.test caelestia publishers are strict and transactionally ordered
+  lexicon-unit-tests> ✅ program.default.test caelestia templates lower to state publishers
+  lexicon-unit-tests> ✅ program.default.test combined shape
+  lexicon-unit-tests> ✅ program.default.test directory member sources stay path typed
+  lexicon-unit-tests> ✅ program.default.test directory members expand to files
+  lexicon-unit-tests> ✅ program.default.test directory subtrees are pruned
+  lexicon-unit-tests> ✅ program.default.test dms templates lower to independent fragments
+  lexicon-unit-tests> ✅ program.default.test duplicate shared shells are rejected
+  lexicon-unit-tests> ✅ program.default.test empty renderers are rejected
+  lexicon-unit-tests> ✅ program.default.test end4 pc templates lower to independent fragments
+  lexicon-unit-tests> ✅ program.default.test except user claims select everyone else
+  lexicon-unit-tests> ✅ program.default.test file only shape
+  lexicon-unit-tests> ✅ program.default.test illogical impulse templates lower to independent fragments
+  lexicon-unit-tests> ✅ program.default.test inactive directory stays lazy
+  lexicon-unit-tests> ✅ program.default.test inactive overrides do not fall back
+  lexicon-unit-tests> ✅ program.default.test inactive payload stays lazy
+  lexicon-unit-tests> ✅ program.default.test inactive theme adapter stays lazy
+  lexicon-unit-tests> ✅ program.default.test inherited renderer fields are supported
+  lexicon-unit-tests> ✅ program.default.test invalid conflict policies are rejected
+  lexicon-unit-tests> ✅ program.default.test noctalia sources are reserved
+  lexicon-unit-tests> ✅ program.default.test overlapping shared shells are rejected
+  lexicon-unit-tests> ✅ program.default.test overrides beneath excluded subtrees are rejected
+  lexicon-unit-tests> ✅ program.default.test package only shape
+  lexicon-unit-tests> ✅ program.default.test selected missing directory source is rejected
+  lexicon-unit-tests> ✅ program.default.test selected nondirectory source is rejected
+  lexicon-unit-tests> ✅ program.default.test selected payload is validated
+  lexicon-unit-tests> ✅ program.default.test self shared shells are rejected
+  lexicon-unit-tests> ✅ program.default.test shared registration emits all backends
+  lexicon-unit-tests> ✅ program.default.test shared registration is direction independent
+  lexicon-unit-tests> ✅ program.default.test suggestions use shared policy
+  lexicon-unit-tests> ✅ program.default.test theme sources beneath excluded subtrees are rejected
+  lexicon-unit-tests> ✅ program.default.test unknown dms fields are rejected
+  lexicon-unit-tests> ✅ program.default.test unknown file fields are rejected
+  lexicon-unit-tests> ✅ program.default.test unknown shared shells are rejected
+  lexicon-unit-tests> ✅ program.default.test user claims select the current user
+  lexicon-unit-tests> ✅ program.default.test writable overrides are first class
+  lexicon-unit-tests> ✅ program.directories.test directory native and pure projections agree
+  lexicon-unit-tests> ✅ program.directories.test directory native diagnostics retain order and origin
+  lexicon-unit-tests> ✅ program.directories.test directory native expansion preserves context and opaque lifecycle values
+  lexicon-unit-tests> ✅ program.directories.test directory native expansion preserves path sources
+  lexicon-unit-tests> ✅ program.directories.test directory native expansion prunes before recursion
+  lexicon-unit-tests> ✅ program.directories.test directory native expansion reserves inactive overrides
+  lexicon-unit-tests> ✅ program.directories.test directory native failure suppresses dependent files
+  lexicon-unit-tests> ✅ program.directories.test directory prefix exclusion keeps short circuiting
+  lexicon-unit-tests> ✅ program.links.test absent external targets compile without filesystem access
+  lexicon-unit-tests> ✅ program.links.test direct external links reject ownership claims
+  lexicon-unit-tests> ✅ program.links.test external link manifests carry no source context
+  lexicon-unit-tests> ✅ program.links.test external links emit the current manifest schema
+  lexicon-unit-tests> ✅ program.links.test external links reject relative and nonnormal targets
+  lexicon-unit-tests> ✅ program.links.test external links reject source path values
+  lexicon-unit-tests> ✅ program.links.test external links reject store context
+  lexicon-unit-tests> ✅ program.links.test external links reject unsupported representations
+  lexicon-unit-tests> ✅ program.links.test external links remain literal
+  lexicon-unit-tests> ✅ program.links.test external links share file collision detection
+  lexicon-unit-tests> ✅ program.links.test external links use the selected home
+  lexicon-unit-tests> ✅ program.links.test inactive external targets stay lazy
+  lexicon-unit-tests> ✅ program.links.test owned external links select the current user
+  lexicon-unit-tests> ✅ program.lucid.test lucid config does not collide with dms
+  lexicon-unit-tests> ✅ program.lucid.test lucid native fields and subids survive
+  lexicon-unit-tests> ✅ program.lucid.test lucid registrations aggregate across programs
+  lexicon-unit-tests> ✅ program.lucid.test lucid registrations use managed home and reload
+  lexicon-unit-tests> ✅ program.lucid.test lucid shared templates use writable seeds
+  lexicon-unit-tests> ✅ program.serpantinum.test serpantinum config does not collide with dms or lucid
+  lexicon-unit-tests> ✅ program.serpantinum.test serpantinum native fields and subids survive
+  lexicon-unit-tests> ✅ program.serpantinum.test serpantinum registrations aggregate across programs
+  lexicon-unit-tests> ✅ program.serpantinum.test serpantinum registrations use managed home and reload
+  lexicon-unit-tests> ✅ program.serpantinum.test serpantinum shared templates use writable seeds
+  lexicon-unit-tests> ✅ program.theme-effects.test canonical and legacy theme files are equivalent
+  lexicon-unit-tests> ✅ program.theme-effects.test matugen aggregates blocks with original principal
+  lexicon-unit-tests> ✅ program.theme-effects.test matugen generated fields and reload override native
+  lexicon-unit-tests> ✅ program.theme-effects.test matugen rejects cross block registration collisions
+  lexicon-unit-tests> ✅ program.theme-effects.test recovering theme checked retains each group diagnostics
+  lexicon-unit-tests> ✅ program.theme-effects.test template defaults retain runtime wins
+  lexicon-unit-tests> ✅ program.theme-effects.test theme file transport preserves opaque sources and generators
+  lexicon-unit-tests> ✅ program-examples.test a claim beside an empty template list stays inert
+  lexicon-unit-tests> ✅ program-examples.test a claim beside templates selects the whole theme through ownerships
+  lexicon-unit-tests> ✅ program-examples.test den boundary
+  lexicon-unit-tests> ✅ program-examples.test direct claims rejected
+  lexicon-unit-tests> ✅ program-examples.test empty template list is inert
+  lexicon-unit-tests> ✅ program-examples.test file automatic
+  lexicon-unit-tests> ✅ program-examples.test file target required
+  lexicon-unit-tests> ✅ program-examples.test minimal
+  lexicon-unit-tests> ✅ program-examples.test ordinary nixos opaque
+  lexicon-unit-tests> ✅ program-examples.test ownership selection
+  lexicon-unit-tests> ✅ program-examples.test predictable edit
+  lexicon-unit-tests> ✅ program-examples.test sparse empty
+  lexicon-unit-tests> ✅ program-examples.test sparse imports
+  lexicon-unit-tests> ✅ program-examples.test sparse nixos
+  lexicon-unit-tests> ✅ program-examples.test sparse package
+  lexicon-unit-tests> ✅ program-examples.test studio home module graph
+  lexicon-unit-tests> ✅ registry.test alias lookup
+  lexicon-unit-tests> ✅ registry.test canonical ids
+  lexicon-unit-tests> ✅ registry.test check reports every hostless host instead of stopping at the first
+  lexicon-unit-tests> ✅ registry.test check validates complete tables
+  lexicon-unit-tests> ✅ registry.test declared system wins
+  lexicon-unit-tests> ✅ registry.test default home
+  lexicon-unit-tests> ✅ registry.test default system applies
+  lexicon-unit-tests> ✅ registry.test den dimensions
+  lexicon-unit-tests> ✅ registry.test den homes default
+  lexicon-unit-tests> ✅ registry.test den inventory
+  lexicon-unit-tests> ✅ registry.test den origin
+  lexicon-unit-tests> ✅ registry.test dimension default applies
+  lexicon-unit-tests> ✅ registry.test dimension query
+  lexicon-unit-tests> ✅ registry.test dimension value wins
+  lexicon-unit-tests> ✅ registry.test empty membership query keeps host lazy
+  lexicon-unit-tests> ✅ registry.test empty registry
+  lexicon-unit-tests> ✅ registry.test empty system query keeps selector lazy
+  lexicon-unit-tests> ✅ registry.test everything checks
+  lexicon-unit-tests> ✅ registry.test exclusion removes
+  lexicon-unit-tests> ✅ registry.test exclusion stays unavailable
+  lexicon-unit-tests> ✅ registry.test home lookup accepts aliases and id
+  lexicon-unit-tests> ✅ registry.test host block home
+  lexicon-unit-tests> ✅ registry.test hosts for known empty user
+  lexicon-unit-tests> ✅ registry.test knows without throwing
+  lexicon-unit-tests> ✅ registry.test layer adds
+  lexicon-unit-tests> ✅ registry.test layer merges
+  lexicon-unit-tests> ✅ registry.test membership diagnostic retains public projection
+  lexicon-unit-tests> ✅ registry.test membership from host block
+  lexicon-unit-tests> ✅ registry.test membership from top level
+  lexicon-unit-tests> ✅ registry.test membership queries
+  lexicon-unit-tests> ✅ registry.test membership rejects known empty host
+  lexicon-unit-tests> ✅ registry.test native origin
+  lexicon-unit-tests> ✅ registry.test non string system query is empty
+  lexicon-unit-tests> ✅ registry.test per host home
+  lexicon-unit-tests> ✅ registry.test rejects alias conflicts
+  lexicon-unit-tests> ✅ registry.test rejects conflicting user ids
+  lexicon-unit-tests> ✅ registry.test rejects host without system
+  lexicon-unit-tests> ✅ registry.test rejects missing required dimension
+  lexicon-unit-tests> ✅ registry.test rejects missing users
+  lexicon-unit-tests> ✅ registry.test rejects stray exclusion
+  lexicon-unit-tests> ✅ registry.test rejects string root
+  lexicon-unit-tests> ✅ registry.test rejects undeclared dimension value
+  lexicon-unit-tests> ✅ registry.test rejects unknown dimension
+  lexicon-unit-tests> ✅ registry.test rejects unknown field
+  lexicon-unit-tests> ✅ registry.test rejects unknown host lookup
+  lexicon-unit-tests> ✅ registry.test rejects unknown user host
+  lexicon-unit-tests> ✅ registry.test rejects unknown user lookup
+  lexicon-unit-tests> ✅ registry.test rejects user off host
+  lexicon-unit-tests> ✅ registry.test root does not demand fleet
+  lexicon-unit-tests> ✅ registry.test root does not validate tables
+  lexicon-unit-tests> ✅ registry.test roots stay distinct
+  lexicon-unit-tests> ✅ registry.test selected context
+  lexicon-unit-tests> ✅ registry.test summary is plain data
+  lexicon-unit-tests> ✅ registry.test system query
+  lexicon-unit-tests> ✅ registry.test system query preserves name order
+  lexicon-unit-tests> ✅ registry.test systems sorted
+  lexicon-unit-tests> ✅ registry.test unknown host diagnostic retains public projection
+  lexicon-unit-tests> ✅ registry.test unknown system has no hosts
+  lexicon-unit-tests> ✅ registry.test user alias lookup
+  lexicon-unit-tests> ✅ registry.test user id lookup
+  lexicon-unit-tests> ✅ registry.test users on alias preserves name order
+  lexicon-unit-tests> ✅ registry.test users on known empty host
+  lexicon-unit-tests> ✅ toml.encoding.test constructor kind is closed
+  lexicon-unit-tests> ✅ toml.encoding.test constructor kind is required
+  lexicon-unit-tests> ✅ toml.encoding.test constructor precedes derivation classification
+  lexicon-unit-tests> ✅ toml.encoding.test constructor unknown field
+  lexicon-unit-tests> ✅ toml.encoding.test constructor value is required
+  lexicon-unit-tests> ✅ toml.encoding.test diagnostic construction and path injection survive effects
+  lexicon-unit-tests> ✅ toml.encoding.test errors accumulate with structured paths
+  lexicon-unit-tests> ✅ toml.encoding.test inline rejects derivations
+  lexicon-unit-tests> ✅ toml.encoding.test invalid result has no value
+  lexicon-unit-tests> ✅ toml.encoding.test literal requires text
+  lexicon-unit-tests> ✅ toml.encoding.test native transport keeps opaque fields and context
+  lexicon-unit-tests> ✅ toml.encoding.test nested document is rejected
+  lexicon-unit-tests> ✅ toml.encoding.test ordinary marker key stays data
+  lexicon-unit-tests> ✅ toml.encoding.test raw syntax is deferred
+  lexicon-unit-tests> ✅ toml.encoding.test root must be document
+  lexicon-unit-tests> ✅ toml.encoding.test source identity and context pass through
+  lexicon-unit-tests> ✅ toml.encoding.test store context survives encoding
+  lexicon-unit-tests> ✅ toml.encoding.test table rejection precedes derivation metadata
+  lexicon-unit-tests> ✅ toml.encoding.test tables rejects constructors
+  lexicon-unit-tests> ✅ toml.encoding.test tables requires list
+  lexicon-unit-tests> ✅ toml.render.test render does no build-time validation
+  lexicon-unit-tests> ✅ toml.render.test render keeps store context
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the arrays fixture
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the comments fixture
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the context fixture
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the empty fixture
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the keys fixture
+  lexicon-unit-tests> ✅ toml.render.test render matches what generate writes for the numbers fixture
+  lexicon-unit-tests> ✅ toml.render.test render reports encoder errors like generate
+  lexicon-unit-tests> ✅ toml.rendering.test automatic and explicit tables
+  lexicon-unit-tests> ✅ toml.rendering.test comments end before separators
+  lexicon-unit-tests> ✅ toml.rendering.test context survives both results
+  lexicon-unit-tests> ✅ toml.rendering.test del is escaped
+  lexicon-unit-tests> ✅ toml.rendering.test document is byte preserved
+  lexicon-unit-tests> ✅ toml.rendering.test document metadata is opaque
+  lexicon-unit-tests> ✅ toml.rendering.test each component is quoted
+  lexicon-unit-tests> ✅ toml.rendering.test empty root
+  lexicon-unit-tests> ✅ toml.rendering.test float retains type and precision
+  lexicon-unit-tests> ✅ toml.rendering.test inline does not open table headers
+  lexicon-unit-tests> ✅ toml.rendering.test malformed toml stays unvalidated
+  lexicon-unit-tests> ✅ toml.rendering.test metadata does not force scalar payload
+  lexicon-unit-tests> ✅ toml.rendering.test metadata retains original order and paths
+  lexicon-unit-tests> ✅ toml.rendering.test metadata retains original text
+  lexicon-unit-tests> ✅ toml.rendering.test raw spelling survives
+  lexicon-unit-tests> ✅ toml.rendering.test scalar keys are sorted
+  lexicon-unit-tests> 
+  lexicon-unit-tests> 🎉 1279/1279 successful
+  lexicon-observation-events> warning: you don't have Internet access; disabling some network-dependent features
+  lexicon-observation-events> {"compiler":5,"effects":13,"ownerships":8,"praxis":14,"resources":4,"terminals":29}
+  building '/nix/store/iv6asx7k4009k6gnpk1xxn16y2qda0xr-praxis.drv'...
+  building '/nix/store/ihp7dinc841p8pb8alj04n6qxz5g04km-closure-info.drv'...
+  closure-info> structuredAttrs is enabled
+  building '/nix/store/8r41mx4vf08xhynbpb15dd05b6q23gy0-lexicon-consumer-checks.drv'...
+  building '/nix/store/lxhzhdca8q9l8ss1xv8506cfza0a82h5-praxis-installed-consumer.drv'...
+  praxis-installed-consumer> Praxis runs the commands a project's flake.nix exposes as its praxis output.
+  praxis-installed-consumer> praxis: no project found; expected a flake.nix exposing a praxis output in the current directory or a parent
+  praxis-installed-consumer> check
+  praxis-installed-consumer>   praxis [RUNNER OPTIONS] NAME [ARGS...]
+  praxis-installed-consumer> warning: you don't have Internet access; disabling some network-dependent features
+  praxis-installed-consumer> warning: creating lock file "/build/inline/flake.lock": 98mlyz7r48mkjnx-source" to the store
+  praxis-installed-consumer> • Added input 'nixpkgs':
+  praxis-installed-consumer>     'path:/nix/store/l5zcfjfqny9ixcc4ss5jg2knhc5537ik-dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  praxis-installed-consumer> warning: you don't have Internet access; disabling some network-dependent features
+  praxis-installed-consumer> true
+  praxis-installed-consumer> check
+  praxis-installed-consumer>   praxis [RUNNER OPTIONS] NAME [ARGS...]
+  praxis-installed-consumer> warning: you don't have Internet access; disabling some network-dependent features
+  praxis-installed-consumer> warning: creating lock file "/build/imported/flake.lock": mlyz7r48mkjnx-source" to the store
+  praxis-installed-consumer> • Added input 'nixpkgs':
+  praxis-installed-consumer>     'path:/nix/store/l5zcfjfqny9ixcc4ss5jg2knhc5537ik-dgl0m61l12l94psyr98mlyz7r48mkjnx-source?lastModified=1&narHash=sha256-hLD4l3QOGBQhkVp3mQ2lJ/YbEi99qUgKapb40KovZ88%3D' (1970-01-01)
+  praxis-installed-consumer> warning: you don't have Internet access; disabling some network-dependent features
+  praxis-installed-consumer> true
+  praxis-installed-consumer> praxis: /build/parent/child/flake.nix does not expose a praxis output
+  praxis-installed-consumer> praxis: could not prepare /build/broken
+  praxis-installed-consumer> praxis: could not prepare /build/broken
+  praxis-installed-consumer>          - [praxis/args-shape] commands.bad.steps[1].args: $[0]: expected string; got set
+  praxis-installed-consumer>          - [praxis/args-shape] commands.bad.steps[1].args: $[0]: expected record containing only param; got set
+  building '/nix/store/qnir177w71hq37b9fqlwigkvnbvp3cbx-lexicon-consumer-checks.drv'...
+  all checks passed!
+  warning: The check omitted these incompatible systems: aarch64-linux
+  Use '--all-systems' to check all.
+  succeeded [2/3] nix (557.02s)
+  running [3/3] nix-unit (0.00s)
+  warning: unknown experimental feature 'pipe-operator'
+  Using saved setting for 'extra-experimental-features = pipe-operators' from ~/.local/share/nix/trusted-settings.json.
+  trace: compiler metadata
+  trace: compiler metadata
+  trace: compiler callback
+  trace: compiler parse 0
+  trace: compiler metadata
+  trace: compiler parse 1
+  trace: compiler metadata
+  trace: compiler lowering
+  trace: compiler preparation root
+  trace: compiler preparation 0
+  trace: compiler normalize
+  trace: compiler preparation 1
+  trace: compiler normalize
+  trace: compiler metadata
+  trace: compiler callback
+  trace: compiler parse 0
+  trace: compiler metadata
+  trace: compiler parse 1
+  trace: compiler metadata
+  trace: compiler lowering
+  trace: compiler preparation 0
+  trace: compiler normalize
+  trace: compiler preparation 1
+  trace: compiler normalize
+  trace: compiler metadata
+  trace: compiler metadata
+  trace: compiler parse 0
+  trace: compiler metadata
+  trace: compiler parse 1
+  trace: compiler metadata
+  trace: compiler lowering
+  trace: compiler preparation root
+  trace: compiler preparation 0
+  trace: compiler normalize
+  trace: compiler preparation 1
+  trace: compiler normalize
+  trace: compiler metadata
+  trace: compiler parse 0
+  trace: compiler metadata
+  trace: compiler parse 1
+  trace: compiler metadata
+  trace: compiler lowering
+  trace: compiler normalize
+  trace: compiler normalize
+  trace: registration extension
+  trace: registration parse
+  trace: registration normalize
+  trace: registration default
+  trace: resource-effects inventory
+  trace: effects-contract parse
+  trace: effects-contract normalize
+  trace: effects-contract shared continuation
+  trace: effects-contract code
+  trace: resource-effects materialize
+  trace: resource-effects inventory
+  trace: resource-effects materialize
+  trace: terminal provider
+  trace: terminal fail
+  trace: terminal fail
+  trace: terminal fail
+  trace: terminal finish
+  trace: terminal failOne
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal failOne
+  trace: terminal fail
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal checked
+  trace: terminal fail
+  trace: terminal fail
+  trace: terminal failOne
+  trace: terminal finish
+  trace: terminal checked
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal checked
+  trace: terminal checked
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal finish
+  trace: terminal finish
+  trace: fleet registration
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet list
+  trace: fleet list
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet scalar
+  trace: fleet scalar
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet schema selector
+  trace: fleet registration
+  trace: fleet schema unnamed
+  trace: fleet schema unnamed
+  trace: fleet registration
+  trace: fleet schema unnamed
+  trace: fleet schema parent
+  trace: fleet schema child
+  trace: fleet predicate
+  trace: fleet predicate
+  trace: fleet schema parent
+  trace: fleet schema child
+  trace: fleet predicate
+  trace: fleet predicate
+  trace: fleet schema parent
+  trace: fleet schema child
+  trace: fleet predicate
+  trace: fleet predicate
+  trace: fleet predicate
+  trace: fleet predicate
+  trace: fleet schema a
+  trace: fleet schema b
+  trace: fleet registration
+  trace: fleet one a
+  trace: fleet two a
+  trace: fleet one b
+  trace: fleet two b
+  trace: fleet survivors
+  trace: fleet tree
+  trace: fleet survivors
+  trace: fleet registration
+  trace: fleet survivors
+  trace: fleet tree
+  trace: fleet schema a
+  trace: fleet schema b
+  trace: fleet one a
+  trace: fleet one b
+  trace: fleet two a
+  trace: fleet two b
+  trace: praxis factory
+  trace: praxis factory
+  trace: praxis reference probe
+  trace: praxis check
+  trace: praxis check
+  trace: praxis check
+  trace: praxis normalize
+  trace: praxis predicate
+  trace: praxis predicate
+  trace: praxis predicate
+  trace: praxis predicate
+  trace: praxis reference envelope
+  trace: praxis reference envelope
+  trace: praxis reference envelope
+  trace: praxis reference envelope
+  trace: praxis code
+  succeeded [3/3] nix-unit (15.38s)
+  3 succeeded, 0 skipped, 0 failed, 0 not run (579.11s)
+✓ Running lexicon:gate in 586s
+{}
