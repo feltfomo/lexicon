@@ -7,7 +7,8 @@
 }:
 let
   inherit (spec) pkgs name;
-  inherit (fields) diagnostic validation finish;
+  inherit (fields) diagnostic effects;
+  finish = fields.finishChecked;
   package = if spec.wrappers then compiled.package else compiled.cli;
   packages = {
     ${name} = package;
@@ -48,23 +49,23 @@ let
         if !exists then
           [ (diagnostic "praxis.checks" "check-name" "unknown selected command '${command}'") ]
         else
-          validation.collect [
-            (validation.optional interactive (
+          builtins.concatLists [
+            (lib.optional interactive (
               diagnostic "checks.${command}" "interactive-check"
                 "flake checks cannot contain prompts, terminal requirements or runtime parameter sources"
             ))
-            (validation.optional fixed (
+            (lib.optional fixed (
               diagnostic "checks.${command}" "check-directory"
                 "flake checks cannot depend on a fixed runtime directory"
             ))
-            (validation.optional (requiresSource && spec.root == null) (
+            (lib.optional (requiresSource && spec.root == null) (
               diagnostic "checks.${command}" "check-root" "this flake check needs root = ./. for its source files"
             ))
           ];
       file = pkgs.writeText "praxis-check-${command}.json" (builtins.toJSON manifest);
     in
     finish (
-      validation.fromDiagnostics diagnostics (
+      effects.fromDiagnostics diagnostics (
         pkgs.runCommand "praxis-check-${command}" { } ''
           mkdir source
           cd source

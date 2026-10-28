@@ -6,7 +6,8 @@
   spec,
 }:
 let
-  inherit (fields) diagnostic finish;
+  inherit (fields) diagnostic;
+  finish = result: fields.finishChecked (fields.effects.fromAxiom result);
   commands =
     spec.commands
     // lib.optionalAttrs spec.check {
@@ -123,7 +124,7 @@ let
       registrations = resolved;
       diagnosticsFor =
         entry:
-        fields.validation.optional (!fields.name entry.name || entry.name == spec.name) (
+        lib.optional (!fields.name entry.name || entry.name == spec.name) (
           diagnostic "${entry.kind}s.${entry.name}" "command-name"
             "names must be command-style and cannot shadow the dispatcher '${spec.name}'"
         );

@@ -17,10 +17,10 @@
 
   group =
     name: declarations: lower:
-    fields.validation.fromDiagnostics
+    fields.effects.fromDiagnostics
       (lib.concatMap (
         child:
-        fields.validation.optional (!fields.name child) (
+        lib.optional (!fields.name child) (
           fields.diagnostic "commands.${name}.${child}" "command-name"
             "subcommand names must be command-style names"
         )

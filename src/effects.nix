@@ -77,51 +77,92 @@ let
     else
       fx.bind (emitAll diagnostics) (_: fx.pure { _con = "Invalid"; });
   run = result: interpret (fromAxiom result);
-  eliminate =
-    fail: succeed: report:
+  checkedFromReport =
+    report:
     let
-      diagnostics = map (diagnostic: forceThunk diagnostic.context) report.diagnostics;
+      inherit (report) outcome;
+      failure = message: if report.diagnostics == [ ] then throw message else { _con = "Invalid"; };
     in
-    if report.diagnostics != [ ] then
-      fail diagnostics
-    else if report.outcome._con == "Success" then
+    if outcome._con == "Failure" then
+      if builtins.attrNames outcome != [ "_con" ] then
+        throw "lexicon: impossible failure constructor"
+      else
+        failure "lexicon: failed validation without diagnostics"
+    else if outcome._con == "Success" then
       let
-        checked = forceThunk report.outcome.value;
+        checked = forceThunk outcome.value;
       in
-      if checked._con == "Valid" then
-        succeed (forceThunk checked.value)
+      if
+        builtins.attrNames outcome != [
+          "_con"
+          "value"
+        ]
+      then
+        throw "lexicon: impossible success constructor"
       else if checked._con == "Invalid" then
-        throw "lexicon: invalid validation without diagnostics"
+        if builtins.attrNames checked != [ "_con" ] then
+          throw "lexicon: impossible invalid constructor"
+        else
+          failure "lexicon: invalid validation without diagnostics"
+      else if checked._con == "Valid" then
+        if
+          builtins.attrNames checked != [
+            "_con"
+            "value"
+          ]
+        then
+          throw "lexicon: impossible valid constructor"
+        else
+          checked
       else
         throw "lexicon: unknown checked constructor"
-    else if report.outcome._con == "Failure" then
-      throw "lexicon: failed validation without diagnostics"
     else
       throw "lexicon: unknown outcome constructor";
+  eliminateWith =
+    project: fail: succeed: report:
+    let
+      checked = checkedFromReport report;
+    in
+    if builtins.seq checked (report.diagnostics != [ ]) then
+      let
+        diagnostics = project report.diagnostics;
+      in
+      builtins.seq diagnostics (fail diagnostics)
+    else
+      succeed (forceThunk checked.value);
+  eliminate = eliminateWith (map (diagnostic: forceThunk diagnostic.context));
+  # settle each mapped envelope before the next callback without demanding presentation
+  mappedResultFromReport =
+    mapper:
+    eliminateWith (
+      diagnostics:
+      let
+        mapped = map (
+          diagnostic:
+          let
+            retained = mapper diagnostic;
+            normalized = toDiagnostic retained;
+          in
+          builtins.seq normalized.code (
+            builtins.seq normalized.severity (builtins.seq (native.diagnostic.make normalized) retained)
+          )
+        ) diagnostics;
+        settled = builtins.foldl' (unit: diagnostic: builtins.seq diagnostic unit) null mapped;
+      in
+      builtins.seq settled mapped
+    ) axiom.validation.failure axiom.validation.success;
   finishComputation = fail: computation: eliminate fail (value: value) (interpret computation);
   # static checked validations emit diagnostics without aborting
   share =
     computation:
     let
       report = interpret computation;
-      checked =
-        if report.outcome._con == "Failure" then
-          { _con = "Invalid"; }
-        else if report.outcome._con == "Success" then
-          let
-            value = forceThunk report.outcome.value;
-          in
-          if value._con == "Valid" || value._con == "Invalid" then
-            value
-          else
-            throw "lexicon: unknown checked constructor"
-        else
-          throw "lexicon: unknown outcome constructor";
+      checked = checkedFromReport report;
       emissions = builtins.foldl' (
         previous: diagnostic: fx.bind previous (_: native.report.emit diagnostic)
       ) (fx.pure null) report.diagnostics;
     in
-    fx.bind emissions (_: fx.pure checked);
+    builtins.seq checked (fx.bind emissions (_: fx.pure checked));
   resultOf = computation: resultFromReport (interpret computation);
   resultFromReport = eliminate axiom.validation.failure axiom.validation.success;
   finishReport = fail: eliminate fail (value: value);
@@ -140,6 +181,7 @@ in
     interpret
     resultOf
     resultFromReport
+    mappedResultFromReport
     finishReport
     finishComputation
     share

@@ -4,8 +4,10 @@ The remaining migration contracts are published as the
 [spec](nix-effects/spec.md), [architecture](nix-effects/architecture.md),
 [effort ownership and candidate custody](nix-effects/efforts.md), and
 [capabilities and acceptance evidence](nix-effects/capabilities.md).
-They distinguish delivered behavior from uncommitted Praxis work and blocked
-acceptance.
+They distinguish delivered behavior, the functionally qualified uncommitted Praxis
+candidate, and performance acceptance deferred in full to a separate future
+user-directed audit. Failed/missing cost evidence no longer blocks migration review
+or architectural acceptance; no audit execution or performance pass is implied.
 
 `src/dependencies.nix` initializes one corrected nix-effects value with the selected
 library, then native Krisis with `{ lib, fx }`. The public factories, fixture
@@ -13,6 +15,10 @@ assembly and installed generic evaluator use this owner. The generic evaluator
 embeds the selected source exports so it doesn't resolve another dependency graph
 inside its isolated store. Its evaluator remains the selected nixpkgs `nix`.
 The development shell now selects that same package explicitly.
+Krisis is pinned to `c48e40834fe90299096d2988433b17f650c30c8a`, which shares
+lazy checker configuration. Its qualified Fx source, patch and provenance are
+unchanged. The generic evaluator embeds that Krisis source and its qualified Fx
+export through the same dependency owner.
 
 `src/effects.nix` validates the retained Axiom result envelope, emits diagnostics in
 order, and produces an explicit Checked value. Input values, diagnostic recovery
@@ -92,8 +98,8 @@ the native inspector. Native reports still obtain their summaries from Krisis.
 | Capability | Production owners | Disposition |
 | --- | --- | --- |
 | `schema.compile` | Declaration reports/definitions, Ownerships axes/surface/merge, Registry fields, Furnish core, TOML encoding, theme, Praxis fields | Retain the public field interpreter and its result bridge |
-| `validation` | Retained schema/parse callbacks, compatibility result envelopes and unmigrated Praxis orchestration | Keep callback result construction at its boundary; registered compiler, resource plans, directory expansion, theme preparation, Furnish, Ownerships, Registry and TOML encoder orchestration use native `all`/`andThen` and Fx |
-| `types` | Praxis schemas and fields | Retain Axiom type objects and `validateType` adaptation |
+| `validation` | Retained schema/parse callbacks, compatibility result envelopes and lazy Praxis graph-node projections | Keep callback result construction at its boundary; registered compiler, resource plans, directory expansion, theme preparation, Furnish, Ownerships, Registry, Praxis and TOML encoder orchestration use native `all`/`andThen` and Fx |
+| `types` | External old-facing type callbacks only | Praxis uses qualified native types; retain `validateType` for the published extension/override boundary |
 | `registry.compile` | Declaration registration, Ownerships descriptors/relations, Registry core, directory reservations, Furnish collisions/executors, theme renderers, Praxis ownership | Retain collision validation before indexing; migrated owners adapt each result once at their operation boundary |
 | `phases.compile` | Ownerships engine | Retain closed view/callback validation and registration order; share one prepared registration |
 | `requirements.evaluate`, `requirements.observe` | Ownerships context requirements and relations, Furnish executors, theme capabilities and runtime | Retain requirement evaluation; no diagnostic substitution |
@@ -138,3 +144,85 @@ checks through native `all` and `andThen`. Its public `document` projection reta
 the Axiom result envelope; generation uses the computation directly and preserves
 injected reporter `finish` recovery. The pure renderer consumes the typed result
 without effects. Raw TOML validation and retained-syntax merge remain native.
+
+## Praxis boundaries
+
+Praxis projects ownership before normalization. Public projection, command/task
+lowering, parameter ordering, prompt validation and schema orchestration compose
+native Checked computations. Literal argv bypasses parameter and interaction
+construction. Each demanded command has one lazy interpreted result, shared by
+namespace lookup, selected reachability, manifests and summaries. Namespace
+children use the same boundary. Graph traversal stays pure and reached-only;
+its final diagnostics enter one Checked computation per selection.
+
+`src/praxis/type-checks.nix` owns the finite native blame mapping for scalar,
+list, nullable and reference checks. It preserves old codes, messages, paths,
+reasons and ordered union failures. Reference checking validates the outer
+attribute names before `param`. The untagged string-or-reference choice is a
+Praxis operation; native Either accepts tagged values and doesn't implement that
+public input contract. Native validation never receives an Axiom type object.
+Type descriptions are shared outside the code application. The internal
+`fields.typeChecks code` factory owns native checker partial applications for each
+fixed code/type combination. Schema and parameter owners bind their configured
+operations once. Subject, authored path and input enter each value application;
+validation, scoped failure state and diagnostic adaptation remain per call.
+Constructing unused configured operations leaves code and values lazy. There is
+no input/result cache. Successful native validation leaves unused locations and
+opaque payloads deferred.
+`effects.mappedResultFromReport` projects a completed native Checked report
+through the Praxis blame mapper into a retained parse result. It shares explicit
+Outcome/Checked elimination with recovery and `share`. Unknown or impossible
+constructors and invalid/failed reports without diagnostics are rejected. Only
+qualified carriers recover successful values. `resultFromReport` still recovers
+original diagnostics from their thunked context.
+
+Mapped diagnostics use the existing compatibility normalization. The bridge
+demands code, then severity, then public native `diagnostic.make` for each envelope
+before the next diagnostic or check. It returns the original mapped diagnostic;
+presentation and arbitrary context stay deferred. Factory and mapper exceptions
+aren't caught. References compose native shape and dependent body checking with
+`validation.andThen` and project once. Arguments check their outer list first,
+keep strings on the fast path and share one reference probe per nonstring member.
+A rejected reference's envelope precedes string fallback demand, while returned
+diagnostics keep string-before-reference order. Member fragments concatenate
+once in authored order. Accepted arguments retain their original values.
+
+The callback-only adapted diagnostic computation and reference probe/replay path
+are removed. General `fromDiagnostics`, `fromAxiom`, `resultOf` and `share` remain
+for their other consumers. No handler state, report format or result cache is
+introduced. Native reports are projected before retained schema parse callbacks.
+Argument, parameter and environment values remain opaque across report transport.
+
+Praxis retains Axiom schema interpretation in `fields.nix` and collision
+registration in `ownership.nix`. Its graph-node result projections use the shared
+result adapter. Public terminal calls still route through `finishWithReporter`,
+including injected `finish` recovery. Summaries read selected diagnostics without
+building packages or demanding runtime package paths.
+
+The residual result operations in Registry field parsers and grouped-link list
+parsers belong to Axiom schema callback contracts. Registry traverses named
+nested records with lexical diagnostic order and explicit null host exclusions;
+grouped links preserve authored list indexes and duplicate diagnostics. Their
+outer application orchestration already uses native Checked computations. The
+compatibility owners retain schema-result construction, diagnostic formatting,
+inspection control errors and external type callbacks. Context wrappers preserve
+injected error-context operations and authored exception locations. These are
+public compatibility boundaries, not separate effect instances.
+
+Pure evaluation is supported with the selected nixpkgs Nix evaluator and
+`pipe-operators`, with IFD disabled. Cross-system public-factory evaluation does
+not establish native execution on that system. Operational proof is native
+x86_64-linux. TOML parsing and retained-syntax merging still use TOML Kit; its
+renderer is pure Nix. Coordinator and Praxis runtime protocols remain with their
+existing native owners.
+
+The final residual capability reconciliation retains these owners and removes no
+protected callback or override. Registry's nested-result parsers and grouped-link
+list parsing remain Axiom schema callback work; their outer orchestration is
+native. Compiler scope preparation still consumes `share` in
+`src/declarations/default.nix`. Praxis shares lazy interpreted command/selection
+results rather than invoking that replay helper. The callback-only adapted report
+and reference replay have no remaining production path in `type-checks.nix`.
+Unmeasured scan/index or graph/preparation suggestions are not functional findings
+and authorize no rewrite, cache or speed claim. This reconciliation changes no
+production source or dependency.

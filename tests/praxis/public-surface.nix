@@ -297,10 +297,12 @@ let
     optional-metadata = (manifest (one literal)).description == "";
     primitive-never-forces-optional-machinery =
       builtins.deepSeq
-        (primitive "tool" {
-          kind = "command";
-          declaration = literal;
-        }).value
+        (krisis.effects.resultOf (
+          primitive "tool" {
+            kind = "command";
+            declaration = literal;
+          }
+        )).value
         true;
     command-context-applies-once =
       let

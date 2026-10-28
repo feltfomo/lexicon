@@ -26,6 +26,7 @@ def main():
         for size in args.sizes:
             records = {"baseline": [], "candidate": []}
             digest = None
+            identities = {}
             schedule = [("warm", "baseline"), ("warm", "candidate")]
             for pair in range(3):
                 order = ("baseline", "candidate") if pair % 2 == 0 else ("candidate", "baseline")
@@ -43,7 +44,12 @@ def main():
                 record = json.loads((target / "record.json").read_text())
                 if not record["admitted"] or not record["process_released"]:
                     raise RuntimeError(f"unusable sample {target}")
-                if digest is None:
+                if component == "toml":
+                    identity = json.loads((target / "stdout").read_text())["value"]
+                    if side in identities and identities[side] != identity:
+                        raise RuntimeError(f"derivation identity changed within source {target}")
+                    identities[side] = identity
+                elif digest is None:
                     digest = record["sha256"]
                 elif digest != record["sha256"]:
                     raise RuntimeError(f"projection mismatch {target}")
@@ -57,6 +63,8 @@ def main():
             baseline, candidate = medians["baseline"], medians["candidate"]
             comparison = {
                 "component": component, "size": size, "medians": medians,
+                "derivation_identities": identities,
+                "equal_output_required": component != "toml",
                 "wall_within_noise": candidate["wall_seconds"] <= baseline["wall_seconds"] * 1.35 + 0.03,
                 "rss_within_noise": candidate["peak_rss_kib"] <= baseline["peak_rss_kib"] * 1.25 + 8192,
             }

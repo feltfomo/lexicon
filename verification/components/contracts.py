@@ -208,7 +208,7 @@ def main():
     inputs = parser.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--source")
     inputs.add_argument("--setup", type=Path)
-    parser.add_argument("--family", choices=["ownerships", "compiler", "resources", "terminals"], default="ownerships")
+    parser.add_argument("--family", choices=["ownerships", "compiler", "resources", "terminals", "praxis", "effects"], default="ownerships")
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--output", type=Path, required=True)
@@ -289,6 +289,52 @@ def main():
         expected, exception_texts, terminal_events = terminal_expectations()
         callbacks = {}
         exception_markers = {name: value for name, value in exception_texts.items()}
+    exception_events = {}
+    exact_exceptions = set()
+    if args.family == "praxis":
+        if not args.source:
+            parser.error("praxis observations require --source")
+        fixture = Path(__file__).resolve().parents[2] / "tests/praxis/effects.nix"
+        setup = ('let p = builtins.getFlake ' + json.dumps(args.source) + '; lib = p.inputs.nixpkgs.lib; '
+                 'axiom = p.inputs.axiom.lib.axiom { inherit lib; }; deps = import (p.outPath + "/src/dependencies.nix") '
+                 '{ inherit lib axiom; krisisSource = p.inputs.krisis; }; in import ' + str(fixture)
+                 + ' { inherit lib axiom; inherit (deps) krisis; krisisSource = p.inputs.krisis; praxis = p.lib.praxis; }')
+        expected = {"sharedProbe": {"selected": ["good", "once"], "description": "good", "summary": 0, "repeated": "good"}}
+        expected["referenceProbe"] = {"value": "valid", "string": "literal"}
+        expected["alternatingProbe"] = [{"count": 0, "value": "valid"}, {"count": 1, "value": None}] * 2
+        expected["factoryProbe"] = [{"code": "praxis/type", "primary": {"label": "probe", "source": "authored"}}] * 2
+        callbacks = {"sharedProbe": {"check": 3, "normalize": 1}, "referenceProbe": {"reference probe": 1},
+                     "alternatingProbe": {"predicate": 4}, "factoryProbe": {"factory": 2}}
+        exception_markers = {"reference": "praxis effects payload exception", "normalize": "praxis normalize exception",
+                             "predicate": "praxis predicate exception", "input": "praxis input exception",
+                             "referenceProbe": "praxis reference probe exception", "referenceCode": "praxis reference code exception",
+                             "referenceSeverity": "praxis reference severity exception", "referenceEnvelope": "krisis: invalid diagnostic envelope",
+                             "referenceFactory": "praxis factory exception", "memberOrder": "praxis first member exception"}
+        exact_exceptions = set(exception_markers)
+        exception_events = {"referenceCode": ["reference envelope"], "referenceSeverity": ["reference envelope", "code"],
+                            "referenceEnvelope": ["reference envelope"], "memberOrder": ["reference envelope"]}
+    if args.family == "effects":
+        if not args.source:
+            parser.error("effects observations require --source")
+        fixture = Path(__file__).resolve().parents[2] / "tests/effects-contract.nix"
+        setup = ('let p = builtins.getFlake ' + json.dumps(args.source) + '; lib = p.inputs.nixpkgs.lib; '
+                 'axiom = p.inputs.axiom.lib.axiom { inherit lib; }; deps = import (p.outPath + "/src/dependencies.nix") '
+                 '{ inherit lib axiom; krisisSource = p.inputs.krisis; }; probe = import ' + str(fixture)
+                 + ' { inherit lib axiom; inherit (deps) krisis; lexicon = p; }; in probe // { exceptions = probe.callbackExceptions; }')
+        expected = {"callbackProbe": {"first": {"parsed": "parse", "normalized": "normalize"},
+                                     "second": {"parsed": "parse", "normalized": "normalize"}},
+                    "sharedProbe": {"first": True, "second": True},
+                    "projectionProbe": {"code": "mapped", "noValue": True, "recovered": True,
+                                        "summary": {"total": 1, "hasErrors": False, "byCode": {"mapped": 1},
+                                                    "bySeverity": {"error": 0, "warning": 1, "info": 0}}}}
+        callbacks = {"callbackProbe": {"parse": 1, "normalize": 1}, "sharedProbe": {"shared continuation": 1}}
+        exception_markers = {name: f"effects contract {name} exception" for name in
+                             ["parse", "normalize", "formatter", "dependent", "lower", "mapper"]}
+        exception_markers.update({"mappedCode": "effects contract code exception", "mappedSeverity": "effects contract severity exception",
+                                  "mappedFactory": "effects contract factory exception", "mappedEnvelope": "krisis: invalid diagnostic envelope",
+                                  "mappedOrder": "effects contract first envelope exception"})
+        exact_exceptions = set(exception_markers)
+        exception_events = {"mappedSeverity": ["code"]}
     records = []
     for cell in list(expected) + ["exceptions." + name for name in exception_markers]:
         command = ["nix", "eval", "--impure", "--json", "--show-trace", "--extra-experimental-features", "nix-command flakes pipe-operators",
@@ -307,7 +353,7 @@ def main():
         (args.output / (cell + ".stdout")).write_bytes(stdout)
         (args.output / (cell + ".stderr")).write_bytes(raw_stderr)
         stderr = raw_stderr.decode()
-        events = re.findall(r"^trace: " + ({"compiler": "compiler", "resources": "resource-effects", "terminals": "terminal"}.get(args.family, "fleet")) + r" (.*)$", stderr, re.MULTILINE)
+        events = re.findall(r"^trace: " + ({"compiler": "compiler", "resources": "resource-effects", "terminals": "terminal", "praxis": "praxis", "effects": "effects-contract"}.get(args.family, "fleet")) + r" (.*)$", stderr, re.MULTILINE)
         if cell in expected:
             try:
                 decoded = json.loads(stdout)
@@ -332,8 +378,11 @@ def main():
             marker = exception_markers[cell.split(".")[1]]
             terminal = stderr.rsplit("error: ", 1)[-1]
             admitted = exit_code is not None and exit_code != 0 and marker in terminal and "premature" not in terminal
+            name = cell.split(".", 1)[1]
+            if name in exact_exceptions:
+                admitted = admitted and terminal.strip() == marker and events == exception_events.get(name, [])
             if args.family == "terminals":
-                admitted = admitted and terminal == exception_texts[cell.split(".", 1)[1]]
+                admitted = admitted and terminal == exception_texts[name]
             if args.reference:
                 reference = (args.reference / (cell + ".stderr")).read_text().rsplit("error: ", 1)[-1]
                 admitted = admitted and terminal == reference

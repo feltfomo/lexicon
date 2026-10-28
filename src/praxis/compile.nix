@@ -9,7 +9,7 @@ let
     severity = "error";
     codePrefix = "praxis";
   };
-  reporter = krisis.mkReporter {
+  reporter = krisis.effects.reporter {
     formatHeader = count: "praxis: ${toString count} declaration error(s)";
     formatDiagnostic = diagnostic: "  - " + krisis.renderPlain diagnostic;
   };
@@ -21,7 +21,8 @@ let
       problem
       ;
   };
-  inherit (reporter) finish;
+  finish = krisis.effects.finishWithReporter reporter;
+  finishResult = result: finish (krisis.effects.fromAxiom result);
   project = finish (
     schema.project (
       removeAttrs args [
@@ -33,7 +34,9 @@ let
       ]
     )
   );
-  results = lib.mapAttrs (args.lower or schema.command) project.commands;
+  results = lib.mapAttrs (
+    name: value: krisis.effects.resultOf ((args.lower or schema.command) name value)
+  ) project.commands;
   fields = import ./fields.nix {
     inherit
       lib
@@ -44,14 +47,14 @@ let
   };
   inspect = import ./graph.nix { inherit lib fields results; };
   tree = import ./tree.nix { inherit lib fields; };
-  selections = lib.mapAttrs (name: _: inspect [ name ]) results;
+  selections = lib.mapAttrs (name: _: krisis.effects.resultOf (inspect [ name ])) results;
   inherit (project) pkgs;
   runner = import ./package.nix { inherit pkgs; };
   # selected manifests must not normalize sibling commands
   normalized =
     name:
     let
-      command = finish (tree.lookup results name);
+      command = finishResult (tree.lookup results name);
     in
     removeAttrs command [ "runtimeInputs" ] // { path = lib.makeBinPath command.runtimeInputs; };
   makeManifest = names: {
@@ -70,7 +73,7 @@ let
     };
     commands = lib.genAttrs names normalized;
   };
-  manifests = lib.mapAttrs (_: selection: makeManifest (finish selection)) selections;
+  manifests = lib.mapAttrs (_: selection: makeManifest (finishResult selection)) selections;
   manifest = makeManifest (finish (inspect (builtins.attrNames results)));
   manifestText = builtins.toJSON manifest;
   prepared = pkgs.writeTextFile {
@@ -84,11 +87,11 @@ let
   emit = import ./wrapper.nix { inherit lib pkgs runner; };
   packages = lib.mapAttrs (
     name: _:
-    builtins.seq (finish selections.${name}) (emit {
+    builtins.seq (finishResult selections.${name}) (emit {
       inherit name;
       manifest = manifests.${name};
       command = name;
-      inherit ((finish results.${name})) description;
+      inherit ((finishResult results.${name})) description;
     })
   ) results;
   cli = emit {
@@ -120,6 +123,6 @@ in
   apps = lib.mapAttrs (name: package: {
     type = "app";
     program = "${package}/bin/${name}";
-    meta.description = (finish results.${name}).description;
+    meta.description = (finishResult results.${name}).description;
   }) packages;
 }

@@ -98,7 +98,21 @@ else
     {
       inherit component size;
       value =
-        if lib.hasPrefix "fleet-" component || component == "registry-queries" then
+        if
+          builtins.elem component [
+            "praxis-selected"
+            "praxis-diagnostics"
+          ]
+        then
+          import ./praxis.nix {
+            inherit
+              project
+              component
+              size
+              bad
+              ;
+          }
+        else if lib.hasPrefix "fleet-" component || component == "registry-queries" then
           import ./fleet.nix {
             inherit
               project

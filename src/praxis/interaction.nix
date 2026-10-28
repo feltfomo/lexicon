@@ -1,7 +1,8 @@
 { lib, fields }:
 let
   inherit (fields)
-    validation
+    effects
+    checked
     diagnostic
     field
     closed
@@ -106,25 +107,25 @@ let
         default.default = null;
       } raw;
     in
-    validation.andThen (
+    checked.andThen (
       spec:
-      validation.fromDiagnostics (validation.collect [
-        (validation.optional (spec.type == "select" && (spec.choices == [ ] || spec.name == null)) (
+      effects.fromDiagnostics (builtins.concatLists [
+        (lib.optional (spec.type == "select" && (spec.choices == [ ] || spec.name == null)) (
           diagnostic subject "prompt" "selection needs choices and a name"
         ))
-        (validation.optional (
-          builtins.length spec.choices != builtins.length (fields.sets.unique spec.choices)
-        ) (diagnostic subject "prompt" "prompt choices must be unique"))
-        (validation.optional (spec.type == "acknowledge" && spec.acknowledgement == null) (
+        (lib.optional (builtins.length spec.choices != builtins.length (fields.sets.unique spec.choices)) (
+          diagnostic subject "prompt" "prompt choices must be unique"
+        ))
+        (lib.optional (spec.type == "acknowledge" && spec.acknowledgement == null) (
           diagnostic subject "prompt" "typed acknowledgement needs acknowledgement text"
         ))
-        (validation.optional (spec.type != "select" && spec.choices != [ ]) (
+        (lib.optional (spec.type != "select" && spec.choices != [ ]) (
           diagnostic subject "prompt" "choices are only valid for selection"
         ))
-        (validation.optional (spec.type != "acknowledge" && spec.acknowledgement != null) (
+        (lib.optional (spec.type != "acknowledge" && spec.acknowledgement != null) (
           diagnostic subject "prompt" "acknowledgement is only valid for typed prompts"
         ))
-        (validation.optional (
+        (lib.optional (
           spec.default != null
           && !(
             if spec.type == "select" then
@@ -134,7 +135,7 @@ let
           )
         ) (diagnostic subject "prompt" "default must match the prompt type and choices"))
       ]) (spec // { default = if spec.default == null then null else text spec.default; })
-    ) shape;
+    ) (effects.fromAxiom shape);
   group =
     subject:
     closed "parameter-group" subject {

@@ -33,15 +33,26 @@ pkgs.runCommandLocal "praxis-installed-consumer"
     original_home="$HOME"
     export XDG_CACHE_HOME="$TMPDIR/cache"
     export NIX_USER_CONF_FILES=/dev/null
-    export NIX_CONFIG='experimental-features = nix-command flakes pipe-operators'
+    export NIX_CONFIG='experimental-features = nix-command flakes pipe-operators
+    allow-import-from-derivation = false'
     mkdir -p "$XDG_CACHE_HOME" "$TMPDIR/empty"
 
-    # identity and help also work outside a project
+    expect_status() {
+      local expected="$1" status=0
+      shift
+      "$@" > stdout 2> stderr || status=$?
+      if [[ "$status" -ne "$expected" ]]; then
+        cat stdout stderr >&2
+        printf 'expected exit %s, got %s\n' "$expected" "$status" >&2
+        exit 1
+      fi
+    }
+
     cd "$TMPDIR/empty"
     test "$(praxis --version)" = 'praxis 1.0.0'
     praxis help > help
     grep -F "Praxis runs the commands a project's flake.nix exposes as its praxis output." help
-    ! praxis list > stdout 2> stderr
+    expect_status 66 praxis list
     grep -F 'praxis: no project found' stderr
 
     test_root="$TMPDIR/nix-root"
@@ -54,7 +65,6 @@ pkgs.runCommandLocal "praxis-installed-consumer"
     nix-store --store "$test_store" --load-db < ${closure}/registration
     export NIX_REMOTE="$test_store"
 
-    # one declaration text, used unchanged by both file layouts
     cat > "$TMPDIR/declaration.nix" <<'DECLARATION'
     { pkgs, root, ... }:
     {
@@ -63,6 +73,20 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       commands = {
         check = [ "nix" "eval" "--raw" ".#value" ];
         choice = [ "${pkgs.coreutils}/bin/printf" "one" ];
+        home = [ "${pkgs.coreutils}/bin/printenv" "HOME" ];
+        typed = {
+          command = [ "${pkgs.coreutils}/bin/printf" "%s" ];
+          args = [ { param = "mode"; } ];
+          parameters.mode = {
+            choices = [ "one" "two" ];
+            default = "one";
+          };
+        };
+        typed-int = {
+          command = [ "${pkgs.coreutils}/bin/printf" "%s" ];
+          args = [ { param = "count"; } ];
+          parameters.count = { type = "int"; choices = [ 7 8 ]; default = 7; };
+        };
         arguments = [ "${pkgs.jq}/bin/jq" "-cn" "--args" "$ARGS.positional" "--" ];
       };
     }
@@ -95,22 +119,26 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       cd "$TMPDIR/$layout"
       test "$(praxis --version)" = 'praxis 1.0.0'
 
+      test "$(praxis --quiet home)" = "$original_home"
+      test "$(praxis --quiet typed)" = one
+      test "$(praxis --quiet typed --mode two)" = two
+      test "$(praxis --quiet typed-int)" = 7
+      test "$(praxis --quiet typed-int --count 8)" = 8
+      expect_status 64 praxis --quiet typed-int --count invalid
+      expect_status 64 praxis --quiet typed --mode invalid
       praxis list > "$TMPDIR/$layout.list"
       grep -F $'check\t' "$TMPDIR/$layout.list"
       test ! -e flake.lock
       praxis help > project-help
       grep -F 'praxis [RUNNER OPTIONS] NAME' project-help
 
-      # the declared child command keeps nix's ordinary lock behavior
       test "$(praxis --quiet check)" = configured
       test -e flake.lock
       lock_hash=$(sha256sum flake.lock | cut -d' ' -f1)
 
-      # the loader itself never writes the project lock
       praxis list > /dev/null
       test "$(sha256sum flake.lock | cut -d' ' -f1)" = "$lock_hash"
 
-      # only the project directory itself may differ between the two layouts
       normalize() {
         sed "s#$TMPDIR/$layout#PROJECT#g"
       }
@@ -118,7 +146,6 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       praxis --json plan arguments | normalize > "$TMPDIR/$layout.plan-arguments"
       praxis --json plan choice | normalize > "$TMPDIR/$layout.plan-choice"
 
-      # nested invocation resolves the same nearest project
       cd nested
       test "$(praxis --quiet check)" = configured
       test "$(sha256sum ../flake.lock | cut -d' ' -f1)" = "$lock_hash"
@@ -129,22 +156,19 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       printf '%s\n' "$lock_hash" > "$TMPDIR/$layout.lock-hash"
     done
 
-    # both layouts describe one project identically
     cmp "$TMPDIR/inline.list" "$TMPDIR/imported.list"
     cmp "$TMPDIR/inline.plan-check" "$TMPDIR/imported.plan-check"
     cmp "$TMPDIR/inline.plan-arguments" "$TMPDIR/imported.plan-arguments"
     cmp "$TMPDIR/inline.plan-choice" "$TMPDIR/imported.plan-choice"
 
-    # editing the declaration reevaluates without reinstalling, in either layout
-    sed -i 's/"one"/"two"/' "$TMPDIR/inline/flake.nix"
-    sed -i 's/"one"/"two"/' "$TMPDIR/imported/praxis.nix"
+    sed -i 's#bin/printf" "one"#bin/printf" "two"#' "$TMPDIR/inline/flake.nix"
+    sed -i 's#bin/printf" "one"#bin/printf" "two"#' "$TMPDIR/imported/praxis.nix"
     for layout in inline imported; do
       cd "$TMPDIR/$layout/nested"
       test "$(praxis --quiet choice)" = two
       test "$(sha256sum ../flake.lock | cut -d' ' -f1)" = "$(cat "$TMPDIR/$layout.lock-hash")"
     done
 
-    # an ordinary invocation realizes the packages its declaration references
     probe_project="$test_root/build/project"
     mkdir -p "$probe_project" "$test_root$HOME" "$test_root$XDG_CACHE_HOME"
     cd "$probe_project"
@@ -189,7 +213,6 @@ pkgs.runCommandLocal "praxis-installed-consumer"
       exit 1
     fi
 
-    # a flake without praxis stops discovery at its own root
     mkdir -p "$TMPDIR/parent/child"
     cp "$TMPDIR/imported/flake.nix" "$TMPDIR/parent/flake.nix"
     cp "$TMPDIR/imported/praxis.nix" "$TMPDIR/parent/praxis.nix"
@@ -204,15 +227,16 @@ pkgs.runCommandLocal "praxis-installed-consumer"
     }
     FLAKE
     cd "$TMPDIR/parent/child"
-    ! praxis list > stdout 2> stderr
+    expect_status 66 praxis list
+    test ! -e flake.lock
     grep -F "$TMPDIR/parent/child/flake.nix does not expose a praxis output" stderr
     ! grep -F $'choice\t' stdout
 
-    # malformed and invalid declarations fail as project preparation errors
     mkdir "$TMPDIR/broken"
     cd "$TMPDIR/broken"
     printf '{\n' > flake.nix
-    ! praxis list > stdout 2> stderr
+    expect_status 1 praxis list
+    test ! -e flake.lock
     grep -F 'praxis: could not prepare' stderr
 
     cat > flake.nix <<'FLAKE'
@@ -225,8 +249,46 @@ pkgs.runCommandLocal "praxis-installed-consumer"
         };
     }
     FLAKE
-    ! praxis list > stdout 2> stderr
+    expect_status 1 praxis list
+    test ! -e flake.lock
     grep -F 'praxis: could not prepare' stderr
+
+    mkdir "$TMPDIR/record"
+    cd "$TMPDIR/record"
+    cat > flake.nix <<'FLAKE'
+    {
+      inputs.nixpkgs.url = "path:${pkgs.path}";
+      outputs =
+        { self, nixpkgs }:
+        {
+          praxis.commands.home = [ "${pkgs.coreutils}/bin/printenv" "HOME" ];
+        };
+    }
+    FLAKE
+    test "$(praxis --quiet home)" = "$original_home"
+    test ! -e flake.lock
+
+    mkdir "$TMPDIR/closed-reference"
+    cd "$TMPDIR/closed-reference"
+    cat > flake.nix <<'FLAKE'
+    {
+      inputs.nixpkgs.url = "path:${pkgs.path}";
+      outputs = { self, nixpkgs }: {
+        praxis.commands.bad = {
+          command = [ "true" ];
+          args = [ {
+            param = throw "closed reference payload forced";
+            extra = throw "closed reference payload forced";
+          } ];
+        };
+      };
+    }
+    FLAKE
+    expect_status 1 praxis list
+    grep -F 'expected string; got set' stderr
+    grep -F 'expected record containing only param; got set' stderr
+    ! grep -F 'closed reference payload forced' stderr
+    test ! -e flake.lock
 
     test "$HOME" = "$original_home"
     touch "$out"

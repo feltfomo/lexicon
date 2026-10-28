@@ -251,3 +251,10 @@ Named parameters accept `--name value`, `--name=value`, and declared short flags
 Boolean flags without a value mean true. Typed parsing stops at `--` or the
 first forwarded argument. Commands without declared parameters preserve literal
 arguments, including `--`.
+
+Compilation uses the shared native Krisis/nix-effects dependency owner. Axiom
+still interprets field specifications and validates ownership name collisions.
+Command normalization is shared at each demanded graph node. Diagnostics and
+summaries select reachability without building packages or reading runtime input
+paths. Native type blame is mapped to the established Praxis diagnostic records.
+The manifest remains version 2; execution belongs to the existing Rust runner.

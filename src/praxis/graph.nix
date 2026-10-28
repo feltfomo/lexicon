@@ -6,7 +6,7 @@
 let
   inherit (fields) diagnostic;
   tree = import ./tree.nix { inherit lib fields; };
-  # selections share adjacency, but only a reached command forces its steps.
+  # selections share adjacency, but only a reached command forces its steps
   references = result: builtins.catAttrs "command" result.value.steps;
   visit =
     stack: state: name:
@@ -41,7 +41,7 @@ let
           diagnostics =
             state.diagnostics
             ++ result.diagnostics
-            ++ fields.validation.optional (
+            ++ lib.optional (
               result.diagnostics == [ ]
               && !(result.value ? children)
               && builtins.any (alias: builtins.hasAttr alias results) result.value.aliases
@@ -93,7 +93,7 @@ let
   );
   aliasDiagnostics = lib.concatMap (
     alias:
-    fields.validation.optional (builtins.length aliasOwners.${alias} > 1) (
+    lib.optional (builtins.length aliasOwners.${alias} > 1) (
       diagnostic "commands" "aliases"
         "alias '${alias}' belongs to multiple commands ${
           lib.concatStringsSep ", " (map (entry: entry.owner) aliasOwners.${alias})
@@ -131,7 +131,7 @@ let
           )
         ) command.steps;
     in
-    fields.validation.optional conflict (
+    lib.optional conflict (
       diagnostic "commands.${entry.name}" "parameter-sensitive"
         "sensitive environment names cannot feed ordinary defaults, overrides, conditions or prompt responses"
     )
@@ -140,4 +140,4 @@ let
     result.diagnostics
     ++ lib.optionals (result.diagnostics == [ ]) (aliasDiagnostics ++ secretDiagnostics);
 in
-fields.validation.fromDiagnostics diagnostics selected
+fields.effects.fromDiagnostics diagnostics selected
