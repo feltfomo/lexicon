@@ -86,23 +86,55 @@ let
       ];
     };
   };
-  ok =
-    samples.minimal == expected.minimal
-    && samples.commands == expected.commands
-    && samples.parameters == expected.parameters
-    && samples.outputs == expected.outputs
-    && samples.workflow == expected.workflow
-    && samples.ownerships == expected.ownerships
-    && samples.project == expected.project
-    && samples.scripts.discoverRoot == "flake.nix"
-    && samples.scripts.sourceKind.kind == "script"
-    && samples.scripts.sourceKind.rootRelative
-    && samples.scripts.generatedKind.kind == "script"
-    && !(samples.scripts.generatedKind.rootRelative or false)
-    && samples.scripts.checks == [ "source-check" ];
+  documented =
+    name:
+    nixpkgs.lib.nameValuePair "test ${name} example matches its documented result" {
+      expr = samples.${name};
+      expected = expected.${name};
+    };
+  stepKind = step: {
+    inherit (step) kind;
+    rootRelative = step.rootRelative or false;
+  };
+  tests =
+    builtins.listToAttrs (
+      map documented [
+        "minimal"
+        "commands"
+        "parameters"
+        "outputs"
+        "workflow"
+        "ownerships"
+        "project"
+      ]
+    )
+    // {
+      "test script example discovers the flake root" = {
+        expr = samples.scripts.discoverRoot;
+        expected = "flake.nix";
+      };
+      "test source scripts resolve relative to the root" = {
+        expr = stepKind samples.scripts.sourceKind;
+        expected = {
+          kind = "script";
+          rootRelative = true;
+        };
+      };
+      "test generated scripts are store paths rather than root relative" = {
+        expr = stepKind samples.scripts.generatedKind;
+        expected = {
+          kind = "script";
+          rootRelative = false;
+        };
+      };
+      "test script example registers only its source check" = {
+        expr = samples.scripts.checks;
+        expected = [ "source-check" ];
+      };
+    };
 in
 {
-  inherit samples ok;
+  inherit samples tests;
   inventories = {
     constructors = builtins.filter (nixpkgs.lib.hasPrefix "praxis") (builtins.attrNames lexicon.lib);
     projectFields = [

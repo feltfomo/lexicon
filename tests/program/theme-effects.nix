@@ -170,49 +170,67 @@ let
       source = toString entry.source.value;
       onConflict = entry.onConflict or "error";
     }) declarations;
-  cases = {
-    recovering-theme-checked-retains-each-group-diagnostics =
-      map (diagnostic: diagnostic.code) invalid == [
-        "program/theme-registration-duplicate"
-        "program/theme-native-unsupported"
-      ]
-      &&
-        map (diagnostic: diagnostic.primary.label) invalid == [
-          "theme.caelestia.duplicate"
-          "theme.caelestia.unsupported"
-        ];
-    theme-file-transport-preserves-opaque-sources-and-generators =
-      map (entry: entry.dest) protected == [
+  tests = {
+    "test recovering theme checked retains each group diagnostics" = {
+      expr =
+        map (diagnostic: diagnostic.code) invalid == [
+          "program/theme-registration-duplicate"
+          "program/theme-native-unsupported"
+        ]
+        &&
+          map (diagnostic: diagnostic.primary.label) invalid == [
+            "theme.caelestia.duplicate"
+            "theme.caelestia.unsupported"
+          ];
+      expected = true;
+    };
+    "test theme file transport preserves opaque sources and generators" = {
+      expr = map (entry: entry.dest) protected;
+      expected = [
         ".config/noctalia/templates/first/palette.tmpl"
         ".config/noctalia/first.toml"
         ".config/noctalia/templates/second/palette.tmpl"
         ".config/noctalia/second.toml"
       ];
-    template-defaults-retain-runtime-wins =
-      (builtins.head protected).representation == "writable"
-      && (builtins.head protected).onConflict == "runtime-wins";
-    matugen-aggregates-blocks-with-original-principal =
-      builtins.length aggregated == 1
-      && aggregate.destination == ".config/matugen/config.toml"
-      && aggregate.authority == principal.authority
-      && aggregate.managedRoot == principal.managedRoot
-      &&
-        builtins.attrNames generated.templates == [
-          "first"
-          "second"
-        ];
-    matugen-generated-fields-and-reload-override-native =
-      generated.templates.first == {
+    };
+    "test template defaults retain runtime wins" = {
+      expr =
+        (builtins.head protected).representation == "writable"
+        && (builtins.head protected).onConflict == "runtime-wins";
+      expected = true;
+    };
+    "test matugen aggregates blocks with original principal" = {
+      expr =
+        builtins.length aggregated == 1
+        && aggregate.destination == ".config/matugen/config.toml"
+        && aggregate.authority == principal.authority
+        && aggregate.managedRoot == principal.managedRoot
+        &&
+          builtins.attrNames generated.templates == [
+            "first"
+            "second"
+          ];
+      expected = true;
+    };
+    "test matugen generated fields and reload override native" = {
+      expr = generated.templates.first;
+      expected = {
         input_path = "/srv/alice/.config/matugen/dms/templates/first/palette.tmpl";
         output_path = "/srv/alice/.config/first/palette";
         post_hook = "reload-first";
         compare_to = "dark";
       };
-    matugen-rejects-cross-block-registration-collisions = !duplicateAggregation.success;
-    canonical-and-legacy-theme-files-are-equivalent = selectedFiles canonical == selectedFiles legacy;
+    };
+    "test matugen rejects cross block registration collisions" = {
+      expr = !duplicateAggregation.success;
+      expected = true;
+    };
+    "test canonical and legacy theme files are equivalent" = {
+      expr = selectedFiles canonical;
+      expected = selectedFiles legacy;
+    };
   };
 in
 {
-  inherit cases;
-  ok = builtins.all (value: value) (builtins.attrValues cases);
+  inherit tests;
 }

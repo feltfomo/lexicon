@@ -91,65 +91,87 @@ let
       };
     };
   fails = value: !(builtins.tryEval (builtins.deepSeq value true)).success;
-  cases = {
-    furnish-protected-preparation-and-artifact-transport =
-      (builtins.head compiled.manifestData).target.path == retainedPath
-      && builtins.hasContext compiled.manifestJson
-      && compiled.manifestPath == null
-      && builtins.attrNames compiled.raw == [ "secret" ];
-    furnish-empty-keeps-provider-context-and-executors-opaque = empty.manifestData == [ ];
-    furnish-host-index-keeps-source-and-context-opaque =
-      builtins.attrNames index == [ "host:/srv/alice/.config/resource" ];
-    furnish-shape-diagnostics-keep-payload-opaque = furnish.core.shapeDiagnostics declaration == [ ];
-    furnish-invalid-shapes-suppress-provider-and-executors =
-      fails
-        (compile {
-          declarations = [ (declaration // { managedRoot = false; }) ];
-          executors = poison;
-          provider = poison;
-        }).manifestData;
-    furnish-external-rejects-context-and-unnormalized-paths =
-      builtins.all
-        (
-          path:
-          fails
-            (compile {
-              executors = [ (externalExecutor path) ];
-            }).manifestData
-        )
-        [
-          retainedPath
-          "/"
-          "/outside/../target"
-          "/outside//target"
-        ];
-    furnish-absent-external-target-does-not-read-the-filesystem =
-      (builtins.head
-        (compile { executors = [ (externalExecutor "/absent/resource-effects-target") ]; }).manifestData
-      ).target == {
+  tests = {
+    "test furnish protected preparation and artifact transport" = {
+      expr =
+        (builtins.head compiled.manifestData).target.path == retainedPath
+        && builtins.hasContext compiled.manifestJson
+        && compiled.manifestPath == null
+        && builtins.attrNames compiled.raw == [ "secret" ];
+      expected = true;
+    };
+    "test furnish empty keeps provider context and executors opaque" = {
+      expr = empty.manifestData;
+      expected = [ ];
+    };
+    "test furnish host index keeps source and context opaque" = {
+      expr = builtins.attrNames index;
+      expected = [ "host:/srv/alice/.config/resource" ];
+    };
+    "test furnish shape diagnostics keep payload opaque" = {
+      expr = furnish.core.shapeDiagnostics declaration;
+      expected = [ ];
+    };
+    "test furnish invalid shapes suppress provider and executors" = {
+      expr =
+        fails
+          (compile {
+            declarations = [ (declaration // { managedRoot = false; }) ];
+            executors = poison;
+            provider = poison;
+          }).manifestData;
+      expected = true;
+    };
+    "test furnish external rejects context and unnormalized paths" = {
+      expr =
+        builtins.all
+          (
+            path:
+            fails
+              (compile {
+                executors = [ (externalExecutor path) ];
+              }).manifestData
+          )
+          [
+            retainedPath
+            "/"
+            "/outside/../target"
+            "/outside//target"
+          ];
+      expected = true;
+    };
+    "test furnish absent external target does not read the filesystem" = {
+      expr =
+        (builtins.head
+          (compile { executors = [ (externalExecutor "/absent/resource-effects-target") ]; }).manifestData
+        ).target;
+      expected = {
         kind = "external";
         path = "/absent/resource-effects-target";
       };
-    furnish-equal-content-and-policy-do-not-excuse-collisions =
-      fails
-        (compile {
-          declarations = [
-            declaration
-            (
+    };
+    "test furnish equal content and policy do not excuse collisions" = {
+      expr =
+        fails
+          (compile {
+            declarations = [
               declaration
-              // {
-                label = "duplicate";
-                onConflict = "runtime-wins";
-              }
-            )
-          ];
-          executors = poison;
-        }).manifestData;
+              (
+                declaration
+                // {
+                  label = "duplicate";
+                  onConflict = "runtime-wins";
+                }
+              )
+            ];
+            executors = poison;
+          }).manifestData;
+      expected = true;
+    };
   };
 in
 {
-  inherit cases;
-  ok = builtins.all (value: value) (builtins.attrValues cases);
+  inherit tests;
   callbackProbe = {
     first = (builtins.head compiled.manifestData).target.path;
     second = (builtins.head compiled.manifestData).target.path;

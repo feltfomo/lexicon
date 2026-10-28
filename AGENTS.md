@@ -102,6 +102,23 @@ terminal, a VM or a running process, and it states that reason. Python and other
 scripts are fine as temporary probes while implementing. Keep them in `.runtime/`
 and delete them before delivery.
 
-Run focused flake checks, then `nix develop path:. -c lexicon-praxis --non-interactive gate`.
-Use `path:.` to include new files before staging. Never stage or commit without the
-user approving the complete commit preview.
+Pure evaluation tests are nix-unit cases in the flake output `tests`, one node
+per file under `tests/` (`tests.ownerships.engine."test ..."`), assembled in
+`tests/default.nix`. Name each case for the one behavior it pins. Put the
+demanded projection in `expr` and the value in `expected`; use `expectedError`
+with `type` and a `msg` pattern that pins the diagnostic for failure paths.
+nix-unit deep-forces `expr`, so never hand it an opaque payload or a derivation.
+Builds, runtimes, VMs and live processes stay derivation flake checks. Run a
+subtree with `nix-unit --flake path:.#tests.praxis`; `checks.unit` runs the whole
+tree in the sandbox.
+
+The development shell is devenv. Enter it with `devenv shell`, or run one command
+with `devenv shell -- <command>`. Run the verbs with `devenv tasks run lexicon:fmt`,
+`lexicon:check`, `lexicon:test` and `lexicon:gate`; `devenv test` runs the gate.
+Each verb runs the flake's `lexicon-praxis` command of the same name, so the
+Praxis project owns the commands, gate order and gate lock. `lexicon:test` runs
+the nix-unit suite published as the flake output `tests`.
+
+Run focused tests, then `devenv tasks run lexicon:gate`. The praxis commands read
+`path:.`, which includes new files before staging. Never stage or commit without
+the user approving the complete commit preview.

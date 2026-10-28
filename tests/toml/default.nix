@@ -256,8 +256,6 @@ let
   );
   python = pkgs.python3.withPackages (p: [ p.tomlkit ]);
 in
-assert import ./encoding.nix { inherit pkgs lexicon; };
-assert rendering.ok;
 pkgs.runCommand "toml-composition-tests"
   {
     nativeBuildInputs = [

@@ -104,29 +104,40 @@ let
   );
 in
 {
-  lucid-config-does-not-collide-with-dms =
-    builtins.length (
+  "test lucid config does not collide with dms" = {
+    expr = builtins.length (
       builtins.filter (entry: entry.destination == ".config/matugen/config.toml") declarations
-    ) == 1;
-  lucid-shared-templates-use-writable-seeds =
-    seed.representation == "writable" && seed.onConflict == "runtime-wins";
-  lucid-registrations-aggregate-across-programs =
-    builtins.length configs == 1
-    &&
-      builtins.attrNames templates == [
-        "editor"
-        "terminal-colors"
-      ];
-  lucid-registrations-use-managed-home-and-reload =
-    templates.editor == {
+    );
+    expected = 1;
+  };
+  "test lucid shared templates use writable seeds" = {
+    expr = seed.representation == "writable" && seed.onConflict == "runtime-wins";
+    expected = true;
+  };
+  "test lucid registrations aggregate across programs" = {
+    expr =
+      builtins.length configs == 1
+      &&
+        builtins.attrNames templates == [
+          "editor"
+          "terminal-colors"
+        ];
+    expected = true;
+  };
+  "test lucid registrations use managed home and reload" = {
+    expr = templates.editor;
+    expected = {
       input_path = "/srv/alice/.config/lucid/matugen/templates/editor/safe-render.nix";
       output_path = "/srv/alice/.config/editor/palette";
       post_hook = "editor-reload";
     };
-  lucid-native-fields-and-subids-survive =
-    templates.terminal-colors == {
+  };
+  "test lucid native fields and subids survive" = {
+    expr = templates.terminal-colors;
+    expected = {
       input_path = "/srv/alice/.config/lucid/matugen/templates/terminal/safe-render.nix";
       output_path = "/srv/alice/.config/terminal/colors";
       compare_to = "dark";
     };
+  };
 }

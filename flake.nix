@@ -126,6 +126,25 @@
           inherit (inputs.furnish-coordinator.lib) mkCoordinator;
         };
 
+      # pure cases only evaluate derivations, so one fixed system keeps a single tree with stable ids
+      flake.tests =
+        let
+          pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
+          inherit (pkgs) lib;
+          inherit (dependenciesFor { inherit lib; }) axiom krisis;
+        in
+        import ./tests {
+          inherit
+            lib
+            pkgs
+            axiom
+            krisis
+            ;
+          krisisSource = inputs.krisis;
+          lexicon = inputs.self;
+          inherit (inputs) nixpkgs;
+        };
+
       flake.nixosConfigurations =
         let
           system = "x86_64-linux";
@@ -243,9 +262,7 @@
         let
           inherit (pkgs) lib;
           inherit (dependenciesFor { inherit lib; }) axiom krisis;
-          ownerships = import ./src/ownerships { inherit lib krisis axiom; };
           praxis = inputs.self.lib.praxis;
-          praxisTests = import ./tests/praxis { inherit lib krisis axiom; };
           praxisCompiler = args: import ./src/praxis/compile.nix ({ inherit lib axiom krisis; } // args);
           genericPraxis = import ./src/praxis/generic.nix {
             inherit pkgs;
@@ -277,94 +294,49 @@
                 ];
                 description = "Check Lexicon";
               };
+              # nix-unit embeds cppnix, which rejects the lix pipe-operator feature name in nix.conf
+              # and applies the flake nixConfig only after it was trusted interactively
+              test = {
+                command = [
+                  "nix-unit"
+                  "--option"
+                  "extra-experimental-features"
+                  "nix-command flakes pipe-operators"
+                  "--flake"
+                  "path:.#tests"
+                ];
+                packages = [ pkgs.nix-unit ];
+                description = "Run the Lexicon nix-unit suite";
+              };
             };
             tasks.gate = {
-              description = "Format and run the complete Lexicon flake check";
+              description = "Format, run the complete Lexicon flake check and the nix-unit suite";
               lock = "lexicon-gate";
               steps = [
                 "fmt"
                 "check"
+                "test"
               ];
             };
           };
 
-          # a declared away host distinguishes inactive payloads from unknown claims
-          roster = ownerships.toRoster [
-            (ownerships.define.host "khion" { system = "x86_64-linux"; })
-            (ownerships.define.host "lumi" { system = "x86_64-linux"; })
-            (ownerships.define.user "feltfomo" {
-              hosts = [
-                "khion"
-                "lumi"
-              ];
-            })
-          ];
-          resolve = ownerships.mkResolve roster;
-          resolveSystem = ownerships.mkResolveSystem roster;
-
-          hostCtx = {
-            id = "x86_64-linux/khion";
-            name = "khion";
-            system = "x86_64-linux";
-          };
-          principalContexts = [
-            {
-              authority = {
-                scope = "system";
-                identity = "x86_64-linux/khion";
-              };
-              ctx.host = hostCtx;
-            }
-            {
-              authority = {
-                scope = "user";
-                identity = "feltfomo";
-              };
-              ctx = {
-                host = hostCtx;
-                user.name = "feltfomo";
-              };
-            }
-          ];
-
-          registryTests = import ./tests/registry {
-            inherit lib krisis axiom;
-          };
-          furnishTests = import ./tests/furnish {
-            inherit
-              lib
-              krisis
-              axiom
-              resolve
-              resolveSystem
-              principalContexts
-              ;
-          };
-          programTests = import ./tests/program {
-            inherit
-              lib
-              pkgs
-              krisis
-              axiom
-              ;
-            lexicon = inputs.self;
-          };
-          ownershipsTest =
-            path:
-            import path {
-              inherit
-                lib
-                krisis
-                axiom
-                ;
-            };
-
-          gate =
-            name: suite:
-            pkgs.runCommandLocal name { } (
-              assert suite.ok;
-              "touch $out"
-            );
+          # the sandbox has no network, so every locked input is handed to nix-unit by store path
+          inputOverrides =
+            let
+              collect =
+                prefix: flakeInputs:
+                lib.concatLists (
+                  lib.mapAttrsToList (
+                    name: input:
+                    let
+                      path = prefix ++ [ name ];
+                    in
+                    [ "--override-input ${lib.concatStringsSep "/" path} ${input.outPath}" ]
+                    ++ collect path (input.inputs or { })
+                  ) (removeAttrs flakeInputs [ "self" ])
+                );
+            in
+            collect [ ] inputs;
         in
         {
           treefmt = import ./formatter.nix;
@@ -375,38 +347,28 @@
           apps.lexicon-praxis = praxisCommands.apps.lexicon-praxis;
 
           checks = {
-            effects-contract = gate "effects-contract-tests" (
-              import ./tests/effects-contract.nix {
-                inherit lib axiom krisis;
-                lexicon = inputs.self;
-              }
-            );
+            # the same tree lexicon:test runs, inside a private store so nothing touches the daemon
+            unit =
+              pkgs.runCommand "lexicon-unit-tests"
+                {
+                  nativeBuildInputs = [ pkgs.nix-unit ];
+                }
+                ''
+                  export HOME="$(realpath .)"
+                  unset NIX_STORE
+                  export NIX_STORE_DIR=${builtins.storeDir}
+                  export NIX_REMOTE="$HOME/store"
+                  nix-unit \
+                    --extra-experimental-features "flakes nix-command pipe-operators" \
+                    --accept-flake-config \
+                    ${lib.concatStringsSep " " inputOverrides} \
+                    --flake path:${inputs.self}#tests
+                  touch "$out"
+                '';
             toml-composition = import ./tests/toml {
               inherit pkgs;
               lexicon = inputs.self;
               inherit (inputs) nixpkgs;
-            };
-            registry = gate "registry-tests" registryTests;
-            declarations-public = gate "declaration-public-tests" {
-              ok =
-                (import ./tests/declarations/public.nix {
-                  inherit
-                    lib
-                    pkgs
-                    axiom
-                    krisis
-                    ;
-                  lexicon = inputs.self;
-                }).ok
-                && (import ./tests/declarations/resource-effects.nix {
-                  inherit
-                    lib
-                    pkgs
-                    axiom
-                    krisis
-                    ;
-                  lexicon = inputs.self;
-                }).ok;
             };
             declarations-observations = import ./tests/declarations/observations-check.nix {
               inherit pkgs;
@@ -414,15 +376,6 @@
               axiomSource = inputs.axiom;
               krisisSource = inputs.krisis;
             };
-            declarations =
-              let
-                existing = import ./tests/declarations { inherit lib axiom krisis; };
-                registration = import ./tests/declarations/registration.nix { inherit lib axiom krisis; };
-                outputs = import ./tests/declarations/outputs.nix { inherit lib axiom krisis; };
-              in
-              gate "declaration-tests" {
-                ok = existing.ok && registration.ok && outputs.ok;
-              };
             consumers =
               let
                 existing = import ./tests/consumers.nix {
@@ -444,18 +397,6 @@
                   path = installed;
                 }
               ];
-            praxis-pure = gate "praxis-pure-tests" {
-              ok =
-                praxisTests.ok
-                && (import ./tests/praxis/graph-effects.nix { inherit lib axiom krisis; }).ok
-                && (import ./tests/praxis/effects.nix {
-                  inherit lib axiom krisis;
-                  krisisSource = inputs.krisis;
-                }).ok;
-            };
-            praxis-public-surface = gate "praxis-public-surface" (
-              import ./tests/praxis/public-surface.nix { inherit lib axiom krisis; }
-            );
             praxis-generated-cli = import ./tests/praxis/generated-cli.nix { inherit pkgs praxis; };
             praxis-integration = import ./tests/praxis/integration.nix {
               inherit pkgs;
@@ -466,69 +407,18 @@
               praxis = praxisCompiler;
             };
             praxis-runner = praxisCommands.runner;
-            furnish-pure = gate "furnish-pure-tests" {
-              ok =
-                furnishTests.ok
-                && (import ./tests/furnish/effects.nix { inherit lib axiom krisis; }).ok
-                && (import ./tests/furnish/runtime.nix {
-                  inherit
-                    lib
-                    pkgs
-                    axiom
-                    krisis
-                    ;
-                  inherit (inputs) nixpkgs;
-                }).ok;
-            };
             furnish-observations = import ./tests/furnish/observations-check.nix {
               inherit pkgs;
               nixpkgsSource = inputs.nixpkgs;
               axiomSource = inputs.axiom;
               krisisSource = inputs.krisis;
             };
-            program-boundary = gate "program-boundary-tests" programTests;
-            ownerships-engine = gate "ownerships-engine-tests" (ownershipsTest ./tests/ownerships/engine.nix);
-            ownerships-roster = gate "ownerships-roster-tests" (ownershipsTest ./tests/ownerships/roster.nix);
-            ownerships-surface = gate "ownerships-surface-tests" (
-              ownershipsTest ./tests/ownerships/surface.nix
-            );
-            ownerships-descriptors = gate "ownerships-descriptor-tests" (
-              ownershipsTest ./tests/ownerships/descriptors.nix
-            );
-            ownerships-matrix = gate "ownerships-matrix-tests" (ownershipsTest ./tests/ownerships/matrix.nix);
             ownerships-observations = import ./tests/ownerships/observations-check.nix {
               inherit pkgs;
               nixpkgsSource = inputs.nixpkgs;
               axiomSource = inputs.axiom;
               krisisSource = inputs.krisis;
             };
-          };
-
-          devShells.default = pkgs.mkShell {
-            packages = with pkgs; [
-              bashInteractive
-              nix
-              praxisCommands.cli
-              cargo
-              rustc
-              rustfmt
-              clippy
-              deadnix
-              delve
-              git
-              go
-              gofumpt
-              golangci-lint
-              gopls
-              jq
-              marksman
-              nixd
-              nixfmt
-              shellcheck
-              shfmt
-              statix
-              taplo
-            ];
           };
         };
     };

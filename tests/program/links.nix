@@ -131,37 +131,69 @@ let
     )).success;
 in
 {
-  external-links-use-the-selected-home = selected.managedRoot == "/srv/alice";
-  owned-external-links-select-the-current-user = builtins.length selectedOwned == 1;
-  inactive-external-targets-stay-lazy = inactive.success;
-  external-links-remain-literal =
-    selected.source == {
+  "test external links use the selected home" = {
+    expr = selected.managedRoot;
+    expected = "/srv/alice";
+  };
+  "test owned external links select the current user" = {
+    expr = builtins.length selectedOwned;
+    expected = 1;
+  };
+  "test inactive external targets stay lazy" = {
+    expr = inactive.success;
+    expected = true;
+  };
+  "test external links remain literal" = {
+    expr = selected.source;
+    expected = {
       kind = "external";
       value = link.target;
     };
-  absent-external-targets-compile-without-filesystem-access =
-    compiled.target == {
+  };
+  "test absent external targets compile without filesystem access" = {
+    expr = compiled.target;
+    expected = {
       kind = "external";
       path = link.target;
     };
-  external-link-manifests-carry-no-source-context =
-    builtins.getContext (builtins.toJSON compiled) == { };
-  external-links-emit-the-current-manifest-schema = compiled.schemaVersion == 3;
-  external-links-share-file-collision-detection = duplicate;
-  external-links-reject-relative-and-nonnormal-targets =
-    builtins.all (path: invalid (link // { target = path; }))
-      [
-        "/srv//alice"
-        "/srv/../alice"
-        "/srv/./alice"
-        "/srv/alice/"
-        "relative"
-        "/"
-      ];
-  external-links-reject-source-path-values = invalid (link // { target = ./links.nix; });
-  external-links-reject-store-context = invalid (link // { target = "${pkgs.hello}/bin/hello"; });
-  external-links-reject-unsupported-representations = invalid (
-    link // { representation = "writable"; }
-  );
-  direct-external-links-reject-ownership-claims = invalid (link // { users = [ "alice" ]; });
+  };
+  "test external link manifests carry no source context" = {
+    expr = builtins.getContext (builtins.toJSON compiled);
+    expected = { };
+  };
+  "test external links emit the current manifest schema" = {
+    expr = compiled.schemaVersion;
+    expected = 3;
+  };
+  "test external links share file collision detection" = {
+    expr = duplicate;
+    expected = true;
+  };
+  "test external links reject relative and nonnormal targets" = {
+    expr = builtins.all (path: invalid (link // { target = path; })) [
+      "/srv//alice"
+      "/srv/../alice"
+      "/srv/./alice"
+      "/srv/alice/"
+      "relative"
+      "/"
+    ];
+    expected = true;
+  };
+  "test external links reject source path values" = {
+    expr = invalid (link // { target = ./links.nix; });
+    expected = true;
+  };
+  "test external links reject store context" = {
+    expr = invalid (link // { target = "${pkgs.hello}/bin/hello"; });
+    expected = true;
+  };
+  "test external links reject unsupported representations" = {
+    expr = invalid (link // { representation = "writable"; });
+    expected = true;
+  };
+  "test direct external links reject ownership claims" = {
+    expr = invalid (link // { users = [ "alice" ]; });
+    expected = true;
+  };
 }

@@ -6,15 +6,6 @@
   lexicon,
 }:
 let
-  bindingTests = import ./bindings.nix {
-    inherit
-      lib
-      pkgs
-      krisis
-      axiom
-      lexicon
-      ;
-  };
   ownerships = import ../../src/ownerships { inherit lib krisis axiom; };
   inherit (ownerships) claimKeys;
 
@@ -238,7 +229,8 @@ let
       declaration: declaration.destination == ".config/caelestia/theme-hooks/caelestia-multi"
     ) caelestiaMultiDeclarations
   );
-  caelestiaMultiHookScript = builtins.readFile caelestiaMultiHook.source.value;
+  # the script's text attribute avoids building it, which the sandboxed runner can't do
+  caelestiaMultiHookScript = caelestiaMultiHook.source.value.text;
   caelestiaPublishFragments = [
     ".local/state/caelestia/theme/caelestia-multi-alpha-program.nix"
     ".config/example/alpha.conf"
@@ -495,45 +487,10 @@ let
     ];
   };
 
-  inactiveResult = builtins.tryEval (builtins.deepSeq (inactiveMalformed.nixos moduleArgs) true);
-  inactiveDirectoryResult = builtins.tryEval (
-    builtins.deepSeq (inactiveDirectory.nixos moduleArgs) true
-  );
-  inactiveThemeResult = builtins.tryEval (builtins.deepSeq (inactiveTheme.nixos moduleArgs) true);
-  malformedResult = builtins.tryEval (builtins.deepSeq (selectedMalformed.nixos moduleArgs) true);
-  malformedDirectoryResult = builtins.tryEval (
-    builtins.deepSeq (selectedMalformedDirectory.nixos moduleArgs) true
-  );
-  missingDirectoryResult = builtins.tryEval (
-    builtins.deepSeq (selectedMissingDirectory.nixos moduleArgs) true
-  );
-  unknownFileFieldResult = builtins.tryEval (
-    builtins.deepSeq (unknownFileField.nixos moduleArgs) true
-  );
-  unknownDmsFieldResult = builtins.tryEval (builtins.deepSeq (unknownDmsField.nixos moduleArgs) true);
-  unsupportedCaelestiaNativeResult = builtins.tryEval (
-    builtins.deepSeq (unsupportedCaelestiaNative.nixos moduleArgs) true
-  );
-  emptyRendererResult = builtins.tryEval (builtins.deepSeq (emptyRenderer.nixos moduleArgs) true);
-  unknownSharedShellResult = builtins.tryEval (
-    builtins.deepSeq (unknownSharedShell.nixos moduleArgs) true
-  );
-  duplicateSharedShellResult = builtins.tryEval (
-    builtins.deepSeq (duplicateSharedShell.nixos moduleArgs) true
-  );
-  selfSharedShellResult = builtins.tryEval (builtins.deepSeq (selfSharedShell.nixos moduleArgs) true);
-  overlappingSharedShellResult = builtins.tryEval (
-    builtins.deepSeq (overlappingSharedShell.nixos moduleArgs) true
-  );
-  invalidPolicyResult = builtins.tryEval (builtins.deepSeq (invalidPolicy.nixos moduleArgs) true);
-  excludedOverrideResult = builtins.tryEval (
-    builtins.deepSeq (excludedOverride.nixos moduleArgs) true
-  );
-  excludedThemeResult = builtins.tryEval (builtins.deepSeq (excludedTheme.nixos moduleArgs) true);
 in
-rec {
-  tests = {
-    suggestions-use-shared-policy =
+{
+  "test suggestions use shared policy" = {
+    expr =
       let
         report = import ../../src/program/report.nix { inherit lib krisis axiom; };
       in
@@ -541,7 +498,10 @@ rec {
       && report.suggestionFor [ "bat" "car" ] "cat" == " -- did you mean 'bat'?"
       && report.suggestionFor [ "unrelated" ] "cat" == ""
       && report.editDistance "kitten" "sitting" == 3;
-    bounded-output-shapes =
+    expected = true;
+  };
+  "test bounded output shapes" = {
+    expr =
       builtins.attrNames packageOnly == [ "homeManager" ]
       && builtins.attrNames fileOnly == [ "nixos" ]
       && builtins.attrNames directoryOnly == [ "nixos" ]
@@ -550,41 +510,99 @@ rec {
           "homeManager"
           "nixos"
         ];
-    package-only-shape = packageOnly ? homeManager && !(packageOnly ? nixos);
-    file-only-shape = fileOnly ? nixos && !(fileOnly ? homeManager);
-    combined-shape = combined ? homeManager && combined ? nixos;
-    inactive-payload-stays-lazy = inactiveResult.success;
-    inactive-directory-stays-lazy = inactiveDirectoryResult.success;
-    inactive-theme-adapter-stays-lazy = inactiveThemeResult.success;
-    selected-payload-is-validated = !malformedResult.success;
-    selected-nondirectory-source-is-rejected = !malformedDirectoryResult.success;
-    selected-missing-directory-source-is-rejected = !missingDirectoryResult.success;
-    directory-members-expand-to-files = builtins.elem ".config/example/default.nix" directoryDestinations;
-    inactive-overrides-do-not-fall-back =
-      !(builtins.elem ".config/example/diagnostics.nix" directoryDestinations);
-    noctalia-sources-are-reserved =
+    expected = true;
+  };
+  "test package only shape" = {
+    expr = packageOnly ? homeManager && !(packageOnly ? nixos);
+    expected = true;
+  };
+  "test file only shape" = {
+    expr = fileOnly ? nixos && !(fileOnly ? homeManager);
+    expected = true;
+  };
+  "test combined shape" = {
+    expr = combined ? homeManager && combined ? nixos;
+    expected = true;
+  };
+  "test inactive payload stays lazy" = {
+    expr = builtins.deepSeq (inactiveMalformed.nixos moduleArgs) true;
+    expected = true;
+  };
+  "test inactive directory stays lazy" = {
+    expr = builtins.deepSeq (inactiveDirectory.nixos moduleArgs) true;
+    expected = true;
+  };
+  "test inactive theme adapter stays lazy" = {
+    expr = builtins.deepSeq (inactiveTheme.nixos moduleArgs) true;
+    expected = true;
+  };
+  "test selected payload is validated" = {
+    expr = selectedMalformed.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/resource/shape\\] \\$\\.furnish\\.files\\[0\\]\\.destination: invalid resource field";
+  };
+  "test selected nondirectory source is rejected" = {
+    expr = selectedMalformedDirectory.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/directory-source-kind\\] \\$\\.furnish\\.directories\\[0\\]: src must be a directory: ";
+  };
+  "test selected missing directory source is rejected" = {
+    expr = selectedMissingDirectory.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/directory-source-missing\\] \\$\\.furnish\\.directories\\[0\\]: src does not exist in the flake source: ";
+  };
+  "test directory members expand to files" = {
+    expr = builtins.elem ".config/example/default.nix" directoryDestinations;
+    expected = true;
+  };
+  "test inactive overrides do not fall back" = {
+    expr = !(builtins.elem ".config/example/diagnostics.nix" directoryDestinations);
+    expected = true;
+  };
+  "test noctalia sources are reserved" = {
+    expr =
       !(builtins.elem ".config/example/safe-render.nix" directoryDestinations)
       && builtins.elem ".config/noctalia/templates/example/safe-render.nix" directoryDestinations;
-    dms-templates-lower-to-independent-fragments =
+    expected = true;
+  };
+  "test dms templates lower to independent fragments" = {
+    expr =
       builtins.elem ".config/matugen/dms/templates/dms-example/program.nix" dmsDestinations
       && !(builtins.any (
         destination: lib.hasPrefix ".config/matugen/dms/configs/" destination
       ) dmsDestinations);
-    illogical-impulse-templates-lower-to-independent-fragments = builtins.elem ".config/illogical-impulse/matugen/templates/illogical-impulse-example/program.nix" illogicalImpulseDestinations;
-    end4-pc-templates-lower-to-independent-fragments = builtins.elem ".config/end4-pc/matugen/templates/end4-pc-example/program.nix" end4PcDestinations;
-    caelestia-templates-lower-to-state-publishers =
+    expected = true;
+  };
+  "test illogical impulse templates lower to independent fragments" = {
+    expr = builtins.elem ".config/illogical-impulse/matugen/templates/illogical-impulse-example/program.nix" illogicalImpulseDestinations;
+    expected = true;
+  };
+  "test end4 pc templates lower to independent fragments" = {
+    expr = builtins.elem ".config/end4-pc/matugen/templates/end4-pc-example/program.nix" end4PcDestinations;
+    expected = true;
+  };
+  "test caelestia templates lower to state publishers" = {
+    expr =
       builtins.elem ".config/caelestia/templates/caelestia-example-program.nix" caelestiaDestinations
       && builtins.elem ".config/caelestia/theme-hooks/caelestia-example" caelestiaDestinations;
-    caelestia-multi-output-destinations-are-exact =
-      caelestiaMultiDestinations == [
-        ".config/caelestia/templates/caelestia-multi-alpha-program.nix"
-        ".config/caelestia/templates/caelestia-multi-zeta-program.nix"
-        ".config/caelestia/theme-hooks/caelestia-multi"
-      ];
-    caelestia-publishers-are-strict-and-transactionally-ordered =
+    expected = true;
+  };
+  "test caelestia multi output destinations are exact" = {
+    expr = caelestiaMultiDestinations;
+    expected = [
+      ".config/caelestia/templates/caelestia-multi-alpha-program.nix"
+      ".config/caelestia/templates/caelestia-multi-zeta-program.nix"
+      ".config/caelestia/theme-hooks/caelestia-multi"
+    ];
+  };
+  "test caelestia publishers are strict and transactionally ordered" = {
+    expr =
       lib.hasInfix "set -eu" caelestiaMultiHookScript
       && containsInOrder caelestiaPublishFragments caelestiaMultiHookScript;
-    shared-registration-emits-all-backends =
+    expected = true;
+  };
+  "test shared registration emits all backends" = {
+    expr =
       builtins.elem ".config/noctalia/templates/shared/program.nix" dualThemeDestinations
       && builtins.elem ".config/noctalia/shared.toml" dualThemeDestinations
       && builtins.elem ".config/matugen/dms/templates/shared/program.nix" dualThemeDestinations
@@ -595,71 +613,99 @@ rec {
       && !(builtins.any (
         destination: lib.hasPrefix ".config/matugen/dms/configs/" destination
       ) dualThemeDestinations);
-    shared-registration-is-direction-independent =
+    expected = true;
+  };
+  "test shared registration is direction independent" = {
+    expr =
       builtins.elem ".config/noctalia/templates/reverse-shared/program.nix" reverseSharedDestinations
       && builtins.elem ".config/noctalia/reverse-shared.toml" reverseSharedDestinations
       && builtins.elem ".config/matugen/dms/templates/reverse-shared/program.nix" reverseSharedDestinations;
-    writable-overrides-are-first-class =
+    expected = true;
+  };
+  "test writable overrides are first class" = {
+    expr =
       writableDeclaration.representation == "writable"
       && writableDeclaration.onConflict == "runtime-wins";
-    directory-subtrees-are-pruned =
-      !(builtins.any (destination: lib.hasInfix "/nested/" destination) subtreeDestinations);
-    directory-member-sources-stay-path-typed = builtins.all (
-      declaration: builtins.isPath declaration.source.value
-    ) subtreeDeclarations;
-    user-claims-select-the-current-user =
+    expected = true;
+  };
+  "test directory subtrees are pruned" = {
+    expr = !(builtins.any (destination: lib.hasInfix "/nested/" destination) subtreeDestinations);
+    expected = true;
+  };
+  "test directory member sources stay path typed" = {
+    expr = builtins.all (declaration: builtins.isPath declaration.source.value) subtreeDeclarations;
+    expected = true;
+  };
+  "test user claims select the current user" = {
+    expr =
       builtins.length (declarationsOf userOnly) == 1 && declarationsOfWith grandpaArgs userOnly == [ ];
-    except-user-claims-select-everyone-else =
+    expected = true;
+  };
+  "test except user claims select everyone else" = {
+    expr =
       declarationsOf exceptFeltfomo == [ ]
       && builtins.length (declarationsOfWith grandpaArgs exceptFeltfomo) == 1;
-    unknown-file-fields-are-rejected = !unknownFileFieldResult.success;
-    unknown-dms-fields-are-rejected = !unknownDmsFieldResult.success;
-    caelestia-native-fields-are-rejected = !unsupportedCaelestiaNativeResult.success;
-    empty-renderers-are-rejected = !emptyRendererResult.success;
-    inherited-renderer-fields-are-supported =
+    expected = true;
+  };
+  "test unknown file fields are rejected" = {
+    expr = unknownFileField.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.furnish\\.files\\[0\\]\\.typo: unregistered field typo";
+  };
+  "test unknown dms fields are rejected" = {
+    expr = unknownDmsField.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/unknown-field\\] \\$\\.theme\\.renderers\\.dms\\.typo: unregistered field typo";
+  };
+  "test caelestia native fields are rejected" = {
+    expr = unsupportedCaelestiaNative.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "program: 1 declaration error\\(s\\)\n\\s*- \\[program/theme-native-unsupported\\] theme\\.caelestia\\.invalid-native: cannot use native registration fields: in";
+  };
+  "test empty renderers are rejected" = {
+    expr = emptyRenderer.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/theme-renderer-incomplete\\] \\$\\.theme\\.renderers\\.dms: effective renderer settings must define source and ";
+  };
+  "test inherited renderer fields are supported" = {
+    expr =
       builtins.elem ".config/matugen/dms/templates/inherited-renderer/shared.nix" inheritedRendererDestinations
       && builtins.elem ".config/noctalia/templates/inherited-renderer/override.nix" inheritedRendererDestinations;
-    unknown-shared-shells-are-rejected = !unknownSharedShellResult.success;
-    duplicate-shared-shells-are-rejected = !duplicateSharedShellResult.success;
-    self-shared-shells-are-rejected = !selfSharedShellResult.success;
-    overlapping-shared-shells-are-rejected = !overlappingSharedShellResult.success;
-    invalid-conflict-policies-are-rejected = !invalidPolicyResult.success;
-    overrides-beneath-excluded-subtrees-are-rejected = !excludedOverrideResult.success;
-    theme-sources-beneath-excluded-subtrees-are-rejected = !excludedThemeResult.success;
-  }
-  // (import ./links.nix {
-    inherit
-      lib
-      pkgs
-      krisis
-      axiom
-      lexicon
-      ;
-  })
-  // (import ./context.nix {
-    inherit
-      lib
-      pkgs
-      lexicon
-      axiom
-      krisis
-      ;
-  })
-  // (import ./directories.nix { inherit lib axiom krisis; }).tests
-  // (import ./theme-effects.nix {
-    inherit
-      lib
-      pkgs
-      axiom
-      krisis
-      lexicon
-      ;
-  }).cases
-  // bindingTests
-  // (import ./lucid.nix { inherit lib pkgs lexicon; })
-  // (import ./serpantinum.nix { inherit lib pkgs lexicon; });
-
-  failing = builtins.attrNames (lib.filterAttrs (_: value: !value) tests);
-  ok =
-    if failing == [ ] then true else throw "program tests failed: ${lib.concatStringsSep ", " failing}";
+    expected = true;
+  };
+  "test unknown shared shells are rejected" = {
+    expr = unknownSharedShell.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/theme-renderer-unknown\\] \\$\\.theme\\.renderers\\.noctalia\\.sharedWith: unknown shell \"ds\"";
+  };
+  "test duplicate shared shells are rejected" = {
+    expr = duplicateSharedShell.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/theme-renderer-shared-duplicate\\] \\$\\.theme\\.renderers\\.noctalia\\.sharedWith: sharedWith repeats shells: dm";
+  };
+  "test self shared shells are rejected" = {
+    expr = selfSharedShell.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/theme-renderer-shared-self\\] \\$\\.theme\\.renderers\\.noctalia\\.sharedWith: a renderer cannot share with itsel";
+  };
+  "test overlapping shared shells are rejected" = {
+    expr = overlappingSharedShell.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/theme-renderer-overlap\\] \\$\\.theme\\.renderers\\.dms: shell dms is assigned by multiple renderer declaration";
+  };
+  "test invalid conflict policies are rejected" = {
+    expr = invalidPolicy.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/resource/shape\\] \\$\\.furnish\\.files\\[0\\]\\.onConflict: invalid resource field";
+  };
+  "test overrides beneath excluded subtrees are rejected" = {
+    expr = excludedOverride.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/directory-file-excluded\\] \\$\\.furnish\\.directories\\[0\\]: overrides excluded names: nested/inner\\.toml";
+  };
+  "test theme sources beneath excluded subtrees are rejected" = {
+    expr = excludedTheme.nixos moduleArgs;
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[program/directory-theme-excluded\\] \\$\\.furnish\\.directories\\[0\\]: excludes theme sources: nested/inner\\.toml";
+  };
 }

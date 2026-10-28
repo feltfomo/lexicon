@@ -201,30 +201,36 @@ let
     ((builtins.head skillHome) { inherit lib pkgs; }).systemd.user.services.skills-bootstrap;
 in
 {
-  context-skills-stays-direct-and-sparse =
-    builtins.attrNames skills == [
+  "test context skills stays direct and sparse" = {
+    expr = builtins.attrNames skills;
+    expected = [
       "homeManager"
       "nixos"
     ];
-  context-skills-two-host-user-targets =
-    builtins.length aliceDeclarations == 12
-    && builtins.length bobDeclarations == 12
-    && builtins.length (external aliceDeclarations) == 9
-    && builtins.length (external bobDeclarations) == 9
-    && builtins.all (
-      entry: entry.authority.identity == "alice" && entry.filesystemNamespace == "${system}/workstation"
-    ) aliceDeclarations
-    && builtins.all (
-      entry: entry.authority.identity == "bob" && entry.filesystemNamespace == "${system}/server"
-    ) bobDeclarations
-    && builtins.all (entry: lib.hasPrefix "/home/alice/Projects/skills/" entry.source.value) (
-      external aliceDeclarations
-    )
-    && builtins.all (entry: lib.hasPrefix "/home/bob/Projects/skills/" entry.source.value) (
-      external bobDeclarations
-    );
-  context-home-manager-native-module =
-    home.result == {
+  };
+  "test context skills two host user targets" = {
+    expr =
+      builtins.length aliceDeclarations == 12
+      && builtins.length bobDeclarations == 12
+      && builtins.length (external aliceDeclarations) == 9
+      && builtins.length (external bobDeclarations) == 9
+      && builtins.all (
+        entry: entry.authority.identity == "alice" && entry.filesystemNamespace == "${system}/workstation"
+      ) aliceDeclarations
+      && builtins.all (
+        entry: entry.authority.identity == "bob" && entry.filesystemNamespace == "${system}/server"
+      ) bobDeclarations
+      && builtins.all (entry: lib.hasPrefix "/home/alice/Projects/skills/" entry.source.value) (
+        external aliceDeclarations
+      )
+      && builtins.all (entry: lib.hasPrefix "/home/bob/Projects/skills/" entry.source.value) (
+        external bobDeclarations
+      );
+    expected = true;
+  };
+  "test context home manager native module" = {
+    expr = home.result;
+    expected = {
       compatible = true;
       imported = true;
       custom = "argument";
@@ -235,62 +241,92 @@ in
       package = "hello";
       service = "${pkgs.git}/bin/git";
     };
-  context-home-manager-skills-service =
-    skillService.Service.ExecStart
-    == "${pkgs.git}/bin/git clone https://github.com/feltfomo/skills /home/alice/Projects/skills"
-    && skillService.Service.ExecStartPre == "${pkgs.coreutils}/bin/mkdir -p /home/alice/Projects"
-    && skillService.Unit.ConditionPathExists == "!/home/alice/Projects/skills";
-  context-home-manager-attr-module =
-    (builtins.head
-      ((direct { homeManager.home.sessionVariables.EDITOR = "hx"; }).homeManager alice).imports
-    ).home.sessionVariables.EDITOR == "hx";
-  context-owned-home-manager-only-is-selected = selectedHomeConfig.result.user == "alice";
-  context-inactive-callbacks-stay-lazy =
-    declarations alice inactive == [ ] && (inactive.homeManager alice).imports == [ ];
-  context-outer-and-nested-claims-select =
-    builtins.length (declarations alice scoped) == 1
-    && declarations bob scoped == [ ]
-    && (builtins.head (declarations alice scoped)).destination == ".config/workstation/alice";
-  context-directory-indices-rules-and-theme-reservations =
-    builtins.elem ".config/tree/default.nix" destinations
-    && !(builtins.elem ".config/tree/diagnostics.nix" destinations)
-    && !(builtins.elem ".config/tree/safe-render.nix" destinations)
-    && builtins.elem ".config/noctalia/templates/dynamic/safe-render.nix" destinations;
-  context-empty-callbacks-are-inert = declarations alice empty == [ ];
-  context-malformed-results-rejected = builtins.all (name: fails ((malformed name).nixos alice)) [
-    "files"
-    "links"
-    "directories"
-  ];
-  context-direct-file-claims-rejected = fails (
-    claimed "files" [
+  };
+  "test context home manager skills service" = {
+    expr =
+      skillService.Service.ExecStart
+      == "${pkgs.git}/bin/git clone https://github.com/feltfomo/skills /home/alice/Projects/skills"
+      && skillService.Service.ExecStartPre == "${pkgs.coreutils}/bin/mkdir -p /home/alice/Projects"
+      && skillService.Unit.ConditionPathExists == "!/home/alice/Projects/skills";
+    expected = true;
+  };
+  "test context home manager attr module" = {
+    expr =
+      (builtins.head
+        ((direct { homeManager.home.sessionVariables.EDITOR = "hx"; }).homeManager alice).imports
+      ).home.sessionVariables.EDITOR;
+    expected = "hx";
+  };
+  "test context owned home manager only is selected" = {
+    expr = selectedHomeConfig.result.user;
+    expected = "alice";
+  };
+  "test context inactive callbacks stay lazy" = {
+    expr = declarations alice inactive == [ ] && (inactive.homeManager alice).imports == [ ];
+    expected = true;
+  };
+  "test context outer and nested claims select" = {
+    expr =
+      builtins.length (declarations alice scoped) == 1
+      && declarations bob scoped == [ ]
+      && (builtins.head (declarations alice scoped)).destination == ".config/workstation/alice";
+    expected = true;
+  };
+  "test context directory indices rules and theme reservations" = {
+    expr =
+      builtins.elem ".config/tree/default.nix" destinations
+      && !(builtins.elem ".config/tree/diagnostics.nix" destinations)
+      && !(builtins.elem ".config/tree/safe-render.nix" destinations)
+      && builtins.elem ".config/noctalia/templates/dynamic/safe-render.nix" destinations;
+    expected = true;
+  };
+  "test context empty callbacks are inert" = {
+    expr = declarations alice empty;
+    expected = [ ];
+  };
+  "test context malformed results rejected" = {
+    expr = builtins.all (name: fails ((malformed name).nixos alice)) [
+      "files"
+      "links"
+      "directories"
+    ];
+    expected = true;
+  };
+  "test context direct file claims rejected" = {
+    expr = claimed "files" [
       {
         users = [ "alice" ];
         src = source;
         dest = "a";
       }
-    ]
-  );
-  context-direct-link-claims-rejected = fails (
-    claimed "links" [
+    ];
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.furnish\\.files\\[0\\]\\.users: direct binding rejects ownership annotations";
+  };
+  "test context direct link claims rejected" = {
+    expr = claimed "links" [
       {
         when = _: true;
         target = "/external";
         dest = "a";
       }
-    ]
-  );
-  context-direct-directory-claims-rejected = fails (
-    claimed "directories" [
+    ];
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.furnish\\.links\\[0\\]\\.when: direct binding rejects ownership annotations";
+  };
+  "test context direct directory claims rejected" = {
+    expr = claimed "directories" [
       {
         hosts = [ "workstation" ];
         src = ./fixtures/sample-tree;
         dest = "a";
       }
-    ]
-  );
-  context-direct-directory-rule-claims-rejected = fails (
-    claimed "directories" [
+    ];
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.furnish\\.directories\\[0\\]\\.hosts: direct binding rejects ownership annotations";
+  };
+  "test context direct directory rule claims rejected" = {
+    expr = claimed "directories" [
       {
         src = ./fixtures/sample-tree;
         dest = "a";
@@ -301,9 +337,13 @@ in
           }
         ];
       }
-    ]
-  );
-  context-direct-callbacks-require-user-at-declaration = fails (
-    (lexicon.lib.programDirect { target.host = target.host; }) { files = _: [ ]; }
-  );
+    ];
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/direct-annotation\\] \\$\\.furnish\\.directories\\[0\\]\\.files\\[0\\]\\.users: direct binding rejects ownership annotati";
+  };
+  "test context direct callbacks require user at declaration" = {
+    expr = (lexicon.lib.programDirect { target.host = target.host; }) { files = _: [ ]; };
+    expectedError.type = "ThrownError";
+    expectedError.msg = "\\[lexicon/resource-user\\] \\$\\.target\\.user: resource-producing declarations require a concrete user target";
+  };
 }

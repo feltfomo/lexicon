@@ -184,10 +184,9 @@ let
       builtins.filter (entry: entry.identity == "unit '${name}'") matrix.neverSelectedInModeledContexts
     );
 
-  cases = [
-    {
-      name = "user matrix survivors agree with real resolve in every valid context";
-      pass =
+  tests = {
+    "test user matrix survivors agree with real resolve in every valid context" = {
+      expr =
         agreementMatrix.byContext."x86_64-linux/khion/feltfomo".survivors == [
           "leaf-0"
           "leaf-1"
@@ -209,10 +208,10 @@ let
             shared = true;
             grandpa = true;
           };
-    }
-    {
-      name = "dead uses the engine impossibility diagnostics for axis and relation failures";
-      pass =
+      expected = true;
+    };
+    "test dead uses the engine impossibility diagnostics for axis and relation failures" = {
+      expr =
         identities matrix.dead == [
           "unit 'dead-host'"
           "unit 'impossible-pair'"
@@ -236,22 +235,21 @@ let
               reason = "no user in { grandpa } lives on any host in { x86_64-linux/khion } -- this host/user co-ownership can never apply";
             }
           ];
-    }
-    {
-      name = "cross-axis dead matches the real resolver's impossible outcome";
-      pass = throws (
-        resolve [
-          {
-            hosts = [ "khion" ];
-            users = [ "grandpa" ];
-            impossiblePair = true;
-          }
-        ] contexts.khionFeltfomo
-      );
-    }
-    {
-      name = "unknown membership is excluded from rows and surfaced as indeterminate";
-      pass =
+      expected = true;
+    };
+    "test cross-axis dead matches the real resolver's impossible outcome" = {
+      expr = resolve [
+        {
+          hosts = [ "khion" ];
+          users = [ "grandpa" ];
+          impossiblePair = true;
+        }
+      ] contexts.khionFeltfomo;
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unlabeled unit \\{ impossiblePair \\}: no user in \\{ grandpa \\} lives on any host in \\{ x86_64-linux/khion \\} -- thi";
+    };
+    "test unknown membership is excluded from rows and surfaced as indeterminate" = {
+      expr =
         builtins.attrNames matrix.byContext == [
           "x86_64-linux/khion/feltfomo"
           "x86_64-linux/lumi/feltfomo"
@@ -261,10 +259,10 @@ let
         && identities matrix.indeterminate.units == [ "unit 'unknown-only'" ]
         && !(builtins.elem "unit 'unknown-only'" (identities matrix.neverSelectedInModeledContexts))
         && !(builtins.elem "unit 'unknown-only'" (identities matrix.dead));
-    }
-    {
-      name = "when misses are observationally inactive, never dead";
-      pass =
+      expected = true;
+    };
+    "test when misses are observationally inactive, never dead" = {
+      expr =
         !(builtins.elem "unit 'runtime-only'" (identities matrix.dead))
         && !(builtins.elem "unit 'runtime-only'" (identities matrix.indeterminate.units))
         &&
@@ -273,17 +271,17 @@ let
             "x86_64-linux/lumi/feltfomo" = [ "when" ];
             "x86_64-linux/lumi/grandpa" = [ "when" ];
           };
-    }
-    {
-      name = "stable keys distinguish unit identity from snapshot position";
-      pass =
+      expected = true;
+    };
+    "test stable keys distinguish unit identity from snapshot position" = {
+      expr =
         matrix.units.leaf-0.identity == "unit 'global'"
         && matrix.units.leaf-4.identity == "unit 'dead-host'"
         && matrix.units.leaf-6.identity == "unit 'unknown-only'";
-    }
-    {
-      name = "unit and top-level pre-merge coverage are pinned";
-      pass =
+      expected = true;
+    };
+    "test unit and top-level pre-merge coverage are pinned" = {
+      expr =
         matrix.coverage.units.leaf-0 == [
           "x86_64-linux/khion/feltfomo"
           "x86_64-linux/lumi/feltfomo"
@@ -295,28 +293,27 @@ let
         && matrix.coverage.preMerge.meaning == "top-level paths offered by surviving leaves before merge"
         && matrix.coverage.preMerge.paths.khion == [ "x86_64-linux/khion/feltfomo" ]
         && matrix.coverage.preMerge.paths.grandpa == [ "x86_64-linux/lumi/grandpa" ];
-    }
-    {
-      name = "host diffs include unit keys and top-level pre-merge paths";
-      pass =
-        matrix.hostDiffs."x86_64-linux/khion -> x86_64-linux/lumi" == {
-          units = {
-            leftOnly = [ "leaf-1" ];
-            rightOnly = [ "leaf-2" ];
-          };
-          preMergePaths = {
-            leftOnly = [ "khion" ];
-            rightOnly = [ "grandpa" ];
-          };
+      expected = true;
+    };
+    "test host diffs include unit keys and top-level pre-merge paths" = {
+      expr = matrix.hostDiffs."x86_64-linux/khion -> x86_64-linux/lumi";
+      expected = {
+        units = {
+          leftOnly = [ "leaf-1" ];
+          rightOnly = [ "leaf-2" ];
         };
-    }
-    {
-      name = "the full report never forces surviving package or secret values";
-      pass = (builtins.tryEval (builtins.deepSeq matrix matrix)).success;
-    }
-    {
-      name = "system matrix agrees with host-only resolution and has its own row shape";
-      pass =
+        preMergePaths = {
+          leftOnly = [ "khion" ];
+          rightOnly = [ "grandpa" ];
+        };
+      };
+    };
+    "test the full report never forces surviving package or secret values" = {
+      expr = (builtins.tryEval (builtins.deepSeq matrix matrix)).success;
+      expected = true;
+    };
+    "test system matrix agrees with host-only resolution and has its own row shape" = {
+      expr =
         systemMatrix.byContext."x86_64-linux/khion".survivors == [
           "leaf-0"
           "leaf-1"
@@ -353,10 +350,10 @@ let
               rightOnly = [ ];
             };
           };
-    }
-    {
-      name = "system matrix keeps the recursive user-claim guard";
-      pass = throws (resolveSystemMatrix {
+      expected = true;
+    };
+    "test system matrix keeps the recursive user-claim guard" = {
+      expr = resolveSystemMatrix {
         units = [
           {
             children = [
@@ -367,30 +364,27 @@ let
             ];
           }
         ];
-      });
-    }
-    {
-      name = "matrix runs tree stages before context projection";
-      pass = throws (reportWithStage (diagnosticStage "tree" "tree stage ran"));
-    }
-    {
-      name = "matrix runs survivor stages for every modeled context";
-      pass = throws (reportWithStage (diagnosticStage "survivors" "survivor stage ran"));
-    }
-  ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: a system-scope \\(host-only\\) unit sets 'users' = \\[\"feltfomo\"\\] -- a host-only slice binds no user, so";
+    };
+    "test matrix runs tree stages before context projection" = {
+      expr = reportWithStage (diagnosticStage "tree" "tree stage ran");
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'matrix stage': tree stage ran";
+    };
+    "test matrix runs survivor stages for every modeled context" = {
+      expr = reportWithStage (diagnosticStage "survivors" "survivor stage ran");
+      expectedError.type = "ThrownError";
+      expectedError.msg = "ownerships: 1 ownership error\\(s\\):\n\\s*- unit 'matrix stage': survivor stage ran";
+    };
+  };
 
-  failing = builtins.filter (case: !case.pass) cases;
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "ownerships matrix tests FAILED: ${lib.concatMapStringsSep ", " (case: case.name) failing}";
 in
 {
   inherit
-    cases
+    tests
     matrix
     systemMatrix
-    ok
     ;
 }

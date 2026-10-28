@@ -63,123 +63,158 @@ let
     })
       { parsed = "authored"; };
   tests = {
-    registrations-preserve-builtins-and-extension-order =
-      map (entry: entry.name) configured.blocks.registrations == [
+    "test registrations preserve builtins and extension order" = {
+      expr = map (entry: entry.name) configured.blocks.registrations;
+      expected = [
         "builtin"
         "recursive"
         "last"
       ];
-    productive-recursion-keeps-reference-targets-lazy =
-      configured.blocks.byKey.recursive.node.validated
-      && follow 128 configured.blocks.byKey.recursive.node == "record";
-    registered-functions-and-payload-defaults-stay-opaque =
-      builtins.isFunction configured.blocks.byKey.recursive.lower
-      && builtins.isFunction configured.blocks.byKey.recursive.node.prepare
-      && builtins.attrNames configured.blocks.byKey.recursive.node.fields.payload == [ "default" ];
-    metadata-retains-external-parse-and-default-specifications =
-      parsed.diagnostics == [ ]
-      && parsed.value.parsed == "authored"
-      && parsed.value.normalized == "fallback";
-    extension-envelope-rejects-unknown-fields = malformed {
-      extensions = [
-        (_: {
-          name = "unknown";
-          typo = throw "unknown extension payload";
-        })
-      ];
     };
-    extension-list-rejects-nonfunctions = malformed { extensions = [ 1 ]; };
-    extension-names-collide-before-block-registration = malformed {
-      extensions = [
-        (extension "same" [ (block "first" (definitions.record { })) ])
-        (extension "same" [ (block "second" (definitions.record { })) ])
-      ];
+    "test productive recursion keeps reference targets lazy" = {
+      expr =
+        configured.blocks.byKey.recursive.node.validated
+        && follow 128 configured.blocks.byKey.recursive.node == "record";
+      expected = true;
     };
-    malformed-extension-suppresses-dependent-block-inspection = malformed {
-      extensions = [
-        (_: {
-          name = 1;
-          blocks = [ (throw "registration inspected a rejected extension block") ];
-        })
-      ];
+    "test registered functions and payload defaults stay opaque" = {
+      expr =
+        builtins.isFunction configured.blocks.byKey.recursive.lower
+        && builtins.isFunction configured.blocks.byKey.recursive.node.prepare
+        && builtins.attrNames configured.blocks.byKey.recursive.node.fields.payload == [ "default" ];
+      expected = true;
     };
-    block-and-metadata-collision-registries-remain-active =
-      malformed {
-        blocks = [
-          (block "same" (definitions.record { }))
-          (block "same" (definitions.record { }))
-        ];
-      }
-      && malformed {
+    "test metadata retains external parse and default specifications" = {
+      expr =
+        parsed.diagnostics == [ ]
+        && parsed.value.parsed == "authored"
+        && parsed.value.normalized == "fallback";
+      expected = true;
+    };
+    "test extension envelope rejects unknown fields" = {
+      expr = malformed {
         extensions = [
           (_: {
-            name = "metadata";
-            metadata = [
-              {
-                name = "same";
-                field = { };
-              }
-              {
-                name = "same";
-                field = { };
-              }
-            ];
+            name = "unknown";
+            typo = throw "unknown extension payload";
           })
         ];
       };
-    malformed-blocks-precede-node-compilation = malformed {
-      blocks = [
-        (
-          (block "bad" (
-            definitions.record { fields.unused.validate = throw "registration compiled a rejected block node"; }
-          ))
-          // {
-            scope = "invalid";
-          }
-        )
-      ];
+      expected = true;
     };
-    unproductive-recursion-is-rejected =
-      malformed (recursiveBlock (definitions.recursive (self: self)))
-      && malformed (
-        recursiveBlock (
-          definitions.recursive (self: definitions.forOutputs [ "homeManager" ] (definitions.contextual self))
-        )
-      );
-    recursive-binder-shape-and-vocabulary-are-checked =
-      malformed (recursiveBlock {
-        kind = "recursive";
-        body = 1;
-      })
-      && malformed (
-        recursiveBlock (
-          (definitions.recursive (_: definitions.record { })) // { extra = throw "unused recursive field"; }
-        )
-      );
-    references-cannot-escape-their-binder = malformed (recursiveBlock {
-      kind = "reference";
-      name = "outside";
-    });
-    node-and-field-schema-contracts-remain-checked =
-      malformed { blocks = [ (block "unknown" { kind = "unknown"; }) ]; }
-      && malformed { blocks = [ (block "field" (definitions.record { fields.bad.validate = 1; })) ]; }
-      && malformed {
-        blocks = [
-          (block "collision" (
-            definitions.record {
-              fields.child = { };
-              children.child = definitions.record { };
-            }
-          ))
+    "test extension list rejects nonfunctions" = {
+      expr = malformed { extensions = [ 1 ]; };
+      expected = true;
+    };
+    "test extension names collide before block registration" = {
+      expr = malformed {
+        extensions = [
+          (extension "same" [ (block "first" (definitions.record { })) ])
+          (extension "same" [ (block "second" (definitions.record { })) ])
         ];
       };
+      expected = true;
+    };
+    "test malformed extension suppresses dependent block inspection" = {
+      expr = malformed {
+        extensions = [
+          (_: {
+            name = 1;
+            blocks = [ (throw "registration inspected a rejected extension block") ];
+          })
+        ];
+      };
+      expected = true;
+    };
+    "test block and metadata collision registries remain active" = {
+      expr =
+        malformed {
+          blocks = [
+            (block "same" (definitions.record { }))
+            (block "same" (definitions.record { }))
+          ];
+        }
+        && malformed {
+          extensions = [
+            (_: {
+              name = "metadata";
+              metadata = [
+                {
+                  name = "same";
+                  field = { };
+                }
+                {
+                  name = "same";
+                  field = { };
+                }
+              ];
+            })
+          ];
+        };
+      expected = true;
+    };
+    "test malformed blocks precede node compilation" = {
+      expr = malformed {
+        blocks = [
+          (
+            (block "bad" (
+              definitions.record { fields.unused.validate = throw "registration compiled a rejected block node"; }
+            ))
+            // {
+              scope = "invalid";
+            }
+          )
+        ];
+      };
+      expected = true;
+    };
+    "test unproductive recursion is rejected" = {
+      expr =
+        malformed (recursiveBlock (definitions.recursive (self: self)))
+        && malformed (
+          recursiveBlock (
+            definitions.recursive (self: definitions.forOutputs [ "homeManager" ] (definitions.contextual self))
+          )
+        );
+      expected = true;
+    };
+    "test recursive binder shape and vocabulary are checked" = {
+      expr =
+        malformed (recursiveBlock {
+          kind = "recursive";
+          body = 1;
+        })
+        && malformed (
+          recursiveBlock (
+            (definitions.recursive (_: definitions.record { })) // { extra = throw "unused recursive field"; }
+          )
+        );
+      expected = true;
+    };
+    "test references cannot escape their binder" = {
+      expr = malformed (recursiveBlock {
+        kind = "reference";
+        name = "outside";
+      });
+      expected = true;
+    };
+    "test node and field schema contracts remain checked" = {
+      expr =
+        malformed { blocks = [ (block "unknown" { kind = "unknown"; }) ]; }
+        && malformed { blocks = [ (block "field" (definitions.record { fields.bad.validate = 1; })) ]; }
+        && malformed {
+          blocks = [
+            (block "collision" (
+              definitions.record {
+                fields.child = { };
+                children.child = definitions.record { };
+              }
+            ))
+          ];
+        };
+      expected = true;
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: pass: !pass) tests);
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "registration tests failed ${lib.concatStringsSep ", " failing}";
   diagnosticReporter = _: rec {
     fail =
       diagnostics:
@@ -204,7 +239,7 @@ let
   };
 in
 {
-  inherit tests ok;
+  inherit tests;
   callbackProbe = {
     first = parsed.value;
     again = parsed.value;

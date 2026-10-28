@@ -32,6 +32,10 @@ in
 {
   inventory = resource.probe;
   materialization = furnish.callbackProbe;
-  poison = resource.ok && furnish.cases.furnish-host-index-keeps-source-and-context-opaque;
+  # the poison cell times the opaque-payload cases themselves, so it evaluates them directly
+  poison = builtins.all (case: case.expr == case.expected) (
+    builtins.attrValues resource.tests
+    ++ [ furnish.tests."test furnish host index keeps source and context opaque" ]
+  );
   inherit (furnish) exceptions;
 }

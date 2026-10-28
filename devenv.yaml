@@ -1,0 +1,6 @@
+inputs:
+  # flake.lock owns the nixpkgs pin, and devenv.lock mirrors it on the next shell entry
+  lexicon:
+    url: path:.
+  nixpkgs:
+    follows: lexicon/nixpkgs

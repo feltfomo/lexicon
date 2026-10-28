@@ -56,16 +56,18 @@ let
     ];
   };
   tests = {
-    diagnostic-construction-and-path-injection-survive-effects =
-      map
-        (d: {
-          inherit (d) notes;
-          path = d.primary.label;
-        })
-        (injectedEncoder.document {
-          a = null;
-          b = null;
-        }).diagnostics == [
+    "test diagnostic construction and path injection survive effects" = {
+      expr =
+        map
+          (d: {
+            inherit (d) notes;
+            path = d.primary.label;
+          })
+          (injectedEncoder.document {
+            a = null;
+            b = null;
+          }).diagnostics;
+      expected = [
         {
           notes = [ "injected" ];
           path = "injected $.a";
@@ -75,23 +77,37 @@ let
           path = "injected $.b";
         }
       ];
-    native-transport-keeps-opaque-fields-and-context =
-      (builtins.elemAt transported 0).safe
-      &&
-        builtins.getContext (builtins.elemAt transported 1).value
-        == builtins.getContext "${pkgs.coreutils}/bin/true";
-    invalid-result-has-no-value = !(encoder.document { bad = null; } ? value);
-    raw-syntax-is-deferred =
-      (encoder.document (toml.document "invalid = [")).diagnostics == [ ]
-      && (encoder.document { raw = toml.literal "true\ninjected=1"; }).diagnostics == [ ];
-    source-identity-and-context-pass-through =
-      toml.source "path" ./palette.toml == ./palette.toml
-      &&
-        builtins.getContext (toml.source "string" "${pkgs.coreutils}/bin/true")
-        == builtins.getContext "${pkgs.coreutils}/bin/true"
-      && (toml.source "derivation" pkgs.hello).drvPath == pkgs.hello.drvPath;
-    errors-accumulate-with-structured-paths =
-      diagnostics invalid == [
+    };
+    "test native transport keeps opaque fields and context" = {
+      expr =
+        (builtins.elemAt transported 0).safe
+        &&
+          builtins.getContext (builtins.elemAt transported 1).value
+          == builtins.getContext "${pkgs.coreutils}/bin/true";
+      expected = true;
+    };
+    "test invalid result has no value" = {
+      expr = !(encoder.document { bad = null; } ? value);
+      expected = true;
+    };
+    "test raw syntax is deferred" = {
+      expr =
+        (encoder.document (toml.document "invalid = [")).diagnostics == [ ]
+        && (encoder.document { raw = toml.literal "true\ninjected=1"; }).diagnostics == [ ];
+      expected = true;
+    };
+    "test source identity and context pass through" = {
+      expr =
+        toml.source "path" ./palette.toml == ./palette.toml
+        &&
+          builtins.getContext (toml.source "string" "${pkgs.coreutils}/bin/true")
+          == builtins.getContext "${pkgs.coreutils}/bin/true"
+        && (toml.source "derivation" pkgs.hello).drvPath == pkgs.hello.drvPath;
+      expected = true;
+    };
+    "test errors accumulate with structured paths" = {
+      expr = diagnostics invalid;
+      expected = [
         {
           code = "toml/unsupported-value";
           path = "$.nested[0].function";
@@ -101,52 +117,81 @@ let
           path = "$.nested[0].missing";
         }
       ];
-    ordinary-marker-key-stays-data =
-      (encoder.document { __lexiconToml = "application"; }).value.value.__lexiconToml.value
-      == "application";
-    constructor-precedes-derivation-classification = hasError "toml/constructor-field" "$.type" (
-      (toml.literal "1") // { type = "derivation"; }
-    );
-    constructor-unknown-field = hasError "toml/constructor-field" "$.value.typo" {
-      value = (toml.literal "1") // {
-        typo = true;
+    };
+    "test ordinary marker key stays data" = {
+      expr = (encoder.document { __lexiconToml = "application"; }).value.value.__lexiconToml.value;
+      expected = "application";
+    };
+    "test constructor precedes derivation classification" = {
+      expr = hasError "toml/constructor-field" "$.type" ((toml.literal "1") // { type = "derivation"; });
+      expected = true;
+    };
+    "test constructor unknown field" = {
+      expr = hasError "toml/constructor-field" "$.value.typo" {
+        value = (toml.literal "1") // {
+          typo = true;
+        };
       };
+      expected = true;
     };
-    constructor-kind-is-required = hasError "toml/constructor-kind" "$" (
-      removeAttrs (toml.literal "1") [ "kind" ]
-    );
-    constructor-kind-is-closed = hasError "toml/constructor-kind" "$" (
-      (toml.literal "1") // { kind = "unknown"; }
-    );
-    constructor-value-is-required = hasError "toml/constructor-value" "$" (
-      removeAttrs (toml.literal "1") [ "value" ]
-    );
-    literal-requires-text = hasError "toml/constructor-value" "$.literal" { literal = toml.literal 1; };
-    nested-document-is-rejected = hasError "toml/document-placement" "$.nested[0]" {
-      nested = [ (toml.document "a=1") ];
+    "test constructor kind is required" = {
+      expr = hasError "toml/constructor-kind" "$" (removeAttrs (toml.literal "1") [ "kind" ]);
+      expected = true;
     };
-    inline-rejects-derivations = hasError "toml/table-value" "$.inline" {
-      inline = toml.inline pkgs.hello;
+    "test constructor kind is closed" = {
+      expr = hasError "toml/constructor-kind" "$" ((toml.literal "1") // { kind = "unknown"; });
+      expected = true;
     };
-    tables-rejects-constructors = hasError "toml/table-value" "$.tables[0]" {
-      tables = toml.tables [ (toml.inline { a = 1; }) ];
+    "test constructor value is required" = {
+      expr = hasError "toml/constructor-value" "$" (removeAttrs (toml.literal "1") [ "value" ]);
+      expected = true;
     };
-    table-rejection-precedes-derivation-metadata = hasError "toml/table-value" "$.tables[0]" {
-      tables = toml.tables [
-        ((toml.literal "1") // { type = throw "forced constructor derivation metadata"; })
-      ];
+    "test literal requires text" = {
+      expr = hasError "toml/constructor-value" "$.literal" { literal = toml.literal 1; };
+      expected = true;
     };
-    tables-requires-list = hasError "toml/tables-value" "$.tables" { tables = toml.tables { a = 1; }; };
-    root-must-be-document = hasError "toml/document-shape" "$" (toml.literal "1");
-    store-context-survives-encoding =
-      builtins.getContext fields.executable.value == builtins.getContext "${pkgs.coreutils}/bin/true"
-      && builtins.getContext fields.package.value == builtins.getContext (toString pkgs.hello)
-      && builtins.hasContext (builtins.toJSON contextual)
-      && fields.source.value == toString ./palette.toml;
+    "test nested document is rejected" = {
+      expr = hasError "toml/document-placement" "$.nested[0]" {
+        nested = [ (toml.document "a=1") ];
+      };
+      expected = true;
+    };
+    "test inline rejects derivations" = {
+      expr = hasError "toml/table-value" "$.inline" {
+        inline = toml.inline pkgs.hello;
+      };
+      expected = true;
+    };
+    "test tables rejects constructors" = {
+      expr = hasError "toml/table-value" "$.tables[0]" {
+        tables = toml.tables [ (toml.inline { a = 1; }) ];
+      };
+      expected = true;
+    };
+    "test table rejection precedes derivation metadata" = {
+      expr = hasError "toml/table-value" "$.tables[0]" {
+        tables = toml.tables [
+          ((toml.literal "1") // { type = throw "forced constructor derivation metadata"; })
+        ];
+      };
+      expected = true;
+    };
+    "test tables requires list" = {
+      expr = hasError "toml/tables-value" "$.tables" { tables = toml.tables { a = 1; }; };
+      expected = true;
+    };
+    "test root must be document" = {
+      expr = hasError "toml/document-shape" "$" (toml.literal "1");
+      expected = true;
+    };
+    "test store context survives encoding" = {
+      expr =
+        builtins.getContext fields.executable.value == builtins.getContext "${pkgs.coreutils}/bin/true"
+        && builtins.getContext fields.package.value == builtins.getContext (toString pkgs.hello)
+        && builtins.hasContext (builtins.toJSON contextual)
+        && fields.source.value == toString ./palette.toml;
+      expected = true;
+    };
   };
-  failing = builtins.attrNames (lib.filterAttrs (_: passed: !passed) tests);
 in
-if failing == [ ] then
-  true
-else
-  throw "TOML encoding tests failed: ${lib.concatStringsSep ", " failing}"
+tests

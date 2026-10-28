@@ -1,4 +1,3 @@
-# _lib/ownerships/tests/import-units.nix
 {
   lib,
   krisis,
@@ -36,105 +35,91 @@ let
   resolvedSystem = ownerships.mkResolveSystem roster unitSets.system { inherit host; };
   resolvedHome = ownerships.mkResolve roster unitSets.home { inherit host user; };
 
-  cases = [
-    {
-      name = "importUnits recursively discovers files in deterministic relative-path order";
-      pass =
-        map (unit: unit.label) flat == [
-          "alpha"
-          "beta"
-          "gamma"
-        ];
-    }
-    {
-      name = "importUnits normalizes one unit and a list into one flat collection";
-      pass = builtins.length flat == 3;
-    }
-    {
-      name = "importUnits passes caller arguments to function files";
-      pass = (builtins.head flat).imported.marker == "passed-through";
-    }
-    {
-      name = "importUnits validates only the unit shell and keeps payload fields lazy";
-      pass =
+  tests = {
+    "test importUnits recursively discovers files in deterministic relative-path order" = {
+      expr = map (unit: unit.label) flat;
+      expected = [
+        "alpha"
+        "beta"
+        "gamma"
+      ];
+    };
+    "test importUnits normalizes one unit and a list into one flat collection" = {
+      expr = builtins.length flat;
+      expected = 3;
+    };
+    "test importUnits passes caller arguments to function files" = {
+      expr = (builtins.head flat).imported.marker;
+      expected = "passed-through";
+    };
+    "test importUnits validates only the unit shell and keeps payload fields lazy" = {
+      expr =
         (builtins.tryEval (builtins.deepSeq (map (unit: unit.label) flat) true)).success
         && throws (builtins.head flat).imported.lazy;
-    }
-    {
-      name = "importUnitSets discovers system and home collections in one call";
-      pass =
+      expected = true;
+    };
+    "test importUnitSets discovers system and home collections in one call" = {
+      expr =
         map (unit: unit.label) unitSets.system == [ "system fixture" ]
         && map (unit: unit.label) unitSets.home == [ "home fixture" ];
-    }
-    {
-      name = "imported system units resolve through the public system door";
-      pass =
-        resolvedSystem == {
-          services.ownershipsImporter = {
-            enable = true;
-            marker = "set-marker";
-          };
+      expected = true;
+    };
+    "test imported system units resolve through the public system door" = {
+      expr = resolvedSystem;
+      expected = {
+        services.ownershipsImporter = {
+          enable = true;
+          marker = "set-marker";
         };
-    }
-    {
-      name = "imported home units resolve through the public user door";
-      pass =
-        resolvedHome == {
-          programs.ownershipsImporter.enable = true;
-          home.sessionVariables.OWNERSHIPS_IMPORTER = "set-marker";
-        };
-    }
-    {
-      name = "mixed trees reject loose root nix files instead of guessing their scope";
-      pass = throws (
-        ownerships.importUnitSets {
-          dir = ./fixtures/import-units/ambiguous;
-        }
-      );
-    }
-    {
-      name = "mixed trees reject unknown top-level collections";
-      pass = throws (
-        ownerships.importUnitSets {
-          dir = ./fixtures/import-units;
-        }
-      );
-    }
-    {
-      name = "invalid imported values fail closed";
-      pass = throws (
-        ownerships.importUnits {
-          dir = ./fixtures/import-units/invalid;
-        }
-      );
-    }
-    {
-      name = "import helpers reject non-attribute argument bundles";
-      pass =
-        throws (
-          ownerships.importUnits {
-            dir = ./fixtures/import-units/flat;
-            args = [ ];
-          }
-        )
-        && throws (
-          ownerships.importUnitSets {
-            dir = ./fixtures/import-units/sets;
-            args = [ ];
-          }
-        );
-    }
-  ];
+      };
+    };
+    "test imported home units resolve through the public user door" = {
+      expr = resolvedHome;
+      expected = {
+        programs.ownershipsImporter.enable = true;
+        home.sessionVariables.OWNERSHIPS_IMPORTER = "set-marker";
+      };
+    };
+    "test mixed trees reject loose root nix files instead of guessing their scope" = {
+      expr = ownerships.importUnitSets {
+        dir = ./fixtures/import-units/ambiguous;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/import/loose-unit\\] cannot classify unit file 'loose\\.nix' in a mixed unit tree; move it under the '";
+    };
+    "test mixed trees reject unknown top-level collections" = {
+      expr = ownerships.importUnitSets {
+        dir = ./fixtures/import-units;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/import/unknown-collection\\] unknown unit collection 'ambiguous'; mixed unit trees support only 'sys";
+    };
+    "test invalid imported values fail closed" = {
+      expr = ownerships.importUnits {
+        dir = ./fixtures/import-units/invalid;
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/import/unit-shape\\] imported unit file 'bad\\.nix' must return an attribute set or a list of attribut";
+    };
+    "test importUnits rejects a non-attribute argument bundle" = {
+      expr = ownerships.importUnits {
+        dir = ./fixtures/import-units/flat;
+        args = [ ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/import/args-shape\\] importUnits args must be an attribute set; got list";
+    };
+    "test importUnitSets rejects a non-attribute argument bundle" = {
+      expr = ownerships.importUnitSets {
+        dir = ./fixtures/import-units/sets;
+        args = [ ];
+      };
+      expectedError.type = "ThrownError";
+      expectedError.msg = "\\[ownerships/import/args-shape\\] importUnitSets args must be an attribute set; got list";
+    };
+  };
 
-  failing = builtins.filter (case: !case.pass) cases;
-  ok =
-    if failing == [ ] then
-      true
-    else
-      throw "ownerships import-unit tests FAILED: ${
-        lib.concatMapStringsSep ", " (case: case.name) failing
-      }";
 in
 {
-  inherit cases ok;
+  inherit tests;
 }

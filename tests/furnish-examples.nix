@@ -159,17 +159,20 @@ in
   manifestEntryFields = builtins.attrNames manifestEntry;
   inherit optionNames;
 
-  ok =
-    assert
-      builtins.attrNames furnish == [
+  tests = {
+    "test furnish factory exposes only its documented surface" = {
+      expr = builtins.attrNames furnish;
+      expected = [
         "compile"
         "contract"
         "core"
         "files"
         "runtime"
       ];
-    assert
-      optionNames == [
+    };
+    "test runtime module declares the documented options" = {
+      expr = optionNames;
+      expected = [
         "declarations"
         "enable"
         "ledgerPath"
@@ -179,21 +182,59 @@ in
         "state.path"
         "state.requiresMountsFor"
       ];
-    assert builtins.length helperDeclarations == 1;
-    assert
-      manifestEntry.provenance == {
+    };
+    "test file helper emits one declaration per user principal" = {
+      expr = builtins.length helperDeclarations;
+      expected = 1;
+    };
+    "test example manifest records the authored provenance" = {
+      expr = manifestEntry.provenance;
+      expected = {
         declaration = "paperkite settings";
         source = "paperkite settings";
       };
-    assert compiler.manifestData == [ ];
-    assert compiler.manifestPath == null;
-    assert disabled.config.lexicon.furnish.manifestPath == null;
-    assert !(disabled.config.systemd.services ? furnish);
-    assert emptyEnabled.config.lexicon.furnish.manifestData == [ ];
-    assert emptyEnabled.config.lexicon.furnish.manifestPath != null;
-    assert emptyEnabled.config.systemd.services ? furnish;
-    assert furnish.contract.schemaVersion == 2;
-    assert furnish.contract.diagnosticSchemaVersion == 1;
-    assert furnish.contract.ledger.schemaVersion == 2;
-    true;
+    };
+    "test off provider compiles to an empty manifest without a path" = {
+      expr = {
+        inherit (compiler) manifestData manifestPath;
+      };
+      expected = {
+        manifestData = [ ];
+        manifestPath = null;
+      };
+    };
+    "test disabled runtime publishes no manifest or service" = {
+      expr = {
+        inherit (disabled.config.lexicon.furnish) manifestPath;
+        service = disabled.config.systemd.services ? furnish;
+      };
+      expected = {
+        manifestPath = null;
+        service = false;
+      };
+    };
+    "test enabled empty runtime still publishes a manifest and service" = {
+      expr = {
+        inherit (emptyEnabled.config.lexicon.furnish) manifestData;
+        manifestPath = emptyEnabled.config.lexicon.furnish.manifestPath != null;
+        service = emptyEnabled.config.systemd.services ? furnish;
+      };
+      expected = {
+        manifestData = [ ];
+        manifestPath = true;
+        service = true;
+      };
+    };
+    "test contract versions match the documented schema" = {
+      expr = {
+        inherit (furnish.contract) schemaVersion diagnosticSchemaVersion;
+        ledger = furnish.contract.ledger.schemaVersion;
+      };
+      expected = {
+        schemaVersion = 3;
+        diagnosticSchemaVersion = 1;
+        ledger = 2;
+      };
+    };
+  };
 }

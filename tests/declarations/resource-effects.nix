@@ -170,38 +170,46 @@ let
       };
     };
   };
-  cases = {
-    directory-theme-source-suppression-stays-declaration-local =
-      map (entry: entry.dest)
-        (owners.compose [
-          directoryPlan
-          themePlan
-        ]).files == [ ".local-tree/nested/inner.toml" ]
-      &&
-        map (entry: entry.dest) (owners.compose [ directoryPlan ]).files == [
-          ".local-tree/nested/inner.toml"
-          ".local-tree/root.nix"
-        ];
-    selected-resource-poison-survives-complete-public-transport =
-      builtins.attrNames (builtins.head (entries "alice")).source.value == [ "secret" ]
-      &&
-        map (entry: entry.target.path) compiled.manifestData == [
-          "/external/root.nix"
-          "/external/.opaque"
-        ];
-    selected-resource-principals-and-shared-preparation-survive =
-      map (entry: entry.principal) probe.first == [
-        "alice"
-        "alice"
-      ]
-      &&
-        map (entry: entry.principal) probe.second == [
-          "bob"
-          "bob"
-        ];
+  tests = {
+    "test directory theme source suppression stays declaration local" = {
+      expr =
+        map (entry: entry.dest)
+          (owners.compose [
+            directoryPlan
+            themePlan
+          ]).files == [ ".local-tree/nested/inner.toml" ]
+        &&
+          map (entry: entry.dest) (owners.compose [ directoryPlan ]).files == [
+            ".local-tree/nested/inner.toml"
+            ".local-tree/root.nix"
+          ];
+      expected = true;
+    };
+    "test selected resource poison survives complete public transport" = {
+      expr =
+        builtins.attrNames (builtins.head (entries "alice")).source.value == [ "secret" ]
+        &&
+          map (entry: entry.target.path) compiled.manifestData == [
+            "/external/root.nix"
+            "/external/.opaque"
+          ];
+      expected = true;
+    };
+    "test selected resource principals and shared preparation survive" = {
+      expr =
+        map (entry: entry.principal) probe.first == [
+          "alice"
+          "alice"
+        ]
+        &&
+          map (entry: entry.principal) probe.second == [
+            "bob"
+            "bob"
+          ];
+      expected = true;
+    };
   };
 in
 {
-  inherit cases probe;
-  ok = builtins.all (value: value) (builtins.attrValues cases);
+  inherit tests probe;
 }

@@ -113,33 +113,45 @@ let
   );
 in
 {
-  serpantinum-config-does-not-collide-with-dms-or-lucid =
-    builtins.length (
-      builtins.filter (entry: entry.destination == ".config/matugen/config.toml") declarations
-    ) == 1
-    &&
+  "test serpantinum config does not collide with dms or lucid" = {
+    expr =
       builtins.length (
-        builtins.filter (entry: entry.destination == ".config/lucid/matugen/config.toml") declarations
-      ) == 1;
-  serpantinum-shared-templates-use-writable-seeds =
-    seed.representation == "writable" && seed.onConflict == "runtime-wins";
-  serpantinum-registrations-aggregate-across-programs =
-    builtins.length configs == 1
-    &&
-      builtins.attrNames templates == [
-        "editor"
-        "terminal-colors"
-      ];
-  serpantinum-registrations-use-managed-home-and-reload =
-    templates.editor == {
+        builtins.filter (entry: entry.destination == ".config/matugen/config.toml") declarations
+      ) == 1
+      &&
+        builtins.length (
+          builtins.filter (entry: entry.destination == ".config/lucid/matugen/config.toml") declarations
+        ) == 1;
+    expected = true;
+  };
+  "test serpantinum shared templates use writable seeds" = {
+    expr = seed.representation == "writable" && seed.onConflict == "runtime-wins";
+    expected = true;
+  };
+  "test serpantinum registrations aggregate across programs" = {
+    expr =
+      builtins.length configs == 1
+      &&
+        builtins.attrNames templates == [
+          "editor"
+          "terminal-colors"
+        ];
+    expected = true;
+  };
+  "test serpantinum registrations use managed home and reload" = {
+    expr = templates.editor;
+    expected = {
       input_path = "/srv/alice/.config/serpantinum/matugen/templates/editor/safe-render.nix";
       output_path = "/srv/alice/.config/editor/palette";
       post_hook = "editor-reload";
     };
-  serpantinum-native-fields-and-subids-survive =
-    templates.terminal-colors == {
+  };
+  "test serpantinum native fields and subids survive" = {
+    expr = templates.terminal-colors;
+    expected = {
       input_path = "/srv/alice/.config/serpantinum/matugen/templates/terminal/safe-render.nix";
       output_path = "/srv/alice/.config/terminal/colors";
       compare_to = "dark";
     };
+  };
 }
