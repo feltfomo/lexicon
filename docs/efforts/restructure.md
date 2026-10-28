@@ -32,8 +32,8 @@ merge in this order. Bands on the same line can run at the same time.
 | Order | Band | Repository | Depends on |
 | --- | --- | --- | --- |
 | 0 | Tooling: devenv, nix-unit, the bug they exposed | lexicon | none |
-| 1 | Krisis batch 1 (K1, K4, K6, K7, K9) and the benchmark suite | krisis, lexicon | 0 |
-| 2 | Native Krisis in Lexicon, one dependency owner; Krisis batch 2 (K2, K3, K5, K8) | lexicon, krisis | 1 |
+| 1 | Krisis batch 1 (K1, K4, K5, K6, K7, K9) and the benchmark suite | krisis, lexicon | 0 |
+| 2 | Native Krisis in Lexicon, one dependency owner; Krisis batch 2 (K2, K3, K8) | lexicon, krisis | 1 |
 | 3 | Axiom removed | lexicon | 2 |
 | 4 | Target layout and architecture tests, no behavior change | lexicon | 3 |
 | 5 | Subsystem records, settings with host binding, assembly, hosts, aliases, P1 to P3 | lexicon | 4 |
@@ -52,5 +52,5 @@ merge in this order. Bands on the same line can run at the same time.
 
 | Limit | Waits on | Until then |
 | --- | --- | --- |
-| Untagged unions, homogeneous attribute sets and path prefixes are still checked by Lexicon code | Krisis batch 2 (K2, K3, K5), band 2 | Band 2's Lexicon track keeps the existing checks for those shapes and removes them when the batch lands |
+| Untagged unions and homogeneous attribute sets are still checked by Lexicon code | Krisis batch 2 (K2, K3), band 2 | Band 2's Lexicon track keeps the existing checks for those shapes and removes them when the batch lands |
 | Den walks includes under the Den host; only the portable aspect subset is checked against the plain walker | none, approved as permanent (D1) | Not a limit. Recorded here so it isn't reopened |
