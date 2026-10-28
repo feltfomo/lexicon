@@ -5,8 +5,9 @@
 
 `id` is required and must be a normalized non-empty basename. Choose either
 one inline template or `templates = [ template ... ];`. With `templates`,
-the enclosing block cannot also carry template value fields, claims or
-`renderers`. Each template requires a non-empty `renderers` attribute set.
+the enclosing block cannot also carry template value fields or `renderers`.
+Its ownership claims select the whole theme, and a claimed empty `templates`
+list stays inert. Each template requires a non-empty `renderers` attribute set.
 
 ## Template and renderer fields
 
