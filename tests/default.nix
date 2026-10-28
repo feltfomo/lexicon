@@ -63,6 +63,7 @@ let
 in
 {
   effects-contract = (import ./effects-contract.nix (core // { inherit lexicon; })).tests;
+  bench = (import ./bench { inherit lib; }).tests;
   registry = (import ./registry core).tests;
 
   declarations = {
@@ -110,6 +111,7 @@ in
 
   toml = {
     encoding = import ./toml/encoding.nix { inherit pkgs lexicon; };
+    render = import ./toml/render.nix { inherit pkgs lexicon; };
     rendering =
       (import ./toml/rendering.nix {
         inherit lib;

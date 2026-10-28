@@ -48,10 +48,11 @@ in
     "lexicon:check" = praxis "check";
     "lexicon:test" = praxis "test";
     "lexicon:gate" = praxis "gate";
+    "lexicon:bench" = praxis "bench";
   };
 
   enterShell = ''
-    echo "lexicon dev shell. Commands: devenv tasks run lexicon:fmt lexicon:check lexicon:test lexicon:gate, lexicon-praxis"
+    echo "lexicon dev shell. Commands: devenv tasks run lexicon:fmt lexicon:check lexicon:test lexicon:gate lexicon:bench, lexicon-praxis"
   '';
 
   enterTest = ''
