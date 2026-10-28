@@ -3,3 +3,4 @@ result-*
 /.runtime/
 /src/praxis/runtime/target/
 __pycache__/
+/.claude/worktrees/

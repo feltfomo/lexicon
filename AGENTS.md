@@ -5,6 +5,10 @@ its implementation as a functional library with distinct subsystem owners.
 Preserve consumer declarations, public factories and extension contracts when
 changing internals. Read the relevant source, callers and tests before editing.
 
+The [philosophy](docs/philosophy.md) holds the laws, and
+[functional design](docs/explanation/functional-design.md) explains their vocabulary.
+Work toward the target layout follows the [restructure effort](docs/efforts/restructure.md).
+
 Read [declaration syntax](src/lexicon/syntax.md) and the
 [definition contract](src/lexicon/definitions.md) before extending the DSL.
 Built-ins and external subsystems use one registered compiler. New annotations
@@ -74,16 +78,29 @@ filesystem operations, locking and process execution belong to runtime owners.
 Don't introduce import-from-derivation or mutable filesystem reads to move work
 into evaluation. A pure renderer doesn't establish parser or publication parity.
 
+Keep Lexicon pure Nix. Compilation, validation, rendering and docs generation are
+Nix, with no helper in another language. A non-Nix component is allowed only for
+work that runs outside evaluation and that Nix can't do, such as the furnish
+coordinator or the Praxis runtime.
+
 ## Writing and verification
 
-Follow the [comment guide](../odyssey-fixes/doc-for-ai/ai-doc-and-comment-patterns.md)
-when it's available. Source comments explain non-obvious constraints, use lowercase
-and contain no colons. Review all comments in a touched file.
+Use the technical-writing skill and Odyssey's
+[writing guide](../odyssey/docs/writing.md) for docs and comments, and its
+[Nix style](../odyssey/docs/reference/nix-style.md) for Nix code. Source comments
+explain non-obvious constraints, use lowercase and contain no colons. Review all
+comments in a touched file.
 
 Test boundary behavior, failure paths, diagnostic order, selected-only evaluation
 and state changes. Compare demanded projections rather than forcing opaque
 results. Fix the cause of a failed invariant; don't add input-specific exceptions
 or new flags to make a regression pass.
+
+Retained tests are pure Nix, as nix-unit cases or Nix flake checks. A test may
+use another language only when Nix can't express it, such as driving a real
+terminal, a VM or a running process, and it states that reason. Python and other
+scripts are fine as temporary probes while implementing. Keep them in `.runtime/`
+and delete them before delivery.
 
 Run focused flake checks, then `nix develop path:. -c lexicon-praxis --non-interactive gate`.
 Use `path:.` to include new files before staging. Never stage or commit without the
