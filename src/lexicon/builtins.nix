@@ -48,6 +48,8 @@ let
   };
   themeFields = lib.genAttrs [
     "source"
+    "template"
+    "transform"
     "output"
     "subdir"
     "placedAs"
@@ -269,16 +271,14 @@ in
           builtins.concatLists (
             lib.imap0 (
               index: template:
-              builtins.concatMap (
-                declared:
-                let
-                  override = template.renderers.${declared};
-                  matches = builtins.elem renderer ([ declared ] ++ (override.sharedWith or [ ]));
-                  origin = (builtins.elemAt templateOrigins index).children.renderers.${declared}.self;
-                in
-                lib.optional matches (
+              let
+                shared = removeAttrs template [ "renderers" ];
+                sharedOrigin = (builtins.elemAt templateOrigins index).self;
+                renderers = template.renderers or { };
+                entryFor =
+                  override: origin:
                   let
-                    effective = removeAttrs template [ "renderers" ] // removeAttrs override [ "sharedWith" ];
+                    effective = resources.theme.effectiveEntry shared override;
                   in
                   resource "theme"
                     {
@@ -289,12 +289,24 @@ in
                     origin
                     {
                       fieldOrigins = lib.genAttrs (builtins.attrNames effective) (
-                        name:
-                        (if override ? ${name} then origin else (builtins.elemAt templateOrigins index).self) ++ [ name ]
+                        name: (if override ? ${name} then origin else sharedOrigin) ++ [ name ]
                       );
-                    }
-                )
-              ) (builtins.attrNames (template.renderers or { }))
+                    };
+                declaredEntries = builtins.concatMap (
+                  declared:
+                  let
+                    override = renderers.${declared};
+                  in
+                  lib.optional (builtins.elem renderer ([ declared ] ++ (override.sharedWith or [ ]))) (
+                    entryFor override (builtins.elemAt templateOrigins index).children.renderers.${declared}.self
+                  )
+                ) (builtins.attrNames renderers);
+              in
+              # a portable template reaches every shell a renderer declaration did not claim
+              if declaredEntries == [ ] && template ? template then
+                [ (entryFor { } sharedOrigin) ]
+              else
+                declaredEntries
             ) checked
           )
         ) resources.theme.themeBackends;

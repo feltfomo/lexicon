@@ -10,6 +10,7 @@ in
   ];
   runtime = "matugen";
   configDestination = ".config/serpantinum/matugen/config.toml";
+  dialect = "matugen";
   templateRoot = ".config/serpantinum/matugen/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   filesFor = _: [ ];

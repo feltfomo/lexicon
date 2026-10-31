@@ -453,7 +453,7 @@ Kept as is:
 - `nixos` units with `value`: the wrapper keeps ownership `users` apart from native `users.users`.
 - `package = pkgs: drv`: one obvious form already.
 - Declaration-level `hosts`, `users`, `exceptHosts`, `exceptUsers`, `when`: the ownership vocabulary.
-- `theme` renderer records, including `sharedWith`: skadi's shared renderer list is skadi's own option.
+- `theme` renderer records, including `sharedWith`: they remain for templates written in one shell's native syntax. Portable `template` declarations don't need them.
 - `configure` and `hosts.den` signatures: settings enter only through `configure` (fixed above).
 - The plain host's module file: it's already the proposal under D2.
 

@@ -7,6 +7,7 @@ in
     capability.nativeBlocks
     capability.blockFiles
   ];
+  dialect = "matugen";
   templateRoot = ".config/noctalia/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   filesFor =

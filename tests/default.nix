@@ -107,6 +107,7 @@ in
     context = import ./program/context.nix withPackages;
     directories = (import ./program/directories.nix core).tests;
     theme-effects = (import ./program/theme-effects.nix withPackages).tests;
+    theme-templates = (import ./program/theme-templates.nix withPackages).tests;
     lucid = import ./program/lucid.nix withPackages;
     serpantinum = import ./program/serpantinum.nix withPackages;
   };

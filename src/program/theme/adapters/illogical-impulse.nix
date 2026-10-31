@@ -9,6 +9,7 @@ in
   ];
   runtime = "matugen";
   configDestination = ".config/illogical-impulse/matugen/config.toml";
+  dialect = "matugen";
   templateRoot = ".config/illogical-impulse/matugen/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   filesFor = _: [ ];

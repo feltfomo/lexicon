@@ -4,6 +4,7 @@ let
 in
 {
   capabilities = [ capability.blockFiles ];
+  dialect = "caelestia";
   templateRoot = ".config/caelestia/templates";
   templateNameOf = entry: "${entry.registrationId}-${entry.placedAs}";
   filesFor =

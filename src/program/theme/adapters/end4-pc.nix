@@ -9,6 +9,7 @@ in
   ];
   runtime = "matugen";
   configDestination = ".config/end4-pc/matugen/config.toml";
+  dialect = "matugen";
   templateRoot = ".config/end4-pc/matugen/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   filesFor = _: [ ];

@@ -27,9 +27,13 @@ let
     };
 
   adapters = import ./adapters { inherit lib; };
+  dialects = import ./dialects.nix { inherit lib; };
+  template = import ./template.nix { inherit lib; };
   themeBackends = builtins.attrNames adapters;
   themeValueFields = [
     "source"
+    "template"
+    "transform"
     "output"
     "subdir"
     "placedAs"
@@ -46,7 +50,30 @@ let
     "templates"
   ]
   ++ themeValueFields;
-  themeEntryFields = themeSharedFields;
+  themeEntryFields = (lib.remove "template" themeSharedFields) ++ [ "syntax" ];
+
+  # an entry carries one source. a portable template becomes that source tagged with its
+  # syntax, and the innermost layer that names a source decides which kind it is.
+  effectiveEntry =
+    base: override:
+    let
+      chosen =
+        if override ? source then
+          removeAttrs base [ "template" ]
+        else if override ? template then
+          removeAttrs base [ "source" ]
+        else
+          base;
+      merged = chosen // removeAttrs override [ "sharedWith" ];
+    in
+    if merged ? template then
+      removeAttrs merged [ "template" ]
+      // {
+        source = merged.template;
+        syntax = "portable";
+      }
+    else
+      merged;
 
   knownShellsNote = "known shells: ${lib.concatStringsSep ", " themeBackends}";
 
@@ -115,6 +142,41 @@ let
       [ ];
 
   targetsForRenderer = renderer: override: lib.unique ([ renderer ] ++ sharedShellsOf override);
+
+  sourceConflictProblem =
+    subject:
+    problem {
+      code = "theme-template-source-conflict";
+      message = "cannot set both source and template";
+      primary.label = subject;
+    };
+
+  effectiveEntryErrors =
+    subject: effective:
+    lib.optional (!(effective ? source) || !(effective ? output)) (problem {
+      code = "theme-renderer-incomplete";
+      message = "effective renderer settings must define source and output, or template and output";
+      primary.label = subject;
+    })
+    ++
+      lib.optional
+        (
+          (effective.syntax or null) == "portable"
+          && effective ? source
+          && builtins.isString effective.source
+          && !(effective ? placedAs)
+        )
+        (problem {
+          code = "theme-template-name";
+          message = "a template given as a string needs placedAs";
+          primary.label = subject;
+        })
+    ++ lib.optional (effective ? transform && (effective.syntax or null) != "portable") (problem {
+      code = "theme-transform-source";
+      message = "transform only applies to a template";
+      primary.label = subject;
+    });
+
   themeTemplateErrors =
     subject: template:
     if !builtins.isAttrs template then
@@ -128,9 +190,11 @@ let
     else
       let
         unknownTemplate = unknownFields (themeSharedFields ++ [ "renderers" ]) template;
+        portable = template ? template;
         renderers =
           if template ? renderers && builtins.isAttrs template.renderers then template.renderers else { };
         rendererNames = builtins.attrNames renderers;
+        shared = removeAttrs template [ "renderers" ];
         unknownRendererErrors = map (
           renderer: unknownShellProblem "${subject}.renderers.${renderer}" renderer
         ) (builtins.filter (name: !(builtins.elem name themeBackends)) rendererNames);
@@ -146,9 +210,6 @@ let
             sharedStrings = if sharedIsList then builtins.filter builtins.isString sharedWith else [ ];
             duplicateShared = duplicateValues sharedStrings;
             unknownShared = builtins.filter (name: !(builtins.elem name themeBackends)) sharedStrings;
-            effective =
-              (removeAttrs template [ "renderers" ])
-              // (if builtins.isAttrs override then removeAttrs override [ "sharedWith" ] else { });
           in
           lib.optional (!builtins.isAttrs override) (problem {
             code = "theme-renderer-shape";
@@ -184,11 +245,8 @@ let
               primary.label = "${rendererSubject}.sharedWith";
             })
             ++ map (shell: unknownShellProblem "${rendererSubject}.sharedWith" shell) unknownShared
-            ++ lib.optional (!(effective ? source) || !(effective ? output)) (problem {
-              code = "theme-renderer-incomplete";
-              message = "effective renderer settings must define source and output";
-              primary.label = rendererSubject;
-            })
+            ++ lib.optional (override ? source && override ? template) (sourceConflictProblem rendererSubject)
+            ++ effectiveEntryErrors rendererSubject (effectiveEntry shared override)
           )
         ) rendererNames;
         assignments = builtins.concatMap (
@@ -224,18 +282,23 @@ let
         message = "has unknown fields: ${lib.concatStringsSep ", " unknownTemplate}";
         primary.label = subject;
       })
-      ++ lib.optional (!(template ? renderers) || !builtins.isAttrs template.renderers) (problem {
-        code = "theme-renderers-shape";
-        message = "renderers must be an attribute set";
-        primary.label = subject;
-      })
+      ++ lib.optional (template ? source && portable) (sourceConflictProblem subject)
       ++
-        lib.optional (template ? renderers && builtins.isAttrs template.renderers && rendererNames == [ ])
+        lib.optional (if template ? renderers then !builtins.isAttrs template.renderers else !portable)
+          (problem {
+            code = "theme-renderers-shape";
+            message = "renderers must be an attribute set";
+            primary.label = subject;
+          })
+      ++
+        lib.optional
+          (!portable && template ? renderers && builtins.isAttrs template.renderers && rendererNames == [ ])
           (problem {
             code = "theme-renderers-empty";
             message = "renderers must select at least one renderer";
             primary.label = subject;
           })
+      ++ lib.optionals portable (effectiveEntryErrors subject (effectiveEntry shared { }))
       ++ unknownRendererErrors
       ++ rendererErrors
       ++ overlapErrors;
@@ -322,6 +385,20 @@ let
           onInvalid =
             _entry: _value: entryProblem (fieldAt "native") "theme-native" "native must be an attribute set";
         };
+        transform = {
+          validate = builtins.isFunction;
+          onInvalid =
+            _entry: _value: entryProblem (fieldAt "transform") "theme-transform" "transform must be a function";
+        };
+        syntax = {
+          validate =
+            value:
+            builtins.elem value [
+              "native"
+              "portable"
+            ];
+          onInvalid = _entry: _value: entryProblem subject "theme-syntax" "syntax must be native or portable";
+        };
       };
     };
 
@@ -331,6 +408,7 @@ let
       inherit (wrapped) blockId renderer;
       inherit (wrapped.entry) source output;
       inherit (wrapped) entry;
+      syntax = entry.syntax or "native";
       rawSubdir =
         if !(entry ? subdir) then
           blockId
@@ -351,8 +429,10 @@ let
         subId
         blockId
         renderer
+        syntax
         ;
       merge = entry.merge or null;
+      transform = entry.transform or lib.id;
       reload = entry.reload or null;
       native = entry.native or { };
       registrationId =
@@ -365,6 +445,56 @@ let
           ];
       runtime = adapters.${renderer}.runtime or null;
     };
+
+  # a path is read at evaluation. generated text stays a string, because reading a derivation
+  # output here would be import from derivation.
+  fragmentsOf =
+    entry:
+    template.parse (
+      if builtins.isPath entry.source then builtins.readFile entry.source else entry.source
+    );
+
+  portableSourceOf =
+    pkgs: dialect: entry:
+    toString (
+      entry.transform (
+        pkgs.writeText "${entry.blockId}-${entry.placedAs}" (template.render dialect (fragmentsOf entry))
+      )
+    );
+
+  tokenProblems =
+    subject:
+    let
+      byTag = {
+        unknown-token =
+          issue:
+          let
+            suggestion = krisis.suggest issue.name template.tokens;
+          in
+          {
+            code = "theme-token-unknown";
+            message = "unknown token \"${issue.name}\" in ${issue.text}";
+            help =
+              if suggestion == null then
+                "tokens are material color names, term0 to term15, success and warning"
+              else
+                "did you mean \"${suggestion}\"?";
+          };
+        unknown-modifier = issue: {
+          code = "theme-token-modifier";
+          message = "unknown modifier \"${issue.modifier}\" in ${issue.text}";
+          help = "modifiers are ${lib.concatStringsSep ", " template.modifiers}";
+        };
+        conflicting-modes = issue: {
+          code = "theme-token-mode";
+          message = "more than one mode in ${issue.text}";
+        };
+      };
+    in
+    issues:
+    map (fields: problem (fields // { primary.label = subject; })) (
+      lib.unique (map (issue: byTag.${issue.tag} issue) issues)
+    );
 
   themeGroupComputation =
     pkgs: entries:
@@ -385,10 +515,18 @@ let
       unsupportedNativeIds = map (entry: entry.registrationId) (
         builtins.filter (entry: !(declares capability.nativeBlocks adapter) && entry.native != { }) entries
       );
+      portableEntries = builtins.filter (entry: entry.syntax == "portable") entries;
+      portableProblems = tokenProblems "theme.${renderer}.${blockId}" (
+        builtins.concatMap (entry: template.issues (fragmentsOf entry)) portableEntries
+      );
       inherit (adapter) templateNameOf;
       seedFileOf = entry: {
         dest = "${adapter.templateRoot}/${templateNameOf entry}";
-        src = entry.source;
+        src =
+          if entry.syntax == "portable" then
+            portableSourceOf pkgs dialects.${adapter.dialect} entry
+          else
+            entry.source;
         representation = contract.capabilities.writable;
         onConflict = contract.conflictPolicies.runtimeWins;
         provenance = "lexicon/program/theme/default.nix";
@@ -412,11 +550,14 @@ let
           )
         )
         (
-          effects.fromDiagnostics (lib.optional (unsupportedNativeIds != [ ]) (problem {
-            code = "theme-native-unsupported";
-            message = "cannot use native registration fields: ${lib.concatStringsSep ", " unsupportedNativeIds}";
-            primary.label = "theme.${renderer}.${blockId}";
-          })) null
+          effects.fromDiagnostics (
+            lib.optional (unsupportedNativeIds != [ ]) (problem {
+              code = "theme-native-unsupported";
+              message = "cannot use native registration fields: ${lib.concatStringsSep ", " unsupportedNativeIds}";
+              primary.label = "theme.${renderer}.${blockId}";
+            })
+            ++ portableProblems
+          ) null
         )
     ) (effects.fromAxiom registrations);
 
@@ -486,6 +627,7 @@ let
 in
 {
   inherit
+    effectiveEntry
     themeBackends
     themeSharedFields
     themeEntrySchema

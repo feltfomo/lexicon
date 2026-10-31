@@ -7,7 +7,8 @@
 one inline template or `templates = [ template ... ];`. With `templates`,
 the enclosing block cannot also carry template value fields or `renderers`.
 Its ownership claims select the whole theme, and a claimed empty `templates`
-list stays inert. Each template requires a non-empty `renderers` attribute set.
+list stays inert. Each template requires a non-empty `renderers` attribute set
+unless it sets `template`.
 
 ## Template and renderer fields
 
@@ -17,7 +18,9 @@ attribute-set merge. Renderer names are `caelestia`, `dms`, `end4-pc`,
 
 | Field | Type | Default / meaning |
 | --- | --- | --- |
-| `source` | Path or string | Required in each effective renderer; template source |
+| `source` | Path or string | Template in one shell's native syntax; each effective renderer needs `source` or `template` |
+| `template` | Path or string | Portable template, described below; a string is the template text and needs `placedAs` |
+| `transform` | Function | Identity; receives each shell's compiled template file and returns the source to install |
 | `output` | Normalized relative path | Required in each effective renderer; rendered output under the user's home |
 | `subdir` | Relative directory string, empty string or null | Theme `id`; null or empty means template root, trailing `/` accepted |
 | `placedAs` | Normalized basename | Basename of `source`; installed template filename |
@@ -34,6 +37,10 @@ not translate template syntax. It rejects unknown names, duplicates, the owning
 renderer's own name, and any backend assigned by another renderer in the same
 template. Unknown fields and backend names are errors.
 
+A layer can set `source` or `template`, not both. A renderer's `source` replaces
+the template's `template` for that shell, and the reverse, so one shell can keep a
+hand-written template while the rest share a portable one.
+
 Registration ID is `id` when `subId` is null, otherwise `"${id}-${subId}"`.
 Multiple templates under one ID generally need distinct `subId` values.
 Duplicate registration IDs fail. Matugen renderers check IDs across program
@@ -41,6 +48,56 @@ declarations for each renderer, filesystem namespace and principal.
 
 Normalized paths reject leading `/`, empty components, `.` and `..`.
 `placedAs`, `subId` and `id` also reject `/`.
+
+## Portable templates
+
+`template` compiles one file for every shell. It reaches each renderer no
+`renderers` declaration claims, so `renderers` is optional and only needs entries
+for per-shell overrides.
+
+```nix
+theme = {
+  id = "kitty";
+  output = ".config/kitty/themes/reactive.conf";
+  template = ./theme.conf;
+};
+```
+
+A placeholder is `{{ token[.modifier...] [| filter]... }}`. `{{ primary }}` renders
+as a hash-prefixed hex color. Everything outside a placeholder is copied verbatim.
+A path is read at evaluation. Pass generated text as a string, for example from
+`toml.render`, because reading a derivation output would be import from derivation.
+
+`transform` covers a template that a derivation must finish, such as a palette
+embedded in a generated stylesheet. It runs once per shell on the compiled file, so
+the build sees rendered placeholders and Lexicon never reads its output. It's only
+valid alongside `template`.
+
+Tokens are the Material color names in camelCase, `term0` to `term15`, `success`
+and `warning`. `src/program/theme/template.nix` holds the list.
+
+| Modifier | Meaning |
+| --- | --- |
+| `bare` | Omit the hash, for formats such as `rgb({{ primary.bare }})` |
+| `dark`, `light` | Use that scheme rather than the active one |
+
+Each adapter names a dialect in `src/program/theme/dialects.nix`, which translates
+placeholders. Anything a dialect can't express degrades to the closest result, so
+a template can use every feature without excluding a shell:
+
+| Feature | Matugen dialect | Caelestia dialect |
+| --- | --- | --- |
+| `dark`, `light` | Selected scheme | Active color; both schemes render alike |
+| Filters | Passed through unchecked | Dropped |
+| `term0` to `term15` | Mapped onto Material roles | Native |
+| `success`, `warning` | `primary` with `set_hue` and `set_saturation` | `term2`, `term3` |
+
+Degradation covers what a shell can't do, not template mistakes. Unknown tokens,
+unknown modifiers and placeholders with two modes are Krisis diagnostics
+(`theme-token-unknown`, `theme-token-modifier`, `theme-token-mode`) that fail when
+the theme's files are demanded. Caelestia would otherwise leave an unknown
+placeholder in its output as literal text. A shell's native syntax is rejected the
+same way. Use `source` for a template that needs it.
 
 ## Renderer destinations
 

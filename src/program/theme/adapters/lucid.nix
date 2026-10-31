@@ -11,6 +11,7 @@ in
   ];
   runtime = "matugen";
   configDestination = ".config/lucid/matugen/config.toml";
+  dialect = "matugen";
   templateRoot = ".config/lucid/matugen/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   filesFor = _: [ ];

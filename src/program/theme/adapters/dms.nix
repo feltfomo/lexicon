@@ -9,6 +9,7 @@ in
   ];
   runtime = "matugen";
   configDestination = ".config/matugen/config.toml";
+  dialect = "matugen";
   templateRoot = ".config/matugen/dms/templates";
   templateNameOf = entry: "${entry.subdir}${entry.placedAs}";
   # matugen only ever reads templates registered in the single
